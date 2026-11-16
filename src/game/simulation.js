@@ -43,7 +43,10 @@ export class Simulation {
       ...this.wrecks.filter((w) => w.solid),
       ...(this.city?.solids || []),
     ];
-    this.navigation.setSolids(this.solids);
+    this.navigation.setSolids([
+      ...this.solids,
+      ...(this.city?.navObstacles || []),
+    ]);
     for (const car of this.police) {
       car.route = [];
       car.routeTimer = 0;
@@ -92,7 +95,10 @@ export class Simulation {
         })
       : null;
     this.solids = [...this.staticSolids];
-    this.navigation = new RoadNavigation(this.solids);
+    this.navigation = new RoadNavigation([
+      ...this.solids,
+      ...(this.city?.navObstacles || []),
+    ]);
     const exit = chooseExit(this.staticSolids, this.random, this.lastExitId);
     this.lastExitId = exit.id;
     this.escape = { phase: "locked", exit, openedAt: null };

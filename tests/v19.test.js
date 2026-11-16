@@ -136,6 +136,9 @@ test("a big tree never breaks and damages the car that hits it", () => {
     angle: Math.PI,
     vx: 0,
     vz: 22,
+    // Coasting straight on (the police route planner itself steers round
+    // big trees).
+    stunTimer: 1,
   });
   s.police = [police];
   Object.assign(s.player, { x: prop.x + 30, z: prop.z + 30 });
@@ -200,7 +203,8 @@ test("pedestrians each react at their own speed, get out of the way sideways and
   for (let i = 0; i < 90; i++) {
     s.update(1 / 60, {});
     for (const q of peds)
-      if (q.state === "flee" && !fled.has(q)) fled.set(q, s.elapsed);
+      if ((q.state === "flee" || q.state === "dive") && !fled.has(q))
+        fled.set(q, s.elapsed);
   }
   assert.equal(fled.size, 3, "everyone ran");
   const times = peds.map((q) => fled.get(q));

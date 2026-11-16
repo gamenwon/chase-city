@@ -153,6 +153,11 @@ export function createCity(layout, options = {}) {
     boxes,
     moving: new Set(), // props that are wobbling, falling or tumbling
     solids: [], // fallen trees, shared with the simulation's solids
+    // Big trees never fall: the police route planner steers round them
+    // (the collision itself stays the tree's own, with its damage).
+    navObstacles: props
+      .filter((p) => p.kind === "bigTree")
+      .map((p) => ({ x: p.x, z: p.z, w: 1.8, d: 1.8, kind: "tree" })),
     pedestrians: [],
     traffic: [],
     parking: parking.map((p, i) => ({ ...p, id: i, car: null })),
@@ -567,6 +572,18 @@ function updatePedestrians(sim, city, dt) {
       if (t !== null && (!worst || t < worst.t)) worst = { t, v };
     }
     const playerDist = Math.hypot(q.x - p.x, q.z - p.z);
+    // Almost on top of them: a reflex jump aside, no reaction delay.
+    if (worst && worst.t < 0.35 && q.state !== "dive" && q.state !== "flee") {
+      const c = worst.v.car,
+        sp = Math.hypot(c.vx, c.vz) || 1;
+      const side = Math.sign((q.x - c.x) * c.vz - (q.z - c.z) * c.vx) || 1;
+      q.fleeX = (c.vz / sp) * side;
+      q.fleeZ = (-c.vx / sp) * side;
+      q.state = "dive";
+      q.timer = 0.45;
+      q.closest = Infinity;
+      city.stats.pedestrianDives++;
+    }
     if (
       (q.state === "walk" || q.state === "cross" || q.state === "recover") &&
       worst &&
@@ -597,7 +614,14 @@ function updatePedestrians(sim, city, dt) {
       const d = Math.hypot(q.x - v.car.x, q.z - v.car.z);
       if (q.state === "flee" || q.state === "dive")
         q.closest = Math.min(q.closest, d);
-      if (d < v.r + 0.55 && q.state !== "dive") {
+      const moving = Math.hypot(v.car.vx, v.car.vz) > 3;
+      // A car standing still is just in the way: step round it.
+      if (!moving && d < v.r + 0.35 && d > 1e-6) {
+        q.x = v.car.x + ((q.x - v.car.x) / d) * (v.r + 0.35);
+        q.z = v.car.z + ((q.z - v.car.z) / d) * (v.r + 0.35);
+        continue;
+      }
+      if (moving && d < v.r + 1.0 && q.state !== "dive") {
         const c = v.car,
           s = Math.hypot(c.vx, c.vz) || 1;
         const side = Math.sign((q.x - c.x) * c.vz - (q.z - c.z) * c.vx) || 1;
@@ -688,10 +712,14 @@ function updatePedestrians(sim, city, dt) {
     for (const b of boxesNear(city, q.x, q.z)) resolveBuilding(q, b, 0.35);
     q.playerDist = playerDist;
   }
-  // Safety net: count any pedestrian a car still overlaps (should stay 0).
+  // Safety net: count any pedestrian a moving car still overlaps (should
+  // stay 0).
   for (const q of city.pedestrians)
     for (const v of cars)
-      if (Math.hypot(q.x - v.car.x, q.z - v.car.z) < v.r * 0.6) {
+      if (
+        Math.hypot(v.car.vx, v.car.vz) > 3 &&
+        Math.hypot(q.x - v.car.x, q.z - v.car.z) < v.r * 0.6
+      ) {
         city.stats.pedestrianHits++;
         q.x += (q.fleeX || 1) * 1.2;
         q.z += (q.fleeZ || 0) * 1.2;

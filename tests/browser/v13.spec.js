@@ -84,6 +84,10 @@ test("player wall sliding costs zero health and remains controllable on keyboard
     s.police = [];
     s.reinforcementsEnabled = false;
     s.barricadesEnabled = false;
+    // V1.9: this fixture is about the building wall only; with the city on
+    // the car would also clip the kerb's parked cars and street props
+    // (covered by tests/v19.test.js and v19-city.spec.js).
+    s.cityEnabled = false;
     s.reset();
     s.start();
     s.police = [];
