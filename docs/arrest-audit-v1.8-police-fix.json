@@ -1,0 +1,1808 @@
+{
+ "summary": {
+  "arrests": 120,
+  "falseArrests": 0
+ },
+ "arrests": [
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 1,
+   "run": 0,
+   "time": 34.83,
+   "player": {
+    "x": -53.45,
+    "z": -75.01
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 1,
+   "run": 0,
+   "time": 34.85,
+   "player": {
+    "x": -53.45,
+    "z": -75.01
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 2,
+   "run": 0,
+   "time": 43.35,
+   "player": {
+    "x": -24.25,
+    "z": 81.47
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 2,
+   "run": 0,
+   "time": 43.37,
+   "player": {
+    "x": -24.25,
+    "z": 81.47
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 3,
+   "run": 0,
+   "time": 55.3,
+   "player": {
+    "x": -20.26,
+    "z": -27.12
+   },
+   "police": 7,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.15
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 3,
+   "run": 0,
+   "time": 55.32,
+   "player": {
+    "x": -20.26,
+    "z": -27.12
+   },
+   "police": 7,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.15
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 4,
+   "run": 0,
+   "time": 50.12,
+   "player": {
+    "x": -45.02,
+    "z": 83.62
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.53
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 4,
+   "run": 0,
+   "time": 50.13,
+   "player": {
+    "x": -45.04,
+    "z": 83.61
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.54
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 5,
+   "run": 0,
+   "time": 38.88,
+   "player": {
+    "x": -20.12,
+    "z": -65.75
+   },
+   "police": 6,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.42
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 5,
+   "run": 0,
+   "time": 38.9,
+   "player": {
+    "x": -20.08,
+    "z": -65.75
+   },
+   "police": 6,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.41
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 6,
+   "run": 0,
+   "time": 41.45,
+   "player": {
+    "x": -41.7,
+    "z": -54.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 6,
+   "run": 0,
+   "time": 41.47,
+   "player": {
+    "x": -41.7,
+    "z": -54.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 7,
+   "run": 0,
+   "time": 54.07,
+   "player": {
+    "x": 55.62,
+    "z": 81.31
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.78
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 7,
+   "run": 0,
+   "time": 54.08,
+   "player": {
+    "x": 55.55,
+    "z": 81.32
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.81
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "run": 0,
+   "time": 16.33,
+   "player": {
+    "x": -83.66,
+    "z": -15.05
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.53
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "run": 0,
+   "time": 16.35,
+   "player": {
+    "x": -83.64,
+    "z": -15.05
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.56
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "run": 1,
+   "time": 17.93,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "run": 1,
+   "time": 17.95,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "run": 2,
+   "time": 17.72,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "run": 2,
+   "time": 17.73,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 9,
+   "run": 0,
+   "time": 17.93,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 9,
+   "run": 0,
+   "time": 17.95,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 9,
+   "run": 1,
+   "time": 17.72,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 9,
+   "run": 1,
+   "time": 17.73,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 10,
+   "run": 0,
+   "time": 17.72,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 10,
+   "run": 0,
+   "time": 17.73,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 10,
+   "run": 1,
+   "time": 26.75,
+   "player": {
+    "x": -14.97,
+    "z": 66.48
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.58
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 10,
+   "run": 1,
+   "time": 26.77,
+   "player": {
+    "x": -14.97,
+    "z": 66.48
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.59
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 11,
+   "run": 0,
+   "time": 26.75,
+   "player": {
+    "x": -14.97,
+    "z": 66.48
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.58
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 11,
+   "run": 0,
+   "time": 26.77,
+   "player": {
+    "x": -14.97,
+    "z": 66.48
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.59
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 12,
+   "run": 0,
+   "time": 52.03,
+   "player": {
+    "x": -45.86,
+    "z": -54.22
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 12,
+   "run": 0,
+   "time": 52.05,
+   "player": {
+    "x": -45.86,
+    "z": -54.22
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 0,
+   "time": 10.95,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 0,
+   "time": 10.97,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 1,
+   "time": 19.92,
+   "player": {
+    "x": -17.3,
+    "z": -24.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.01
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 1,
+   "time": 19.93,
+   "player": {
+    "x": -17.31,
+    "z": -24.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.02
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 2,
+   "time": 10.95,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 2,
+   "time": 10.97,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 2,
+   "run": 0,
+   "time": 19.92,
+   "player": {
+    "x": -17.3,
+    "z": -24.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.01
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 2,
+   "run": 0,
+   "time": 19.93,
+   "player": {
+    "x": -17.31,
+    "z": -24.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.02
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 2,
+   "run": 1,
+   "time": 10.95,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 2,
+   "run": 1,
+   "time": 10.97,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 3,
+   "run": 0,
+   "time": 10.95,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 3,
+   "run": 0,
+   "time": 10.97,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 3,
+   "run": 1,
+   "time": 36.1,
+   "player": {
+    "x": 65.75,
+    "z": -16.13
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 3,
+   "run": 1,
+   "time": 36.12,
+   "player": {
+    "x": 65.75,
+    "z": -16.13
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 4,
+   "run": 0,
+   "time": 36.1,
+   "player": {
+    "x": 65.75,
+    "z": -16.13
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 4,
+   "run": 0,
+   "time": 36.12,
+   "player": {
+    "x": 65.75,
+    "z": -16.13
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 5,
+   "run": 0,
+   "time": 58.42,
+   "player": {
+    "x": -13.28,
+    "z": -54.25
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 5,
+   "run": 0,
+   "time": 58.43,
+   "player": {
+    "x": -13.28,
+    "z": -54.25
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 6,
+   "run": 0,
+   "time": 26.47,
+   "player": {
+    "x": -54.25,
+    "z": 40.56
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 6,
+   "run": 0,
+   "time": 26.48,
+   "player": {
+    "x": -54.25,
+    "z": 40.56
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 7,
+   "run": 0,
+   "time": 57.23,
+   "player": {
+    "x": -105.32,
+    "z": 84.17
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 1.29
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 7,
+   "run": 0,
+   "time": 57.25,
+   "player": {
+    "x": -105.32,
+    "z": 84.17
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 1.29
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 9,
+   "run": 0,
+   "time": 47.08,
+   "player": {
+    "x": -106,
+    "z": 106
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.46
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 9,
+   "run": 0,
+   "time": 47.1,
+   "player": {
+    "x": -106,
+    "z": 106
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.46
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 0,
+   "time": 17.23,
+   "player": {
+    "x": -18.21,
+    "z": -24.25
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.02
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 0,
+   "time": 17.25,
+   "player": {
+    "x": -18.2,
+    "z": -24.25
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.01
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 1,
+   "time": 34.23,
+   "player": {
+    "x": 54.25,
+    "z": 68.64
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 1,
+   "time": 34.25,
+   "player": {
+    "x": 54.25,
+    "z": 68.64
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 11,
+   "run": 0,
+   "time": 34.23,
+   "player": {
+    "x": 54.25,
+    "z": 68.64
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 11,
+   "run": 0,
+   "time": 34.25,
+   "player": {
+    "x": 54.25,
+    "z": 68.64
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 11,
+   "run": 1,
+   "time": 19.88,
+   "player": {
+    "x": -30.35,
+    "z": -27.65
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.99
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 11,
+   "run": 1,
+   "time": 19.9,
+   "player": {
+    "x": -30.35,
+    "z": -27.65
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.99
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 12,
+   "run": 0,
+   "time": 19.88,
+   "player": {
+    "x": -30.35,
+    "z": -27.65
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.99
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 12,
+   "run": 0,
+   "time": 19.9,
+   "player": {
+    "x": -30.35,
+    "z": -27.65
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.99
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 2,
+   "run": 0,
+   "time": 31.77,
+   "player": {
+    "x": -65.75,
+    "z": -41.57
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 2,
+   "run": 0,
+   "time": 31.78,
+   "player": {
+    "x": -65.75,
+    "z": -41.57
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 2,
+   "run": 1,
+   "time": 26.72,
+   "player": {
+    "x": 23.46,
+    "z": 74.99
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 2,
+   "run": 1,
+   "time": 26.73,
+   "player": {
+    "x": 23.46,
+    "z": 74.99
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 3,
+   "run": 0,
+   "time": 26.72,
+   "player": {
+    "x": 23.46,
+    "z": 74.99
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 3,
+   "run": 0,
+   "time": 26.73,
+   "player": {
+    "x": 23.46,
+    "z": 74.99
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 5,
+   "run": 0,
+   "time": 33.28,
+   "player": {
+    "x": -49.99,
+    "z": -57.94
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 4.7
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 5,
+   "run": 0,
+   "time": 33.3,
+   "player": {
+    "x": -49.99,
+    "z": -57.94
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 4.7
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 6,
+   "run": 0,
+   "time": 46.03,
+   "player": {
+    "x": -77.51,
+    "z": -24.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 6,
+   "run": 0,
+   "time": 46.05,
+   "player": {
+    "x": -77.51,
+    "z": -24.25
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "run": 0,
+   "time": 16.33,
+   "player": {
+    "x": -83.66,
+    "z": -15.05
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.53
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "run": 0,
+   "time": 16.35,
+   "player": {
+    "x": -83.64,
+    "z": -15.05
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.56
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "run": 1,
+   "time": 17.93,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "run": 1,
+   "time": 17.95,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "run": 2,
+   "time": 17.63,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "run": 2,
+   "time": 17.65,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 9,
+   "run": 0,
+   "time": 17.93,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 9,
+   "run": 0,
+   "time": 17.95,
+   "player": {
+    "x": 84.25,
+    "z": -13.41
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 9,
+   "run": 1,
+   "time": 17.63,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 9,
+   "run": 1,
+   "time": 17.65,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 10,
+   "run": 0,
+   "time": 17.63,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 10,
+   "run": 0,
+   "time": 17.65,
+   "player": {
+    "x": -15.96,
+    "z": 65.76
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 10,
+   "run": 1,
+   "time": 26.02,
+   "player": {
+    "x": -15.82,
+    "z": 65.79
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.63
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 10,
+   "run": 1,
+   "time": 26.03,
+   "player": {
+    "x": -15.83,
+    "z": 65.78
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.61
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 11,
+   "run": 0,
+   "time": 26.02,
+   "player": {
+    "x": -15.82,
+    "z": 65.79
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.63
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 11,
+   "run": 0,
+   "time": 26.03,
+   "player": {
+    "x": -15.83,
+    "z": 65.78
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.61
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 11,
+   "run": 1,
+   "time": 27.6,
+   "player": {
+    "x": -13.19,
+    "z": 65.75
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.02
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 11,
+   "run": 1,
+   "time": 27.62,
+   "player": {
+    "x": -13.21,
+    "z": 65.75
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.01
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 12,
+   "run": 0,
+   "time": 27.6,
+   "player": {
+    "x": -13.19,
+    "z": 65.75
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.02
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 12,
+   "run": 0,
+   "time": 27.62,
+   "player": {
+    "x": -13.21,
+    "z": 65.75
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.01
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 12,
+   "run": 1,
+   "time": 27.27,
+   "player": {
+    "x": -16.1,
+    "z": 65.75
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.3
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 12,
+   "run": 1,
+   "time": 27.28,
+   "player": {
+    "x": -16.09,
+    "z": 65.75
+   },
+   "police": 2,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.31
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 0,
+   "time": 10.95,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 1,
+   "run": 0,
+   "time": 10.97,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 2,
+   "run": 0,
+   "time": 51.53,
+   "player": {
+    "x": -6.56,
+    "z": -75
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 2,
+   "run": 0,
+   "time": 51.55,
+   "player": {
+    "x": -6.56,
+    "z": -75
+   },
+   "police": 5,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 3,
+   "run": 0,
+   "time": 10.95,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 3,
+   "run": 0,
+   "time": 10.97,
+   "player": {
+    "x": 40.26,
+    "z": -104.9
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.68
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 4,
+   "run": 0,
+   "time": 50.05,
+   "player": {
+    "x": 32.4,
+    "z": -72.17
+   },
+   "police": 6,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.77
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 4,
+   "run": 0,
+   "time": 50.07,
+   "player": {
+    "x": 32.4,
+    "z": -72.17
+   },
+   "police": 6,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 3.77
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 6,
+   "run": 0,
+   "time": 28.3,
+   "player": {
+    "x": -16.94,
+    "z": 65.75
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 6,
+   "run": 0,
+   "time": 28.32,
+   "player": {
+    "x": -16.94,
+    "z": 65.75
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 7,
+   "run": 0,
+   "time": 33.15,
+   "player": {
+    "x": -5.75,
+    "z": 76.4
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 7,
+   "run": 0,
+   "time": 33.17,
+   "player": {
+    "x": -5.75,
+    "z": 76.4
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 8,
+   "run": 0,
+   "time": 40.22,
+   "player": {
+    "x": -75.89,
+    "z": -24.23
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 8,
+   "run": 0,
+   "time": 40.23,
+   "player": {
+    "x": -75.89,
+    "z": -24.23
+   },
+   "police": 4,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 0,
+   "time": 17,
+   "player": {
+    "x": -19.57,
+    "z": -24.25
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.01
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 0,
+   "time": 17.02,
+   "player": {
+    "x": -19.58,
+    "z": -24.25
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0.02
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 1,
+   "time": 18.72,
+   "player": {
+    "x": 65.82,
+    "z": 15.63
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.32
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 10,
+   "run": 1,
+   "time": 18.73,
+   "player": {
+    "x": 65.82,
+    "z": 15.62
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.32
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 11,
+   "run": 0,
+   "time": 18.72,
+   "player": {
+    "x": 65.82,
+    "z": 15.63
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.32
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 11,
+   "run": 0,
+   "time": 18.73,
+   "player": {
+    "x": 65.82,
+    "z": 15.62
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 2.32
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 12,
+   "run": 0,
+   "time": 57.43,
+   "player": {
+    "x": 54.25,
+    "z": -70.55
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 12,
+   "run": 0,
+   "time": 57.45,
+   "player": {
+    "x": 54.25,
+    "z": -70.55
+   },
+   "police": 3,
+   "falseArrest": false,
+   "escapes": [],
+   "bestEscape": 0
+  }
+ ]
+}

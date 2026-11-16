@@ -370,7 +370,11 @@ test.describe("V1.8 police AI fix scenarios", () => {
     const holds = (f) =>
       f.police.filter((c) => c.kind === "roadblock" && c.block === "hold")
         .length;
-    const reached = r.frames.find((f) => f.player.x > plan.x - 3.2);
+    // (The first log line is written before the scenario's start positions
+    // are applied, so only frames after the start count.)
+    const reached = r.frames.find(
+      (f) => f.t > 0.2 && f.player.x > plan.x - 3.2,
+    );
     expect(reached).toBeTruthy();
     expect(holds(reached)).toBeGreaterThanOrEqual(1);
     const stopped = r.frames.find((f) => f.t > reached.t && f.player.speed < 1);

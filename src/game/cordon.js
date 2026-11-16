@@ -557,7 +557,11 @@ export function updateCordon(sim, dt) {
     if (
       !sim.enclosure.trapped &&
       away > CONFIG.cordonReplanDistance &&
-      (p.netSpeed ?? 0) > 1
+      (p.netSpeed ?? 0) > 1 &&
+      // Only a car still scraping along slowly is followed; one driving off
+      // faster than that is getting away (or the cordon would trail it for
+      // ever and never let go).
+      (p.netSpeed ?? 0) <= CONFIG.cordonStartSpeed
     ) {
       const center = aim;
       cordon.x = center.x;
