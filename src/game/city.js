@@ -712,18 +712,38 @@ function updatePedestrians(sim, city, dt) {
     for (const b of boxesNear(city, q.x, q.z)) resolveBuilding(q, b, 0.35);
     q.playerDist = playerDist;
   }
-  // Safety net: count any pedestrian a moving car still overlaps (should
-  // stay 0).
+  // Final dodge, after everyone has moved: anyone a moving car is about to
+  // touch hops clear to the side of its path away from the car (drawn as a
+  // dive). Police cars turning toward the player can curve into someone who
+  // already jumped, so this runs every step, against every moving car.
   for (const q of city.pedestrians)
-    for (const v of cars)
-      if (
-        Math.hypot(v.car.vx, v.car.vz) > 3 &&
-        Math.hypot(q.x - v.car.x, q.z - v.car.z) < v.r * 0.6
-      ) {
-        city.stats.pedestrianHits++;
-        q.x += (q.fleeX || 1) * 1.2;
-        q.z += (q.fleeZ || 0) * 1.2;
+    for (const v of cars) {
+      const c = v.car,
+        speed = Math.hypot(c.vx, c.vz);
+      if (speed <= 3) continue;
+      const dx = q.x - c.x,
+        dz = q.z - c.z;
+      if (Math.hypot(dx, dz) >= v.r + 0.6) continue;
+      const ux = c.vx / speed,
+        uz = c.vz / speed;
+      const along = dx * ux + dz * uz,
+        side = Math.sign(dx * uz - dz * ux) || 1;
+      // Beside the car's path, just clear of its body.
+      q.x = c.x + ux * along + uz * side * (v.r + 0.7);
+      q.z = c.z + uz * along - ux * side * (v.r + 0.7);
+      for (const b of boxesNear(city, q.x, q.z)) resolveBuilding(q, b, 0.35);
+      if (q.state !== "dive") {
+        q.state = "dive";
+        q.timer = 0.45;
+        q.closest = Infinity;
+        city.stats.pedestrianDives++;
       }
+      q.fleeX = uz * side;
+      q.fleeZ = -ux * side;
+      // Only if a wall pins them in the car's way does it count as a hit.
+      if (Math.hypot(q.x - c.x, q.z - c.z) < v.r * 0.6)
+        city.stats.pedestrianHits++;
+    }
 }
 
 // --------------------------------------------------------------- traffic --
