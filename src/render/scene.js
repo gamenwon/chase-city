@@ -10,15 +10,18 @@ import { BuildingOcclusion } from "./occlusion.js";
 import { ExplosionEffects } from "./explosions.js";
 import { BonnetCamera } from "./pip.js";
 import { OfficerRenderer } from "./officers.js";
+import { CityLifeRenderer } from "./city.js";
 const palette = [0xf34b32, 0xffbf22, 0x087cba, 0x13a783, 0xf38617, 0x2364ce];
 export class CityRenderer {
-  constructor(canvas, layout) {
+  constructor(canvas, layout, options = {}) {
+    // V1.9: phones get a lighter start (resolution, shadow map).
+    const mobile = !!options.mobile;
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.7));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor(0x83c8d3);
@@ -30,7 +33,7 @@ export class CityRenderer {
     const sun = new THREE.DirectionalLight(0xffefd6, 3);
     sun.position.set(-45, 90, 35);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
     Object.assign(sun.shadow.camera, {
       left: -90,
       right: 90,
@@ -67,8 +70,8 @@ export class CityRenderer {
       this.box(p.x, 0.39, p.z, 18, 0.2, 18, 0x55ae22);
       this.box(p.x, 0.51, p.z, 2, 0.05, 18, 0xe9cf8a);
       this.box(p.x, 0.52, p.z, 18, 0.05, 2, 0xe9cf8a);
-      for (const dx of [-6, 6])
-        for (const dz of [-6, 6]) this.tree(p.x + dx, p.z + dz);
+      // V1.9: the park trees are big (solid) city props, drawn by
+      // CityLifeRenderer.
       this.box(p.x + 4, 0.75, p.z, 3, 0.5, 0.8, 0xa84b1e);
     }
     this.buildings = [];
@@ -142,12 +145,8 @@ export class CityRenderer {
         },
       });
     }
-    for (let x = -90; x <= 90; x += 30)
-      for (let z = -80; z <= 80; z += 30) {
-        this.tree(x + 8, z);
-        this.box(x - 7, 2.2, z, 0.14, 4.4, 0.14, 0x233c48);
-        this.box(x - 6.4, 4.4, z, 1.4, 0.18, 0.4, 0xffeac3);
-      }
+    // V1.9: street trees, lamps, signs and bins are interactive city props
+    // (src/game/city.js), drawn by CityLifeRenderer.
     this.batchStatic();
     this.player = this.car(0xffcc08, false);
     this.police = Array.from({ length: CONFIG.policeCount }, () =>
@@ -170,6 +169,7 @@ export class CityRenderer {
     this.wreckRenderer = new WreckRenderer(this.scene);
     this.roadEvents = new RoadEventsRenderer(this.scene);
     this.officers = new OfficerRenderer(this.scene);
+    this.cityLife = new CityLifeRenderer(this.scene);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -296,6 +296,9 @@ export class CityRenderer {
       }
     });
     this.officers.update(sim, sim.elapsed);
+    this.cityLife.update(sim.city, sim, this.camera, dt, (k) =>
+      this.cameraRig.kick(k),
+    );
     this.effects.update(sim.events, sim.elapsed);
     if (sim.cameraRig !== this.cameraRig || !running)
       this.cameraRig.update(p, dt);
@@ -412,6 +415,7 @@ export class CityRenderer {
     this.roadEvents.reset();
     this.wreckRenderer.reset();
     this.officers.reset();
+    this.cityLife.reset();
     this.cameraRig.reset();
     this.trails.reset();
     this.resetMetrics();

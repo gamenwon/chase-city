@@ -34,6 +34,7 @@ export class SoundSystem {
     this.voices = new Set();
     this.lastExplosion = 0;
     this.lastImpact = 0;
+    this.lastCity = 0;
     this.cooldowns = {};
     this.lastTargets = null;
   }
@@ -152,24 +153,38 @@ export class SoundSystem {
     // queued in the same frame each get their own voice.
     if (
       kind !== "tone" &&
+      kind !== "horn" &&
       Math.abs(now + delay - (this.cooldowns[kind] ?? -100)) < 0.07
     )
       return;
     if (this.voices.size >= 6) return;
     this.cooldowns[kind] = now + delay;
-    const source =
-      kind === "tone" ? c.createOscillator() : c.createBufferSource();
+    const osc = kind === "tone" || kind === "horn";
+    const source = osc ? c.createOscillator() : c.createBufferSource();
     const gain = c.createGain(),
       filter = c.createBiquadFilter();
     const duration =
-      kind === "explosion" ? 0.85 : kind === "collision" ? 0.2 : 0.19;
+      kind === "explosion"
+        ? 0.85
+        : kind === "collision"
+          ? 0.2
+          : kind === "horn"
+            ? 0.32
+            : 0.19;
     const start = now + delay,
       amplitude =
-        ((kind === "explosion" ? 0.26 : kind === "collision" ? 0.14 : 0.07) *
+        ((kind === "explosion"
+          ? 0.26
+          : kind === "collision"
+            ? 0.14
+            : kind === "horn"
+              ? 0.045
+              : 0.07) *
           clamp(strength, 0.1, 1)) /
         Math.sqrt(1 + this.voices.size);
-    if (kind === "tone") {
-      source.type = "sine";
+    if (osc) {
+      // V1.9 car horn: a short square-wave beep.
+      source.type = kind === "horn" ? "square" : "sine";
       source.frequency.value = frequency;
     } else {
       source.buffer = this.noise;
@@ -238,6 +253,21 @@ export class SoundSystem {
               // Staged chain-reaction links sound when they are shown.
               event.delay || 0,
             );
+        }
+      // V1.9 city: knocked props, crashes and horns nearby.
+      for (const event of sim.city?.events || [])
+        if (event.id > (this.lastCity || 0)) {
+          this.lastCity = event.id;
+          const d = Math.hypot(event.x - sim.player.x, event.z - sim.player.z);
+          if (d > 45) continue;
+          const near = 1 - d / 50;
+          if (event.type === "traffic" && event.action === "honk") {
+            this.voice("horn", near, 392);
+            this.voice("horn", near, 494, 0.02);
+          } else if (event.action === "break" || event.action === "crash")
+            this.voice("collision", near * Math.min(1, event.strength / 15));
+          else if (event.action === "land")
+            this.voice("collision", near * 0.6, 200, 0);
         }
       for (const event of sim.impacts)
         if (event.id > this.lastImpact) {

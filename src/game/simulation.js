@@ -9,6 +9,7 @@ import { updateBarricades } from "./barricades.js";
 import { createMission, updateMission } from "./missions.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
+import { createCity, updateCity, cityBudget } from "./city.js";
 import {
   makePolice,
   steerPolice,
@@ -27,6 +28,10 @@ export class Simulation {
     this.random = options.random || Math.random;
     this.reinforcementsEnabled = options.reinforcements !== false;
     this.barricadesEnabled = options.barricades !== false;
+    // V1.9 city life (props, pedestrians, traffic). On in the real game
+    // (main.js); off by default so older fixed scenarios keep their meaning.
+    this.cityEnabled = options.city === true;
+    this.cityBudget = options.cityBudget || cityBudget(options.cityProfile);
     this.lastExitId = null;
     this.runNumber = 0;
     this.reset();
@@ -36,6 +41,7 @@ export class Simulation {
       ...this.staticSolids,
       ...this.barricades,
       ...this.wrecks.filter((w) => w.solid),
+      ...(this.city?.solids || []),
     ];
     this.navigation.setSolids(this.solids);
     for (const car of this.police) {
@@ -79,6 +85,12 @@ export class Simulation {
     this.barricadeEvents = [];
     this.barricadeWarnings = new Set();
     this.barricadeWarning = null;
+    this.city = this.cityEnabled
+      ? createCity(this.layout, {
+          seed: 9031 + this.runNumber,
+          budget: this.cityBudget,
+        })
+      : null;
     this.solids = [...this.staticSolids];
     this.navigation = new RoadNavigation(this.solids);
     const exit = chooseExit(this.staticSolids, this.random, this.lastExitId);
@@ -170,13 +182,57 @@ export class Simulation {
       this.collisions++;
     }
   }
+  // V1.9 (phones): solids near a point, from a 10 m grid rebuilt whenever
+  // the solids list changes. Same boxes in the same order as scanning the
+  // whole list, so collision results are unchanged; only far boxes that
+  // cannot touch are skipped.
+  nearSolids(x, z, reach) {
+    if (
+      this.solidGridFor !== this.solids ||
+      this.solidGridLength !== this.solids.length
+    ) {
+      this.solidGridFor = this.solids;
+      this.solidGridLength = this.solids.length;
+      this.solidGrid = new Map();
+      this.solids.forEach((b, i) => {
+        for (
+          let gx = Math.floor((b.x - b.w / 2) / 10);
+          gx <= Math.floor((b.x + b.w / 2) / 10);
+          gx++
+        )
+          for (
+            let gz = Math.floor((b.z - b.d / 2) / 10);
+            gz <= Math.floor((b.z + b.d / 2) / 10);
+            gz++
+          ) {
+            const k = gx * 1000 + gz;
+            if (!this.solidGrid.has(k)) this.solidGrid.set(k, []);
+            this.solidGrid.get(k).push(i);
+          }
+      });
+    }
+    const seen = new Set();
+    for (
+      let gx = Math.floor((x - reach) / 10);
+      gx <= Math.floor((x + reach) / 10);
+      gx++
+    )
+      for (
+        let gz = Math.floor((z - reach) / 10);
+        gz <= Math.floor((z + reach) / 10);
+        gz++
+      )
+        for (const i of this.solidGrid.get(gx * 1000 + gz) || []) seen.add(i);
+    return [...seen].sort((a, b) => a - b).map((i) => this.solids[i]);
+  }
   constrain(body, radius, fallback) {
     let hit = false;
+    const near = this.nearSolids(body.x, body.z, radius + 4);
     // Tight alleys can be narrower than a car. Iterate neighboring contacts,
     // then keep the last valid pose instead of pushing through another wall.
     for (let pass = 0; pass < 8; pass++) {
       let contact = false;
-      for (const b of this.solids)
+      for (const b of near)
         if (resolveBuilding(body, b, radius)) {
           contact = true;
           body.lastObstacleKind = b.kind || "wall";
@@ -184,9 +240,7 @@ export class Simulation {
         }
       if (!contact) break;
     }
-    if (
-      this.solids.some((b) => resolveBuilding({ ...body }, b, radius - 1e-6))
-    ) {
+    if (near.some((b) => resolveBuilding({ ...body }, b, radius - 1e-6))) {
       body.x = fallback.x;
       body.z = fallback.z;
       hit = true;
@@ -591,6 +645,9 @@ export class Simulation {
           );
       }
     }
+    // V1.9: street props, pedestrians and traffic react to where the cars
+    // ended up this step (props/traffic can still nudge them).
+    if (this.city) updateCity(this, dt);
     for (const c of this.police)
       if (c.state === "active" && c.health <= 0) this.explodePolice(c);
     const groundSpeed =

@@ -192,8 +192,7 @@ export class WreckRenderer {
       // A fresh wreck burns hardest, then settles into a steady fire that
       // never goes out before RESTART.
       const flare = flareBoost(w, sim.elapsed);
-      const fury =
-        1 + 0.6 * Math.exp(-Math.max(0, age - 0.9) / 4) + flare;
+      const fury = 1 + 0.6 * Math.exp(-Math.max(0, age - 0.9) / 4) + flare;
       slot.glow.scale.setScalar(2.4 + Math.sin(age * 9) * 0.25 + fury * 0.4);
       slot.flames.forEach((m, i) => {
         const t = age * 5.5 + i * 1.7;

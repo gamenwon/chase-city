@@ -431,9 +431,9 @@ export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
   // car): close to it, park where it is, still turned across; further out,
   // look for another way round.
   if (c.blockState !== "hold") {
-    // Progress means really closing in (0.5 m), not creeping a few
-    // centimetres at a time behind another car.
-    if (d < (c.blockBest ?? Infinity) - 0.5) {
+    // Progress means really closing in (1 m per stall window), not
+    // creeping along behind another car.
+    if (d < (c.blockBest ?? Infinity) - 1) {
       c.blockBest = d;
       c.blockStall = 0;
     } else c.blockStall = (c.blockStall || 0) + dt;

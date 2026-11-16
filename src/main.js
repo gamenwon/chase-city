@@ -6,8 +6,18 @@ import { Simulation } from "./game/simulation.js";
 import { Input } from "./game/input.js";
 import { CityRenderer } from "./render/scene.js";
 import { Interface } from "./ui/interface.js";
+import { cityBudget } from "./game/city.js";
+// V1.9: phones are the main platform. A touch screen or a small screen gets
+// the mobile budget (fewer pedestrians/cars, lighter rendering).
+const mobile =
+  matchMedia("(pointer: coarse)").matches ||
+  Math.min(innerWidth, innerHeight) < 600;
+const profile = mobile ? "mobile" : "desktop";
 const ui = new Interface(),
-  sim = new Simulation(createLayout());
+  sim = new Simulation(createLayout(), {
+    city: true,
+    cityProfile: profile,
+  });
 let renderer,
   state = "ready";
 function pause() {
@@ -25,7 +35,9 @@ function pause() {
 }
 const input = new Input(pause);
 try {
-  renderer = new CityRenderer(document.querySelector("#game"), sim.layout);
+  renderer = new CityRenderer(document.querySelector("#game"), sim.layout, {
+    mobile,
+  });
   sim.cameraRig = renderer.cameraRig;
   sim.cameraRig.update(sim.player, 0);
 } catch (error) {
@@ -96,9 +108,49 @@ window.addEventListener("blur", () => {
 });
 let last = 0,
   accumulator = 0;
+// V1.9 frame-rate governor: aim for 30+ FPS. If frames run slow for a while
+// the city budget (pedestrians, traffic, parked cars) is cut and, on phones,
+// the render resolution drops a step; when there is headroom again it is
+// slowly given back. Gameplay (police, physics) is never changed.
+const perf = {
+  profile,
+  level: 1,
+  frameMs: 16.7,
+  slowFor: 0,
+  fastFor: 0,
+  pixelRatio: renderer ? renderer.renderer.getPixelRatio() : 1,
+  changes: [],
+};
+function govern(dtMs) {
+  perf.frameMs += (Math.min(dtMs, 100) - perf.frameMs) * 0.1;
+  perf.slowFor = perf.frameMs > 33.4 ? perf.slowFor + dtMs / 1000 : 0;
+  perf.fastFor = perf.frameMs < 22 ? perf.fastFor + dtMs / 1000 : 0;
+  let level = perf.level;
+  if (perf.slowFor > 1.5 && level > 0.4) level = Math.max(0.4, level - 0.2);
+  else if (perf.fastFor > 6 && level < 1) level = Math.min(1, level + 0.1);
+  else return;
+  perf.slowFor = perf.fastFor = 0;
+  perf.level = level;
+  sim.cityBudget = cityBudget(profile, level);
+  if (sim.city) sim.city.budget = sim.cityBudget;
+  if (renderer && mobile) {
+    const ratio = Math.min(devicePixelRatio, level < 0.7 ? 1 : 1.5);
+    if (ratio !== perf.pixelRatio) {
+      perf.pixelRatio = ratio;
+      renderer.renderer.setPixelRatio(ratio);
+      renderer.resize();
+    }
+  }
+  perf.changes.push({
+    at: Math.round(performance.now()),
+    level,
+    fps: Math.round(1000 / perf.frameMs),
+  });
+}
 function frame(ms) {
   requestAnimationFrame(frame);
   const dt = Math.min((ms - last) / 1000, 0.1);
+  if (state === "running" && last) govern(ms - last);
   last = ms;
   if (state === "running") {
     accumulator += dt;
@@ -145,6 +197,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("debug"))
     input,
     renderer,
     audio,
+    perf,
     get state() {
       return state;
     },
