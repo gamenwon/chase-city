@@ -263,6 +263,13 @@ export class Simulation {
       event.chainRoot = root;
       this.events.push(event);
       if (this.events.length > 64) this.events.shift();
+      // Existing wrecks caught in the blast flare up again on screen.
+      for (const w of this.wrecks)
+        if (
+          w.born < this.elapsed + delay &&
+          Math.hypot(w.x - c.x, w.z - c.z) < CONFIG.explosionRadius
+        )
+          w.flaredAt = this.elapsed + delay;
       const energy = Math.pow(CONFIG.chainFalloff, depth);
       for (const other of this.police) {
         if (other === c || other.state !== "active") continue;

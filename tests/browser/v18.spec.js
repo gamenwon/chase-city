@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 // V1.8 native chase on the real requestAnimationFrame loop. Only legal
-// left/right steering from stageDriver(5, "evasive") is used: no simulation
+// left/right steering from stageDriver(12, "evasive") is used: no simulation
 // stepping, no police/health placement and no forced explosions.
 test("V1.8 native chase: side/front pressure, staged multi-explosions, persistent wrecks and debris", async ({
   page,
@@ -16,12 +16,14 @@ test("V1.8 native chase: side/front pressure, staged multi-explosions, persisten
     const { sim: s, input, renderer: r } = window.__CHASE__;
     // V1.8: the same seeded road-control RNG as scripts/measure-v18.js, so
     // this native-frame run is repeatable (Math.random made it a coin flip
-    // under V1.8's stronger pressure). Route 5 survives 60 s on PC/phone.
+    // under V1.8's stronger pressure). Route 12 survives 60 s on PC and
+    // phone in the real browser (checked there: Node's V8 differs in the last
+    // float bits, so a Node replay is not an exact predictor).
     s.random = random(40003);
     s.lastExitId = null;
     s.reset();
     r.reset();
-    const drive = stageDriver(5, "evasive");
+    const drive = stageDriver(12, "evasive");
     let tick = -1,
       controls = {};
     for (const key of ["left", "right"])
@@ -165,7 +167,7 @@ test("V1.8 native chase: side/front pressure, staged multi-explosions, persisten
     );
     return {
       method:
-        "Normal START; native RAF; legal stageDriver(5,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
+        "Normal START; native RAF; legal stageDriver(12,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
       viewport: { width: innerWidth, height: innerHeight },
       elapsed: s.elapsed,
       result: s.result,

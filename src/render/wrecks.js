@@ -10,6 +10,13 @@ export const WRECK_ROLL = 0.18;
 export const WRECK_LIFT = 1.75;
 export const FLAME_COUNT = 5;
 export const SMOKE_COUNT = 6;
+export const EMBER_COUNT = 4;
+
+// Extra fire intensity when a nearby explosion re-ignites a wreck.
+export function flareBoost(wreck, elapsed) {
+  if (wreck.flaredAt === undefined || elapsed < wreck.flaredAt) return 0;
+  return 1.2 * Math.exp(-(elapsed - wreck.flaredAt) / 1.5);
+}
 
 // Crash animation pose for a police car t seconds after its explosion. At
 // t >= CONFIG.wreckSeconds it equals the persistent wreck pose.
@@ -33,7 +40,7 @@ export class WreckRenderer {
       new THREE.MeshStandardMaterial({ color, roughness: 1 });
     // Shared by every wreck: 0 charred paint, 1 black, 2 orange flame,
     // 3 yellow flame, 4 dark smoke, 5 grey smoke, 6 dim red lamp,
-    // 7 dim blue lamp, 8 scorch decal, 9 ember glow.
+    // 7 dim blue lamp, 8 scorch decal, 9 ember glow, 10 sparks.
     this.materials = [
       standard(0x8a877f),
       standard(0x0b0d0e),
@@ -59,6 +66,13 @@ export class WreckRenderer {
         blending: THREE.AdditiveBlending,
         polygonOffset: true,
         polygonOffsetFactor: -3,
+      }),
+      new THREE.MeshBasicMaterial({
+        color: 0xffc23a,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
       }),
     ];
     this.createSlot = () => {
@@ -115,7 +129,12 @@ export class WreckRenderer {
         group.add(m);
         return m;
       });
-      return { group, body, glow, flames, smoke, id: null };
+      const embers = Array.from({ length: EMBER_COUNT }, () => {
+        const m = new THREE.Mesh(this.puff, this.materials[10]);
+        group.add(m);
+        return m;
+      });
+      return { group, body, glow, flames, smoke, embers, id: null };
     };
     this.pool = Array.from(
       { length: CONFIG.initialWreckSlots },
@@ -172,7 +191,9 @@ export class WreckRenderer {
       const age = sim.elapsed - w.born;
       // A fresh wreck burns hardest, then settles into a steady fire that
       // never goes out before RESTART.
-      const fury = 1 + 0.6 * Math.exp(-Math.max(0, age - 0.9) / 4);
+      const flare = flareBoost(w, sim.elapsed);
+      const fury =
+        1 + 0.6 * Math.exp(-Math.max(0, age - 0.9) / 4) + flare;
       slot.glow.scale.setScalar(2.4 + Math.sin(age * 9) * 0.25 + fury * 0.4);
       slot.flames.forEach((m, i) => {
         const t = age * 5.5 + i * 1.7;
@@ -194,7 +215,19 @@ export class WreckRenderer {
           2.4 + t * 8,
           Math.cos(i * 2.4) * t * 1.4,
         );
-        m.scale.setScalar((0.35 + t * 1.3) * Math.sin(Math.PI * t));
+        m.scale.setScalar(
+          (0.35 + t * 1.3) * Math.sin(Math.PI * t) * (1 + flare * 0.4),
+        );
+      });
+      // Sparks shoot up out of the fire and drift with the smoke.
+      slot.embers.forEach((m, i) => {
+        const t = (age * (0.9 + i * 0.17) + i / EMBER_COUNT) % 1;
+        m.position.set(
+          Math.sin(i * 1.9 + age) * (0.4 + t * 1.2),
+          2 + t * (4 + flare * 3),
+          Math.cos(i * 1.9 + age) * (0.4 + t),
+        );
+        m.scale.setScalar(0.11 * (1 - t) * (1 + flare));
       });
     }
   }

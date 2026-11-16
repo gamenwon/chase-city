@@ -55,16 +55,21 @@ export function steerPolice(
   // (half of the blockers via a parallel street, see `ambush`).
   const forward = { x: -Math.sin(player.angle), z: -Math.cos(player.angle) },
     side = { x: Math.cos(player.angle), z: -Math.sin(player.angle) },
-    along = (c.x - player.x) * forward.x + (c.z - player.z) * forward.z,
-    lateral = (c.x - player.x) * side.x + (c.z - player.z) * side.z;
+    along = (c.x - player.x) * forward.x + (c.z - player.z) * forward.z;
   // A slow/pinned player (or an officer already on top of it) gets the plain
   // converge behaviour so the 3-second cordon can form; the positioning roles
   // only make sense against a car that is actually driving away.
   const playerMoving = (player.fleeSpeed ?? player.netSpeed ?? 24) > 13;
+  // Side by side is where a flanker is meant to be, so being close only turns
+  // an officer into a plain pursuer when it is behind or in front.
+  const alongside = Math.abs(along) < 6;
+  // With four or more cars the 2nd and 3rd ride on opposite sides, so with
+  // the rear pursuer and the front blockers the player is boxed in.
+  const flankers = ranked.length >= 4 ? 2 : 1;
   c.role =
-    rank === 0 || !playerMoving || close < 9
+    rank === 0 || !playerMoving || (close < 9 && !alongside)
       ? "pursuit"
-      : rank === 1
+      : rank <= flankers
         ? "flank"
         : elapsed >= CONFIG.frontBlockStart
           ? "front"
@@ -100,14 +105,28 @@ export function steerPolice(
     : { x: clamp(player.x, -95, 95), z: clamp(player.z, -95, 95) };
   let chaseTarget = player;
   if (c.role === "flank") {
-    // Ride alongside on the side the car already occupies and squeeze in.
-    const sign =
-      Math.abs(lateral) > 0.8 ? Math.sign(lateral) : c.id % 2 ? 1 : -1;
-    const offset = along > -10 && close < 16 ? 2.6 : 3.4;
-    chaseTarget = {
-      x: prediction.x + side.x * sign * offset,
-      z: prediction.z + side.z * sign * offset,
+    // Ride alongside and squeeze in. The first flanker keeps the side it is
+    // already on; the second takes the opposite side.
+    const sideOf = (car) => {
+      const l = (car.x - player.x) * side.x + (car.z - player.z) * side.z;
+      return Math.abs(l) > 0.8 ? Math.sign(l) : car.id % 2 ? 1 : -1;
     };
+    const sign = rank === 2 && ranked[1] ? -sideOf(ranked[1]) : sideOf(c);
+    const offset = along > -10 && close < 16 ? 3 : 3.4;
+    const at = (k) => ({
+      x: prediction.x + side.x * k,
+      z: prediction.z + side.z * k,
+    });
+    // Near corners or kerbs the preferred slot may not be reachable in a
+    // straight line: try a tighter slot, then the other side, before giving
+    // up and following the road route behind the player.
+    chaseTarget = at(sign * offset);
+    if (close < 22)
+      for (const k of [sign * offset, sign * 1.9, -sign * offset, -sign * 1.9])
+        if (navigation.clear(c, at(k))) {
+          chaseTarget = at(k);
+          break;
+        }
   } else if (c.role === "front") {
     const spread = ((index % 3) - 1) * 1.4;
     // Once ahead of the player, turn into a head-on block instead of
@@ -334,8 +353,15 @@ export function steerPolice(
     );
   // Tailgate rather than grind: right behind the player the rear pursuer
   // matches its pace instead of ramming it every second.
-  if (!surrounding && close < 5 && along < 0)
-    speed = Math.min(speed, (player.groundSpeed ?? player.speed ?? 24) + 2.5);
+  const playerPace = player.groundSpeed ?? player.speed ?? 24;
+  if (!surrounding && c.role !== "flank" && close < 5 && along < 0)
+    speed = Math.min(speed, playerPace + 2.5);
+  // A flanker closes the gap from behind faster than the player drives, then
+  // holds station beside it instead of falling back behind.
+  if (!surrounding && c.role === "flank" && close < 18) {
+    if (along < -2.5) speed = Math.max(speed, playerPace + 5);
+    else speed = clamp(playerPace - along * 1.5, 0, playerPace + 5);
+  }
   const grip = 1 - Math.exp(-dt * 7);
   c.vx += ((dx / (d || 1)) * speed - c.vx) * grip;
   c.vz += ((dz / (d || 1)) * speed - c.vz) * grip;

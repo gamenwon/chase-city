@@ -1,67 +1,67 @@
 {
- "method": "Normal START, native requestAnimationFrame loop, legal stageDriver(5,evasive) steering only, seeded road-control RNG random(40003). Phone = iPhone 13 viewport/touch emulation on Chromium (WebKit not installed in this environment).",
+ "method": "V1.8 round 2. Normal START, native requestAnimationFrame loop, legal stageDriver(12,evasive) steering only, seeded road-control RNG random(40003). Phone = iPhone 13 viewport/touch emulation on Chromium (WebKit not installed in this environment).",
  "desktop": {
   "summary": {
-   "elapsed": 60.05,
+   "elapsed": 60.07,
    "viewport": {
     "width": 1100,
     "height": 740
    },
-   "frontPct": 31.6,
-   "sidePct": 6.6,
-   "frontVisibleSamples": 50,
-   "explosions": 20,
+   "frontPct": 40.9,
+   "sidePct": 20.6,
+   "frontVisibleSamples": 66,
+   "explosions": 18,
    "visibleExplosions": 18,
    "visibleMultiMoments": 7,
-   "chainLinks": 8,
-   "maxShake": 0.51,
-   "wrecks": 20,
-   "debris": 360,
+   "chainLinks": 10,
+   "maxShake": 0.73,
+   "wrecks": 18,
+   "debris": 270,
    "checkpoints": [
     {
      "stage": "front",
-     "time": 7.65,
+     "time": 6.92,
      "wrecks": 0,
      "debris": 0
     },
     {
      "stage": "multi",
-     "time": 16.35,
+     "time": 12.7,
      "wrecks": 2,
      "debris": 0
     },
     {
      "stage": "sixty",
-     "time": 60.05,
-     "wrecks": 20,
-     "debris": 360
+     "time": 60.07,
+     "wrecks": 18,
+     "debris": 270
     }
    ]
   },
   "record": {
-   "method": "Normal START; native RAF; legal stageDriver(5,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
+   "method": "Normal START; native RAF; legal stageDriver(12,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
    "viewport": {
     "width": 1100,
     "height": 740
    },
-   "elapsed": 60.04999999999787,
+   "elapsed": 60.06666666666454,
    "result": null,
    "stats": {
-    "explosions": 20,
-    "chainExplosions": 6,
+    "explosions": 18,
+    "chainExplosions": 7,
     "wallCollisions": 0,
-    "pairCollisions": 30,
+    "pairCollisions": 28,
     "wallDamage": 0,
-    "pairDamage": 2052.0810477075574,
+    "pairDamage": 1827.2530035170998,
     "barricadeCollisions": 0,
     "barricadeDamage": 0,
-    "boostSeconds": 11.683333333333493,
-    "spawnDeferrals": 29
+    "boostSeconds": 18.716666666666885,
+    "spawnDeferrals": 30
    },
-   "wrecks": 20,
-   "wrecksInView": 0,
-   "wrecksDrawn": 0,
-   "debris": 360,
+   "wrecks": 18,
+   "wrecksInView": 3,
+   "wrecksDrawn": 3,
+   "debris": 270,
    "explosions": [
     {
      "id": 1,
@@ -87,16 +87,16 @@
     {
      "id": 4,
      "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 4
+     "delay": 0.22,
+     "depth": 1,
+     "root": 3
     },
     {
      "id": 5,
      "cause": "vehicle",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 4
+     "delay": 0,
+     "depth": 0,
+     "root": 5
     },
     {
      "id": 6,
@@ -107,17 +107,17 @@
     },
     {
      "id": 7,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 7
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 6
     },
     {
      "id": 8,
      "cause": "blast",
      "delay": 0.22,
      "depth": 1,
-     "root": 7
+     "root": 6
     },
     {
      "id": 9,
@@ -135,38 +135,38 @@
     },
     {
      "id": 11,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 11
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 9
     },
     {
      "id": 12,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 11
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 12
     },
     {
      "id": 13,
      "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 13
+     "delay": 0.22,
+     "depth": 1,
+     "root": 12
     },
     {
      "id": 14,
      "cause": "vehicle",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 13
+     "delay": 0,
+     "depth": 0,
+     "root": 14
     },
     {
      "id": 15,
      "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 15
+     "delay": 0.22,
+     "depth": 1,
+     "root": 14
     },
     {
      "id": 16,
@@ -177,193 +177,165 @@
     },
     {
      "id": 17,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 17
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 16
     },
     {
      "id": 18,
      "cause": "blast",
      "delay": 0.22,
      "depth": 1,
-     "root": 17
-    },
-    {
-     "id": 19,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 19
-    },
-    {
-     "id": 20,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 19
+     "root": 16
     }
    ],
    "screen": {
-    "sampledSeconds": 59.97980000000005,
-    "policeVisibleSeconds": 56.19690000000001,
+    "sampledSeconds": 59.981100000000076,
+    "policeVisibleSeconds": 57.54790000000007,
     "visibleExplosions": 18,
-    "explosions": 20,
-    "nearestDistanceTime": 730.3881378561714,
-    "chaseSeconds": 56.4135
+    "explosions": 18,
+    "nearestDistanceTime": 621.2943860458159,
+    "chaseSeconds": 57.86450000000007
    },
    "samples": 301,
-   "front": 95,
-   "side": 20,
-   "frontVisible": 50,
+   "front": 123,
+   "side": 62,
+   "frontVisible": 66,
    "shown": [
     {
      "id": 1,
      "root": 1,
      "depth": 0,
-     "shown": 16.033333333333704,
+     "shown": 12.43333333333353,
      "visible": true
     },
     {
      "id": 2,
      "root": 1,
      "depth": 1,
-     "shown": 16.253333333333703,
+     "shown": 12.653333333333531,
      "visible": true
     },
     {
      "id": 3,
      "root": 3,
      "depth": 0,
-     "shown": 23.899999999999924,
+     "shown": 14.10000000000028,
      "visible": true
     },
     {
      "id": 4,
-     "root": 4,
-     "depth": 0,
-     "shown": 28.249999999999677,
+     "root": 3,
+     "depth": 1,
+     "shown": 14.320000000000281,
      "visible": true
     },
     {
      "id": 5,
-     "root": 4,
-     "depth": 1,
-     "shown": 28.469999999999676,
+     "root": 5,
+     "depth": 0,
+     "shown": 25.81666666666648,
      "visible": true
     },
     {
      "id": 6,
      "root": 6,
      "depth": 0,
-     "shown": 32.41666666666611,
+     "shown": 27.466666666666388,
      "visible": true
     },
     {
      "id": 7,
-     "root": 7,
-     "depth": 0,
-     "shown": 34.39999999999933,
+     "root": 6,
+     "depth": 1,
+     "shown": 27.686666666666387,
      "visible": true
     },
     {
      "id": 8,
-     "root": 7,
+     "root": 6,
      "depth": 1,
-     "shown": 34.61999999999933,
+     "shown": 27.686666666666387,
      "visible": true
     },
     {
      "id": 9,
      "root": 9,
      "depth": 0,
-     "shown": 40.74999999999897,
+     "shown": 40.21666666666567,
      "visible": true
     },
     {
      "id": 10,
      "root": 9,
      "depth": 1,
-     "shown": 40.96999999999897,
+     "shown": 40.436666666665666,
      "visible": true
     },
     {
      "id": 11,
-     "root": 11,
-     "depth": 0,
-     "shown": 46.46666666666531,
+     "root": 9,
+     "depth": 2,
+     "shown": 40.656666666665664,
      "visible": true
     },
     {
      "id": 12,
-     "root": 11,
-     "depth": 1,
-     "shown": 46.68666666666531,
+     "root": 12,
+     "depth": 0,
+     "shown": 43.14999999999883,
      "visible": true
     },
     {
      "id": 13,
-     "root": 13,
-     "depth": 0,
-     "shown": 48.56666666666519,
+     "root": 12,
+     "depth": 1,
+     "shown": 43.36999999999883,
      "visible": true
     },
     {
      "id": 14,
-     "root": 13,
-     "depth": 1,
-     "shown": 48.78666666666519,
+     "root": 14,
+     "depth": 0,
+     "shown": 44.549999999998754,
      "visible": true
     },
     {
      "id": 15,
-     "root": 15,
-     "depth": 0,
-     "shown": 49.766666666665124,
+     "root": 14,
+     "depth": 1,
+     "shown": 44.76999999999875,
      "visible": true
     },
     {
      "id": 16,
      "root": 16,
      "depth": 0,
-     "shown": 52.08333333333166,
+     "shown": 57.29999999999803,
      "visible": true
     },
     {
      "id": 17,
-     "root": 17,
-     "depth": 0,
-     "shown": 53.48333333333158,
-     "visible": false
+     "root": 16,
+     "depth": 1,
+     "shown": 57.51999999999803,
+     "visible": true
     },
     {
      "id": 18,
-     "root": 17,
+     "root": 16,
      "depth": 1,
-     "shown": 53.70333333333158,
-     "visible": false
-    },
-    {
-     "id": 19,
-     "root": 19,
-     "depth": 0,
-     "shown": 55.69999999999812,
-     "visible": true
-    },
-    {
-     "id": 20,
-     "root": 19,
-     "depth": 1,
-     "shown": 55.91999999999812,
+     "shown": 57.51999999999803,
      "visible": true
     }
    ],
-   "maxShake": 0.5083265596446824,
+   "maxShake": 0.7294864091980506,
    "last": 300,
    "checkpoints": [
     {
      "stage": "front",
-     "time": 7.649999999999978,
+     "time": 6.916666666666647,
      "explosions": 0,
      "wreckIds": [],
      "renderedWrecks": 0,
@@ -371,7 +343,7 @@
     },
     {
      "stage": "multi",
-     "time": 16.350000000000353,
+     "time": 12.70000000000021,
      "explosions": 2,
      "wreckIds": [
       1,
@@ -382,8 +354,544 @@
     },
     {
      "stage": "sixty",
-     "time": 60.04999999999787,
-     "explosions": 20,
+     "time": 60.06666666666454,
+     "explosions": 18,
+     "wreckIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+     ],
+     "renderedWrecks": 3,
+     "debris": 270
+    }
+   ]
+  }
+ },
+ "phone": {
+  "summary": {
+   "elapsed": 60.03,
+   "viewport": {
+    "width": 390,
+    "height": 664
+   },
+   "frontPct": 24.6,
+   "sidePct": 19.9,
+   "frontVisibleSamples": 20,
+   "explosions": 29,
+   "visibleExplosions": 27,
+   "visibleMultiMoments": 8,
+   "chainLinks": 19,
+   "maxShake": 0.85,
+   "wrecks": 29,
+   "debris": 450,
+   "checkpoints": [
+    {
+     "stage": "front",
+     "time": 6.88,
+     "wrecks": 0,
+     "debris": 0
+    },
+    {
+     "stage": "multi",
+     "time": 12.68,
+     "wrecks": 2,
+     "debris": 0
+    },
+    {
+     "stage": "sixty",
+     "time": 60.03,
+     "wrecks": 29,
+     "debris": 450
+    }
+   ]
+  },
+  "record": {
+   "method": "Normal START; native RAF; legal stageDriver(12,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
+   "viewport": {
+    "width": 390,
+    "height": 664
+   },
+   "elapsed": 60.03333333333121,
+   "result": null,
+   "stats": {
+    "explosions": 29,
+    "chainExplosions": 14,
+    "wallCollisions": 0,
+    "pairCollisions": 39,
+    "wallDamage": 0,
+    "pairDamage": 2672.5587422832145,
+    "barricadeCollisions": 0,
+    "barricadeDamage": 0,
+    "boostSeconds": 16.83333333333366,
+    "spawnDeferrals": 0
+   },
+   "wrecks": 29,
+   "wrecksInView": 0,
+   "wrecksDrawn": 0,
+   "debris": 450,
+   "explosions": [
+    {
+     "id": 1,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 1
+    },
+    {
+     "id": 2,
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 1
+    },
+    {
+     "id": 3,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 3
+    },
+    {
+     "id": 4,
+     "cause": "vehicle",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 3
+    },
+    {
+     "id": 5,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 5
+    },
+    {
+     "id": 6,
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 5
+    },
+    {
+     "id": 7,
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 5
+    },
+    {
+     "id": 8,
+     "cause": "blast",
+     "delay": 0.66,
+     "depth": 3,
+     "root": 5
+    },
+    {
+     "id": 9,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 9
+    },
+    {
+     "id": 10,
+     "cause": "vehicle",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 9
+    },
+    {
+     "id": 11,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 11
+    },
+    {
+     "id": 12,
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 11
+    },
+    {
+     "id": 13,
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 11
+    },
+    {
+     "id": 14,
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 11
+    },
+    {
+     "id": 15,
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 11
+    },
+    {
+     "id": 16,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 16
+    },
+    {
+     "id": 17,
+     "cause": "blast",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 16
+    },
+    {
+     "id": 18,
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 16
+    },
+    {
+     "id": 19,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 19
+    },
+    {
+     "id": 20,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 20
+    },
+    {
+     "id": 21,
+     "cause": "vehicle",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 20
+    },
+    {
+     "id": 22,
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 20
+    },
+    {
+     "id": 23,
+     "cause": "blast",
+     "delay": 0.66,
+     "depth": 3,
+     "root": 20
+    },
+    {
+     "id": 24,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 24
+    },
+    {
+     "id": 25,
+     "cause": "vehicle",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 24
+    },
+    {
+     "id": 26,
+     "cause": "vehicle",
+     "delay": 0,
+     "depth": 0,
+     "root": 26
+    },
+    {
+     "id": 27,
+     "cause": "vehicle",
+     "delay": 0.22,
+     "depth": 1,
+     "root": 26
+    },
+    {
+     "id": 28,
+     "cause": "blast",
+     "delay": 0.44,
+     "depth": 2,
+     "root": 26
+    },
+    {
+     "id": 29,
+     "cause": "blast",
+     "delay": 0.66,
+     "depth": 3,
+     "root": 26
+    }
+   ],
+   "screen": {
+    "sampledSeconds": 60.0473,
+    "policeVisibleSeconds": 49.63150000000002,
+    "visibleExplosions": 27,
+    "explosions": 29,
+    "nearestDistanceTime": 884.3485036363122,
+    "chaseSeconds": 55.264400000000016
+   },
+   "samples": 301,
+   "front": 74,
+   "side": 60,
+   "frontVisible": 20,
+   "shown": [
+    {
+     "id": 1,
+     "root": 1,
+     "depth": 0,
+     "shown": 12.43333333333353,
+     "visible": true
+    },
+    {
+     "id": 2,
+     "root": 1,
+     "depth": 1,
+     "shown": 12.653333333333531,
+     "visible": true
+    },
+    {
+     "id": 3,
+     "root": 3,
+     "depth": 0,
+     "shown": 14.10000000000028,
+     "visible": true
+    },
+    {
+     "id": 4,
+     "root": 3,
+     "depth": 1,
+     "shown": 14.320000000000281,
+     "visible": true
+    },
+    {
+     "id": 5,
+     "root": 5,
+     "depth": 0,
+     "shown": 24.18333333333324,
+     "visible": true
+    },
+    {
+     "id": 6,
+     "root": 5,
+     "depth": 1,
+     "shown": 24.40333333333324,
+     "visible": true
+    },
+    {
+     "id": 7,
+     "root": 5,
+     "depth": 2,
+     "shown": 24.623333333333242,
+     "visible": true
+    },
+    {
+     "id": 8,
+     "root": 5,
+     "depth": 3,
+     "shown": 24.84333333333324,
+     "visible": true
+    },
+    {
+     "id": 9,
+     "root": 9,
+     "depth": 0,
+     "shown": 26.466666666666445,
+     "visible": true
+    },
+    {
+     "id": 10,
+     "root": 9,
+     "depth": 1,
+     "shown": 26.686666666666444,
+     "visible": true
+    },
+    {
+     "id": 11,
+     "root": 11,
+     "depth": 0,
+     "shown": 33.06666666666607,
+     "visible": true
+    },
+    {
+     "id": 12,
+     "root": 11,
+     "depth": 1,
+     "shown": 33.28666666666607,
+     "visible": true
+    },
+    {
+     "id": 13,
+     "root": 11,
+     "depth": 1,
+     "shown": 33.28666666666607,
+     "visible": true
+    },
+    {
+     "id": 14,
+     "root": 11,
+     "depth": 2,
+     "shown": 33.50666666666607,
+     "visible": true
+    },
+    {
+     "id": 15,
+     "root": 11,
+     "depth": 2,
+     "shown": 33.50666666666607,
+     "visible": true
+    },
+    {
+     "id": 16,
+     "root": 16,
+     "depth": 0,
+     "shown": 39.64999999999903,
+     "visible": true
+    },
+    {
+     "id": 17,
+     "root": 16,
+     "depth": 1,
+     "shown": 39.86999999999903,
+     "visible": true
+    },
+    {
+     "id": 18,
+     "root": 16,
+     "depth": 2,
+     "shown": 40.08999999999903,
+     "visible": true
+    },
+    {
+     "id": 19,
+     "root": 19,
+     "depth": 0,
+     "shown": 46.533333333331974,
+     "visible": true
+    },
+    {
+     "id": 20,
+     "root": 20,
+     "depth": 0,
+     "shown": 46.63333333333197,
+     "visible": true
+    },
+    {
+     "id": 21,
+     "root": 20,
+     "depth": 1,
+     "shown": 46.85333333333197,
+     "visible": true
+    },
+    {
+     "id": 22,
+     "root": 20,
+     "depth": 2,
+     "shown": 47.073333333331966,
+     "visible": true
+    },
+    {
+     "id": 23,
+     "root": 20,
+     "depth": 3,
+     "shown": 47.293333333331965,
+     "visible": true
+    },
+    {
+     "id": 24,
+     "root": 24,
+     "depth": 0,
+     "shown": 49.54999999999847,
+     "visible": false
+    },
+    {
+     "id": 25,
+     "root": 24,
+     "depth": 1,
+     "shown": 49.76999999999847,
+     "visible": false
+    },
+    {
+     "id": 26,
+     "root": 26,
+     "depth": 0,
+     "shown": 57.64999999999801,
+     "visible": true
+    },
+    {
+     "id": 27,
+     "root": 26,
+     "depth": 1,
+     "shown": 57.86999999999801,
+     "visible": true
+    },
+    {
+     "id": 28,
+     "root": 26,
+     "depth": 2,
+     "shown": 58.08999999999801,
+     "visible": true
+    },
+    {
+     "id": 29,
+     "root": 26,
+     "depth": 3,
+     "shown": 58.309999999998006,
+     "visible": true
+    }
+   ],
+   "maxShake": 0.8487019150658418,
+   "last": 300,
+   "checkpoints": [
+    {
+     "stage": "front",
+     "time": 6.883333333333314,
+     "explosions": 0,
+     "wreckIds": [],
+     "renderedWrecks": 0,
+     "debris": 0
+    },
+    {
+     "stage": "multi",
+     "time": 12.683333333333543,
+     "explosions": 2,
+     "wreckIds": [
+      1,
+      2
+     ],
+     "renderedWrecks": 0,
+     "debris": 0
+    },
+    {
+     "stage": "sixty",
+     "time": 60.03333333333121,
+     "explosions": 29,
      "wreckIds": [
       1,
       2,
@@ -404,317 +912,19 @@
       17,
       18,
       19,
-      20
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29
      ],
      "renderedWrecks": 0,
-     "debris": 360
-    }
-   ]
-  }
- },
- "phone": {
-  "summary": {
-   "elapsed": 60.05,
-   "viewport": {
-    "width": 390,
-    "height": 664
-   },
-   "frontPct": 34.2,
-   "sidePct": 2.3,
-   "frontVisibleSamples": 43,
-   "explosions": 13,
-   "visibleExplosions": 9,
-   "visibleMultiMoments": 4,
-   "chainLinks": 8,
-   "maxShake": 0.6,
-   "wrecks": 13,
-   "debris": 234,
-   "checkpoints": [
-    {
-     "stage": "front",
-     "time": 9.92,
-     "wrecks": 0,
-     "debris": 0
-    },
-    {
-     "stage": "multi",
-     "time": 16.32,
-     "wrecks": 2,
-     "debris": 0
-    },
-    {
-     "stage": "sixty",
-     "time": 60.05,
-     "wrecks": 13,
-     "debris": 234
-    }
-   ]
-  },
-  "record": {
-   "method": "Normal START; native RAF; legal stageDriver(5,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
-   "viewport": {
-    "width": 390,
-    "height": 664
-   },
-   "elapsed": 60.04999999999787,
-   "result": null,
-   "stats": {
-    "explosions": 13,
-    "chainExplosions": 8,
-    "wallCollisions": 0,
-    "pairCollisions": 30,
-    "wallDamage": 0,
-    "pairDamage": 1599.9471545337472,
-    "barricadeCollisions": 0,
-    "barricadeDamage": 0,
-    "boostSeconds": 15.23333333333367,
-    "spawnDeferrals": 11
-   },
-   "wrecks": 13,
-   "wrecksInView": 0,
-   "wrecksDrawn": 0,
-   "debris": 234,
-   "explosions": [
-    {
-     "id": 1,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 1
-    },
-    {
-     "id": 2,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 1
-    },
-    {
-     "id": 3,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 3
-    },
-    {
-     "id": 4,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 3
-    },
-    {
-     "id": 5,
-     "cause": "blast",
-     "delay": 0.44,
-     "depth": 2,
-     "root": 3
-    },
-    {
-     "id": 6,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 6
-    },
-    {
-     "id": 7,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 6
-    },
-    {
-     "id": 8,
-     "cause": "blast",
-     "delay": 0.44,
-     "depth": 2,
-     "root": 6
-    },
-    {
-     "id": 9,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 9
-    },
-    {
-     "id": 10,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 9
-    },
-    {
-     "id": 11,
-     "cause": "vehicle",
-     "delay": 0,
-     "depth": 0,
-     "root": 11
-    },
-    {
-     "id": 12,
-     "cause": "blast",
-     "delay": 0.22,
-     "depth": 1,
-     "root": 11
-    },
-    {
-     "id": 13,
-     "cause": "blast",
-     "delay": 0.44,
-     "depth": 2,
-     "root": 11
-    }
-   ],
-   "screen": {
-    "sampledSeconds": 59.99740000000004,
-    "policeVisibleSeconds": 57.947600000000044,
-    "visibleExplosions": 9,
-    "explosions": 13,
-    "nearestDistanceTime": 589.4076393923038,
-    "chaseSeconds": 59.99740000000004
-   },
-   "samples": 301,
-   "front": 103,
-   "side": 7,
-   "frontVisible": 43,
-   "shown": [
-    {
-     "id": 1,
-     "root": 1,
-     "depth": 0,
-     "shown": 16.033333333333704,
-     "visible": true
-    },
-    {
-     "id": 2,
-     "root": 1,
-     "depth": 1,
-     "shown": 16.253333333333703,
-     "visible": true
-    },
-    {
-     "id": 3,
-     "root": 3,
-     "depth": 0,
-     "shown": 23.166666666666632,
-     "visible": false
-    },
-    {
-     "id": 4,
-     "root": 3,
-     "depth": 1,
-     "shown": 23.38666666666663,
-     "visible": false
-    },
-    {
-     "id": 5,
-     "root": 3,
-     "depth": 2,
-     "shown": 23.606666666666634,
-     "visible": false
-    },
-    {
-     "id": 6,
-     "root": 6,
-     "depth": 0,
-     "shown": 29.816666666666254,
-     "visible": true
-    },
-    {
-     "id": 7,
-     "root": 6,
-     "depth": 1,
-     "shown": 30.036666666666253,
-     "visible": false
-    },
-    {
-     "id": 8,
-     "root": 6,
-     "depth": 2,
-     "shown": 30.256666666666256,
-     "visible": true
-    },
-    {
-     "id": 9,
-     "root": 9,
-     "depth": 0,
-     "shown": 40.43333333333232,
-     "visible": true
-    },
-    {
-     "id": 10,
-     "root": 9,
-     "depth": 1,
-     "shown": 40.65333333333232,
-     "visible": true
-    },
-    {
-     "id": 11,
-     "root": 11,
-     "depth": 0,
-     "shown": 48.59999999999852,
-     "visible": true
-    },
-    {
-     "id": 12,
-     "root": 11,
-     "depth": 1,
-     "shown": 48.81999999999852,
-     "visible": true
-    },
-    {
-     "id": 13,
-     "root": 11,
-     "depth": 2,
-     "shown": 49.03999999999852,
-     "visible": true
-    }
-   ],
-   "maxShake": 0.595148800624149,
-   "last": 300,
-   "checkpoints": [
-    {
-     "stage": "front",
-     "time": 9.916666666666739,
-     "explosions": 0,
-     "wreckIds": [],
-     "renderedWrecks": 0,
-     "debris": 0
-    },
-    {
-     "stage": "multi",
-     "time": 16.31666666666702,
-     "explosions": 2,
-     "wreckIds": [
-      1,
-      2
-     ],
-     "renderedWrecks": 0,
-     "debris": 0
-    },
-    {
-     "stage": "sixty",
-     "time": 60.04999999999787,
-     "explosions": 13,
-     "wreckIds": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13
-     ],
-     "renderedWrecks": 0,
-     "debris": 234
+     "debris": 450
     }
    ]
   }

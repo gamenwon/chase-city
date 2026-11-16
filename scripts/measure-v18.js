@@ -22,6 +22,7 @@ function pressureSample(s) {
   let within15 = 0,
     front = false,
     side = false;
+  const sectors = new Set();
   for (const c of s.police) {
     if (c.state !== "active") continue;
     const rx = c.x - p.x,
@@ -29,12 +30,24 @@ function pressureSample(s) {
       dist = Math.hypot(rx, rz),
       along = rx * fx + rz * fz,
       lateral = rx * -fz + rz * fx;
-    if (dist < 15) within15++;
+    if (dist < 15) {
+      within15++;
+      // Which side of the player this officer covers (front/back/left/right).
+      sectors.add(
+        Math.abs(along) >= Math.abs(lateral)
+          ? along > 0
+            ? "front"
+            : "back"
+          : lateral > 0
+            ? "right"
+            : "left",
+      );
+    }
     if (along > 3 && along < 22 && Math.abs(lateral) < 7) front = true;
     if (Math.abs(along) < 4.5 && Math.abs(lateral) > 1.5 && Math.abs(lateral) < 7)
       side = true;
   }
-  return { within15, front, side };
+  return { within15, front, side, boxed: sectors.size >= 3 };
 }
 
 export function measure(seeds = [1, 2, 3, 4, 5, 6], seconds = 60) {
@@ -62,6 +75,7 @@ export function measure(seeds = [1, 2, 3, 4, 5, 6], seconds = 60) {
           side: 0,
           frontOrSide: 0,
           surround3: 0,
+          boxed: 0,
           arrestSeconds: 0,
         };
         let last = 0,
@@ -101,6 +115,7 @@ export function measure(seeds = [1, 2, 3, 4, 5, 6], seconds = 60) {
           if (ps.side) run.side++;
           if (ps.front || ps.side) run.frontOrSide++;
           if (ps.within15 >= 3) run.surround3++;
+          if (ps.boxed) run.boxed++;
           if (s.arrest > 0) run.arrestSeconds += 1 / 60;
         }
         run.restarts = restarts;
@@ -148,6 +163,7 @@ export function summarize(runs) {
     sidePressurePct: pct("side"),
     frontOrSidePct: pct("frontOrSide"),
     threeWithin15Pct: pct("surround3"),
+    boxedIn3SidesPct: pct("boxed"),
     explosionsPerRun: +(all.length / n).toFixed(2),
     visibleExplosionsPerRun: +(all.filter((e) => e.visible).length / n).toFixed(2),
     visibleSharePct: +((all.filter((e) => e.visible).length / Math.max(1, all.length)) * 100).toFixed(1),

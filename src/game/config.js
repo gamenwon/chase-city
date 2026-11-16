@@ -27,9 +27,9 @@ export const CONFIG = Object.freeze({
   frontBlockStart: 0,
   frontSprintSpeed: 27.5,
   blockerApproachSpeed: 7,
-  flankSprintSpeed: 25.5,
+  flankSprintSpeed: 27.5,
   chainStepSeconds: 0.22,
-  chainFalloff: 0.62,
+  chainFalloff: 0.72,
 });
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 export const angleDelta = (a, b) =>

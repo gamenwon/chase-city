@@ -10,6 +10,8 @@ import { updateWrecks } from "../src/game/wrecks.js";
 import {
   WreckRenderer,
   wreckPose,
+  flareBoost,
+  EMBER_COUNT,
   WRECK_LIFT,
   WRECK_ROLL,
 } from "../src/render/wrecks.js";
@@ -50,10 +52,16 @@ test("a fleeing player is pressed from behind, alongside and in front", () => {
   fleet.forEach((c, i) => steerPolice(c, i, player, 1 / 60, nav, fleet, 20));
   assert.deepEqual(
     fleet.map((c) => c.role),
-    ["pursuit", "flank", "front", "front"],
+    ["pursuit", "flank", "flank", "front"],
   );
+  // The two flankers take opposite sides of the player (a box with the rear
+  // pursuer and the front blocker).
+  const sideOf = (c) => Math.sign(c.vx);
+  for (let i = 0; i < 30; i++)
+    fleet.forEach((c, k) => steerPolice(c, k, player, 1 / 60, nav, fleet, 20));
+  assert.notEqual(sideOf(fleet[1]), sideOf(fleet[2]));
   // Blockers out-run the 24-unit player to get in front of it.
-  assert.ok(fleet[2].effectiveSpeed > CONFIG.playerSpeed);
+  assert.ok(fleet[3].effectiveSpeed > CONFIG.playerSpeed);
   assert.ok(fleet[1].effectiveSpeed > CONFIG.playerSpeed);
   // A blocker already in front brakes into a roadblock, it does not charge.
   const blocker = Object.assign(makePolice(2), { x: 0, z: -16, vz: 0 });
@@ -138,15 +146,16 @@ test("chain reactions are staged link by link and lose energy at each step", () 
   );
   s.explodePolice(s.police[0]);
   const events = s.events.filter((e) => e.type === "explosion");
-  // 0.62 falloff: the chain reaches the 2nd and 3rd links, then dies out.
-  assert.equal(events.length, 3);
+  // Blast energy falls off per link: the chain runs down the row of damaged
+  // cars and dies out before the last one.
+  assert.equal(events.length, 4);
   assert.deepEqual(
     s.police.map((c) => c.state),
-    ["wreck", "wreck", "wreck", "active", "active"],
+    ["wreck", "wreck", "wreck", "wreck", "active"],
   );
   assert.deepEqual(
     events.map((e) => e.delay),
-    [0, CONFIG.chainStepSeconds, CONFIG.chainStepSeconds * 2],
+    [0, 1, 2, 3].map((k) => CONFIG.chainStepSeconds * k),
   );
   assert.ok(events.every((e) => e.chainRoot === events[0].id));
   // Each wreck lands, and each officer starts its crash animation, with its
@@ -156,7 +165,7 @@ test("chain reactions are staged link by link and lose energy at each step", () 
     events.map((e) => e.time + e.delay),
   );
   assert.deepEqual(
-    s.police.slice(0, 3).map((c) => c.wreckAge),
+    s.police.slice(0, 4).map((c) => c.wreckAge),
     events.map((e) => 0 - e.delay),
   );
 });
@@ -250,4 +259,37 @@ test("camera shake only applies to the drawn frame and decays", () => {
   assert.ok(rig.camera.position.distanceTo(before) < 1e-9);
   for (let i = 0; i < 120; i++) rig.withShake(1 / 60, i, () => {});
   assert.ok(rig.shake < 0.01);
+});
+
+test("a new explosion next to an old wreck makes its fire flare up and throw sparks", () => {
+  const scene = new THREE.Scene(),
+    r = new WreckRenderer(scene),
+    s = empty();
+  Object.assign(s.player, { x: 80, z: 80 });
+  s.police = [
+    Object.assign(makePolice(0), { x: 0, z: 0 }),
+    Object.assign(makePolice(1), { x: 5, z: 0 }),
+  ];
+  s.explodePolice(s.police[0]);
+  s.elapsed = 10;
+  updateWrecks(s);
+  const old = s.wrecks[0];
+  assert.equal(flareBoost(old, s.elapsed), 0);
+  s.explodePolice(s.police[1]);
+  assert.equal(old.flaredAt, 10);
+  assert.ok(flareBoost(old, 10.1) > 1);
+  assert.ok(flareBoost(old, 20) < 0.01);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+  camera.position.set(20, 30, 30);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  s.elapsed = 10.2;
+  r.update(s, camera);
+  const slot = r.pool.find((p) => p.id === old.id);
+  const flaring = slot.flames[0].scale.x;
+  assert.equal(slot.embers.length, EMBER_COUNT);
+  assert.ok(slot.embers.some((m) => m.position.y > 2));
+  s.elapsed = 30;
+  r.update(s, camera);
+  assert.ok(slot.flames[0].scale.x < flaring, "flare settles back down");
 });

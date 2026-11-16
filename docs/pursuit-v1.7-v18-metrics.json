@@ -9,6 +9,7 @@
   "sidePressurePct": 17.3,
   "frontOrSidePct": 21.4,
   "threeWithin15Pct": 34.5,
+  "boxedIn3SidesPct": 5.3,
   "explosionsPerRun": 12.33,
   "visibleExplosionsPerRun": 10.56,
   "visibleSharePct": 85.6,
@@ -184,6 +185,7 @@
    "side": 1038,
    "frontOrSide": 1202,
    "surround3": 1398,
+   "boxed": 174,
    "arrestSeconds": 8.700000000000012,
    "restarts": 1,
    "multiMoments": 3
@@ -261,6 +263,7 @@
    "side": 1070,
    "frontOrSide": 1252,
    "surround3": 1136,
+   "boxed": 257,
    "arrestSeconds": 7.6333333333333115,
    "restarts": 1,
    "multiMoments": 2
@@ -370,6 +373,7 @@
    "side": 790,
    "frontOrSide": 861,
    "surround3": 1349,
+   "boxed": 217,
    "arrestSeconds": 11.133333333333466,
    "restarts": 0,
    "multiMoments": 3
@@ -503,6 +507,7 @@
    "side": 246,
    "frontOrSide": 502,
    "surround3": 1185,
+   "boxed": 17,
    "arrestSeconds": 3.433333333333326,
    "restarts": 0,
    "multiMoments": 4
@@ -604,6 +609,7 @@
    "side": 892,
    "frontOrSide": 1072,
    "surround3": 1434,
+   "boxed": 539,
    "arrestSeconds": 9.883333333333404,
    "restarts": 1,
    "multiMoments": 3
@@ -769,6 +775,7 @@
    "side": 426,
    "frontOrSide": 550,
    "surround3": 964,
+   "boxed": 115,
    "arrestSeconds": 3.6999999999999917,
    "restarts": 0,
    "multiMoments": 3
@@ -862,6 +869,7 @@
    "side": 573,
    "frontOrSide": 652,
    "surround3": 986,
+   "boxed": 156,
    "arrestSeconds": 8.483333333333334,
    "restarts": 1,
    "multiMoments": 3
@@ -955,6 +963,7 @@
    "side": 440,
    "frontOrSide": 682,
    "surround3": 997,
+   "boxed": 252,
    "arrestSeconds": 10.400000000000096,
    "restarts": 2,
    "multiMoments": 1
@@ -1048,6 +1057,7 @@
    "side": 472,
    "frontOrSide": 705,
    "surround3": 945,
+   "boxed": 248,
    "arrestSeconds": 7.4666666666666455,
    "restarts": 1,
    "multiMoments": 1
@@ -1133,6 +1143,7 @@
    "side": 418,
    "frontOrSide": 695,
    "surround3": 746,
+   "boxed": 209,
    "arrestSeconds": 4.333333333333323,
    "restarts": 1,
    "multiMoments": 2
@@ -1298,6 +1309,7 @@
    "side": 471,
    "frontOrSide": 834,
    "surround3": 1131,
+   "boxed": 228,
    "arrestSeconds": 8.433333333333332,
    "restarts": 0,
    "multiMoments": 2
@@ -1351,6 +1363,7 @@
    "side": 478,
    "frontOrSide": 628,
    "surround3": 1021,
+   "boxed": 134,
    "arrestSeconds": 7.766666666666644,
    "restarts": 1,
    "multiMoments": 2
@@ -1500,6 +1513,7 @@
    "side": 905,
    "frontOrSide": 1063,
    "surround3": 1760,
+   "boxed": 397,
    "arrestSeconds": 8.216666666666654,
    "restarts": 0,
    "multiMoments": 6
@@ -1649,6 +1663,7 @@
    "side": 636,
    "frontOrSide": 695,
    "surround3": 936,
+   "boxed": 58,
    "arrestSeconds": 9.933333333333406,
    "restarts": 0,
    "multiMoments": 4
@@ -1686,6 +1701,7 @@
    "side": 515,
    "frontOrSide": 574,
    "surround3": 1530,
+   "boxed": 115,
    "arrestSeconds": 7.1666666666666465,
    "restarts": 1,
    "multiMoments": 1
@@ -1819,6 +1835,7 @@
    "side": 863,
    "frontOrSide": 871,
    "surround3": 1483,
+   "boxed": 189,
    "arrestSeconds": 8.566666666666672,
    "restarts": 0,
    "multiMoments": 3
@@ -1912,6 +1929,7 @@
    "side": 736,
    "frontOrSide": 778,
    "surround3": 1631,
+   "boxed": 344,
    "arrestSeconds": 7.066666666666647,
    "restarts": 1,
    "multiMoments": 2
@@ -2077,6 +2095,7 @@
    "side": 393,
    "frontOrSide": 540,
    "surround3": 997,
+   "boxed": 236,
    "arrestSeconds": 6.633333333333315,
    "restarts": 0,
    "multiMoments": 5
@@ -2234,6 +2253,7 @@
    "side": 953,
    "frontOrSide": 1084,
    "surround3": 1515,
+   "boxed": 238,
    "arrestSeconds": 9.500000000000052,
    "restarts": 1,
    "multiMoments": 5
@@ -2383,6 +2403,7 @@
    "side": 761,
    "frontOrSide": 1022,
    "surround3": 1509,
+   "boxed": 436,
    "arrestSeconds": 9.716666666666729,
    "restarts": 0,
    "multiMoments": 5
@@ -2532,6 +2553,7 @@
    "side": 546,
    "frontOrSide": 684,
    "surround3": 1277,
+   "boxed": 55,
    "arrestSeconds": 3.0833333333333273,
    "restarts": 0,
    "multiMoments": 5
@@ -2593,6 +2615,7 @@
    "side": 581,
    "frontOrSide": 675,
    "surround3": 1284,
+   "boxed": 174,
    "arrestSeconds": 8.299999999999992,
    "restarts": 1,
    "multiMoments": 2
@@ -2662,6 +2685,7 @@
    "side": 463,
    "frontOrSide": 599,
    "surround3": 1130,
+   "boxed": 337,
    "arrestSeconds": 4.966666666666654,
    "restarts": 1,
    "multiMoments": 2
@@ -2779,6 +2803,7 @@
    "side": 508,
    "frontOrSide": 508,
    "surround3": 835,
+   "boxed": 50,
    "arrestSeconds": 7.033333333333314,
    "restarts": 1,
    "multiMoments": 4
@@ -2920,6 +2945,7 @@
    "side": 458,
    "frontOrSide": 510,
    "surround3": 929,
+   "boxed": 118,
    "arrestSeconds": 6.9999999999999805,
    "restarts": 0,
    "multiMoments": 3
@@ -3053,6 +3079,7 @@
    "side": 507,
    "frontOrSide": 825,
    "surround3": 837,
+   "boxed": 157,
    "arrestSeconds": 3.2333333333333267,
    "restarts": 0,
    "multiMoments": 4
@@ -3194,6 +3221,7 @@
    "side": 500,
    "frontOrSide": 632,
    "surround3": 1325,
+   "boxed": 134,
    "arrestSeconds": 5.349999999999986,
    "restarts": 0,
    "multiMoments": 3
@@ -3335,6 +3363,7 @@
    "side": 654,
    "frontOrSide": 724,
    "surround3": 1147,
+   "boxed": 233,
    "arrestSeconds": 5.666666666666652,
    "restarts": 1,
    "multiMoments": 3
@@ -3468,6 +3497,7 @@
    "side": 826,
    "frontOrSide": 1098,
    "surround3": 1620,
+   "boxed": 288,
    "arrestSeconds": 8.766666666666682,
    "restarts": 0,
    "multiMoments": 3
@@ -3585,6 +3615,7 @@
    "side": 498,
    "frontOrSide": 755,
    "surround3": 908,
+   "boxed": 159,
    "arrestSeconds": 3.516666666666659,
    "restarts": 0,
    "multiMoments": 3
@@ -3654,6 +3685,7 @@
    "side": 607,
    "frontOrSide": 798,
    "surround3": 842,
+   "boxed": 61,
    "arrestSeconds": 4.866666666666655,
    "restarts": 1,
    "multiMoments": 1
@@ -3779,6 +3811,7 @@
    "side": 628,
    "frontOrSide": 917,
    "surround3": 685,
+   "boxed": 191,
    "arrestSeconds": 5.099999999999987,
    "restarts": 0,
    "multiMoments": 3
@@ -3880,6 +3913,7 @@
    "side": 677,
    "frontOrSide": 816,
    "surround3": 1509,
+   "boxed": 102,
    "arrestSeconds": 9.616666666666724,
    "restarts": 0,
    "multiMoments": 2
@@ -3957,6 +3991,7 @@
    "side": 541,
    "frontOrSide": 730,
    "surround3": 1240,
+   "boxed": 126,
    "arrestSeconds": 7.0833333333333135,
    "restarts": 1,
    "multiMoments": 1
@@ -4042,6 +4077,7 @@
    "side": 329,
    "frontOrSide": 464,
    "surround3": 1637,
+   "boxed": 85,
    "arrestSeconds": 4.166666666666657,
    "restarts": 0,
    "multiMoments": 1
@@ -4159,6 +4195,7 @@
    "side": 445,
    "frontOrSide": 608,
    "surround3": 1362,
+   "boxed": 113,
    "arrestSeconds": 9.133333333333367,
    "restarts": 0,
    "multiMoments": 3
@@ -4284,6 +4321,7 @@
    "side": 442,
    "frontOrSide": 669,
    "surround3": 1366,
+   "boxed": 175,
    "arrestSeconds": 6.083333333333317,
    "restarts": 0,
    "multiMoments": 3
@@ -4393,6 +4431,7 @@
    "side": 579,
    "frontOrSide": 633,
    "surround3": 1015,
+   "boxed": 5,
    "arrestSeconds": 8.133333333333317,
    "restarts": 0,
    "multiMoments": 3
@@ -4486,6 +4525,7 @@
    "side": 563,
    "frontOrSide": 646,
    "surround3": 1459,
+   "boxed": 136,
    "arrestSeconds": 5.049999999999987,
    "restarts": 1,
    "multiMoments": 2
@@ -4579,6 +4619,7 @@
    "side": 765,
    "frontOrSide": 800,
    "surround3": 1529,
+   "boxed": 231,
    "arrestSeconds": 7.349999999999979,
    "restarts": 1,
    "multiMoments": 2
@@ -4728,6 +4769,7 @@
    "side": 617,
    "frontOrSide": 745,
    "surround3": 1354,
+   "boxed": 207,
    "arrestSeconds": 5.416666666666653,
    "restarts": 0,
    "multiMoments": 4
@@ -4861,6 +4903,7 @@
    "side": 472,
    "frontOrSide": 529,
    "surround3": 1169,
+   "boxed": 51,
    "arrestSeconds": 8.033333333333312,
    "restarts": 0,
    "multiMoments": 3
@@ -4978,6 +5021,7 @@
    "side": 988,
    "frontOrSide": 1119,
    "surround3": 1689,
+   "boxed": 385,
    "arrestSeconds": 9.016666666666694,
    "restarts": 1,
    "multiMoments": 3
@@ -5167,6 +5211,7 @@
    "side": 1012,
    "frontOrSide": 1241,
    "surround3": 1138,
+   "boxed": 297,
    "arrestSeconds": 12.000000000000176,
    "restarts": 1,
    "multiMoments": 4
@@ -5284,6 +5329,7 @@
    "side": 963,
    "frontOrSide": 1149,
    "surround3": 1266,
+   "boxed": 296,
    "arrestSeconds": 6.399999999999983,
    "restarts": 1,
    "multiMoments": 2
@@ -5457,6 +5503,7 @@
    "side": 546,
    "frontOrSide": 670,
    "surround3": 1332,
+   "boxed": 18,
    "arrestSeconds": 5.633333333333319,
    "restarts": 1,
    "multiMoments": 5
@@ -5590,6 +5637,7 @@
    "side": 540,
    "frontOrSide": 596,
    "surround3": 1995,
+   "boxed": 201,
    "arrestSeconds": 8.733333333333347,
    "restarts": 0,
    "multiMoments": 4
@@ -5763,6 +5811,7 @@
    "side": 570,
    "frontOrSide": 644,
    "surround3": 1029,
+   "boxed": 236,
    "arrestSeconds": 7.09999999999998,
    "restarts": 0,
    "multiMoments": 3
