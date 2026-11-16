@@ -118,26 +118,20 @@ test("separating and resting police contacts do not repeatedly damage cars", () 
   assert.equal(b.health, 100);
 });
 test("several moderate impacts accumulate damage and high-energy impact is lethal", () => {
-  const [a, b] = pair(8);
-  for (let i = 0; i < 8; i++) {
-    a.pairCooldown = 0;
-    b.pairCooldown = 0;
-    a.x = 0;
-    b.x = 2;
-    a.vx = 8;
-    b.vx = -8;
-    collidePolice(a, b);
+  // A moderate knock (closing 12, under the lethal line) only damages; it
+  // takes several to wreck a car.
+  const [a, b] = pair(0);
+  let hits = 0;
+  while (a.health > 0 && hits < 20) {
+    Object.assign(a, { x: 0, vx: 9, pairCooldown: 0, stunTimer: 0 });
+    Object.assign(b, { x: 2, vx: -3, pairCooldown: 0, stunTimer: 0 });
+    const damage = collidePolice(a, b);
+    assert.ok(damage > 0 && damage < 100);
+    hits++;
   }
+  assert.ok(hits >= 3);
   assert.equal(a.health, 0);
   assert.equal(b.health, 0);
-  // A strong (but not head-on lethal) knock takes 60; a second one wrecks.
-  const [c, d] = pair(12);
-  assert.equal(collidePolice(c, d), 60);
-  assert.equal(c.health, 40);
-  Object.assign(c, { x: 0, vx: 12, pairCooldown: 0 });
-  Object.assign(d, { x: 2, vx: -12, pairCooldown: 0 });
-  collidePolice(c, d);
-  assert.equal(c.health, 0);
   // V1.8: a hard head-on impact wrecks both cars at once.
   const [e, f] = pair(20);
   assert.equal(collidePolice(e, f), 100);
@@ -146,7 +140,9 @@ test("several moderate impacts accumulate damage and high-energy impact is letha
 });
 test("actual simulation contacts reduce durability, then explode after a second strong impact", () => {
   const s = create();
-  s.police = pair(12);
+  s.police = pair(0);
+  Object.assign(s.police[0], { vx: 9 });
+  Object.assign(s.police[1], { vx: -3 });
   s.player.x = 50;
   s.player.z = 50;
   tick(s, 1 / 60);
@@ -163,17 +159,22 @@ test("blast impulses and weakened neighbors produce bounded chain reactions", ()
     Object.assign(makePolice(i), {
       x,
       z: 0,
-      health: i === 1 || i === 2 ? 30 : 100,
+      // V1.8: car 1 was wrecked in the same crash (0 health); car 2 is badly
+      // damaged but untouched by any car.
+      health: i === 1 ? 0 : i === 2 ? 30 : 100,
     }),
   );
   s.explodePolice(s.police[0]);
+  // The car wrecked in the crash goes up with it; the blast alone wrecks
+  // nobody else, however damaged.
   assert.deepEqual(
     s.police.map((c) => c.state),
-    ["wreck", "wreck", "wreck", "active"],
+    ["wreck", "wreck", "active", "active"],
   );
-  assert.equal(s.events.length, 3);
+  assert.ok(s.police[2].health >= 1);
+  assert.equal(s.events.length, 2);
   s.explodePolice(s.police[0]);
-  assert.equal(s.events.length, 3);
+  assert.equal(s.events.length, 2);
   const s2 = create();
   s2.police = [
     Object.assign(makePolice(0), { x: 0, z: 0 }),
@@ -272,7 +273,7 @@ test("destroyed car cannot earn success on the same tick as mission deadline", (
 test("full city pursuit stays finite with intact building colliders", () => {
   const s = create(createLayout());
   for (let i = 0; i < 3000; i++) {
-    if (s.result) (s.reset(), s.start());
+    if (s.result) s.reset(), s.start();
     s.update(1 / 60, { left: i % 600 < 180, right: i % 600 > 400 });
     for (const c of [s.player, ...s.police]) {
       assert.ok(Number.isFinite(c.x + c.z + c.vx + c.vz));

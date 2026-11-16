@@ -33,17 +33,26 @@ export const CONFIG = Object.freeze({
   // V1.8 roadblocks: predicted-route blocks that stop across the road.
   blockMaxGap: 1.8,
   blockMaxCars: 3,
-  blockMinAhead: 36,
+  blockMinAhead: 24,
   blockMaxAhead: 80,
   blockEtaSlack: 0,
   blockCooldown: 2.5,
   blockLostSeconds: 0.8,
   blockMaxSeconds: 14,
-  blockDecel: 12,
+  blockDecel: 15,
   blockHoldEnter: 0.9,
   blockHoldLeave: 1.8,
   // A hard enough police-police impact wrecks both cars at once.
-  lethalPairImpact: 30,
+  lethalPairImpact: 14,
+  // Below that, a strong knock still stalls both cars briefly.
+  stunImpact: 10,
+  stunSeconds: 0.8,
+  // V1.8 cordon: started when the player has slowed right down.
+  cordonStartSpeed: 8,
+  cordonRecruitRange: 40,
+  cordonEscapeDistance: 9,
+  cordonReplanDistance: 6,
+  cordonStandoff: 14,
 });
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 export const angleDelta = (a, b) =>

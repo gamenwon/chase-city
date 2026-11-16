@@ -66,7 +66,8 @@ test("a fleeing player is pressed from behind, alongside and in front", () => {
   // A blocker already in front brakes into a roadblock, it does not charge.
   const blocker = Object.assign(makePolice(2), { x: 0, z: -16, vz: 0 });
   const trio = [fleet[0], fleet[1], blocker];
-  for (let i = 0; i < 60; i++) steerPolice(blocker, 2, player, 1 / 60, nav, trio, 20);
+  for (let i = 0; i < 60; i++)
+    steerPolice(blocker, 2, player, 1 / 60, nav, trio, 20);
   assert.equal(blocker.role, "front");
   assert.equal(blocker.pressure, "front");
   assert.ok(
@@ -140,10 +141,13 @@ test("far from the player, oncoming officers keep right; near it, crashes stay p
 test("chain reactions are staged link by link and lose energy at each step", () => {
   const s = empty();
   Object.assign(s.player, { x: 80, z: 80 });
-  // Five damaged cars in a row, 3 units apart.
-  s.police = [0, 3, 6, 9, 12].map((x, i) =>
-    Object.assign(makePolice(i), { x, z: 0, health: i ? 40 : 100 }),
+  // Five cars in a row, 9 units apart: each blast only reaches the next car.
+  s.police = [0, 9, 18, 27, 36].map((x, i) =>
+    Object.assign(makePolice(i), { x, z: 0, health: [100, 0, 0, 0, 40][i] }),
   );
+  // V1.8: blasts alone never wreck a car; cars 1-3 were wrecked in the same
+  // pile-up (health 0) and go up one link at a time, the damaged car at the
+  // end of the row is thrown but survives.
   s.explodePolice(s.police[0]);
   const events = s.events.filter((e) => e.type === "explosion");
   // Blast energy falls off per link: the chain runs down the row of damaged
@@ -217,7 +221,15 @@ test("explosion fragments land and stay until RESTART; staged links wait their t
     fx = new ExplosionEffects(scene, (e) => started.push(e.id));
   const events = [
     { id: 1, type: "explosion", x: 0, z: 0, time: 10, delay: 0, chainDepth: 0 },
-    { id: 2, type: "explosion", x: 4, z: 0, time: 10, delay: 0.22, chainDepth: 1 },
+    {
+      id: 2,
+      type: "explosion",
+      x: 4,
+      z: 0,
+      time: 10,
+      delay: 0.22,
+      chainDepth: 1,
+    },
   ];
   fx.update(events, 10.1);
   assert.deepEqual(started, [1]);

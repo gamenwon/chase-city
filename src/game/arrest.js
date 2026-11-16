@@ -21,7 +21,8 @@ export function inspectEnclosure(player, fleet, solids, allowed = () => true) {
       Math.hypot(c.x - player.x, c.z - player.z) <
         (player.contained ? 10.5 : 9.5),
   );
-  if (cops.length < 3)
+  // Walls count as part of a cordon, so two cars can be enough.
+  if (cops.length < 2)
     return {
       trapped: false,
       exits: 1,

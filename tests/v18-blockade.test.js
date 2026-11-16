@@ -12,8 +12,9 @@ import {
 } from "../src/game/roadblock.js";
 import { BonnetCamera, BONNET } from "../src/render/pip.js";
 
-// Player fleeing east along the z = 0 road; one officer tailing it and three
-// on the x = -30 cross street ahead, where a front blocker would come from.
+// Player fleeing east along the z = 0 road; three officers tailing it and
+// three on the x = -30 cross street ahead, where a front blocker would come
+// from.
 function blockScenario(steer = () => ({})) {
   const s = new Simulation(createLayout(), {
     reinforcements: false,
@@ -37,6 +38,16 @@ function blockScenario(steer = () => ({})) {
     ...[12, 17, 22].map((z, i) =>
       Object.assign(makePolice(i + 1), { x: -30, z, angle: 0, vz: -10 }),
     ),
+    // V1.8: two more tailing officers. A block alone no longer counts as an
+    // arrest while the road behind the player is open; the chasers close it.
+    ...[-116, -124].map((x, i) =>
+      Object.assign(makePolice(i + 4), {
+        x,
+        z: 0,
+        angle: -Math.PI / 2,
+        vx: 20,
+      }),
+    ),
   ];
   const frames = [];
   for (let f = 0; f < 60 * 14 && !s.result; f++) {
@@ -51,6 +62,7 @@ function blockScenario(steer = () => ({})) {
         z: c.z,
         angle: c.angle,
         state: c.blockState,
+        block: c.blockId,
         mode: c.mode,
         speed: Math.hypot(c.vx, c.vz),
       })),
@@ -68,24 +80,47 @@ test("a roadblock is planned on the predicted road, cars stop across it and hold
   assert.ok(plan.x > -100 && plan.ahead >= CONFIG.blockMinAhead);
   assert.equal(plan.cars.length, 3);
   assert.ok(!plan.cars.includes(0), "the tailing officer keeps chasing");
-  // All three blockers come to rest before the player reaches the block.
+  // The block is up across the road before the player reaches it (the plan
+  // is only 28 m ahead of a 24 m/s car, so the last car may still be pulling
+  // in when the player arrives).
   const held = frames.find(
-    (f) => f.cars.filter((c) => c.state === "hold").length === 3,
+    (f) => f.cars.filter((c) => c.state === "hold").length >= 1,
   );
   assert.ok(held);
-  assert.ok(held.player.x < plan.x - 5);
-  // Holding: stationary, turned across the road, not twitching.
-  const holding = frames.filter((f) => f.t >= held.t);
+  assert.ok(held.player.x < plan.x - 3);
+  // Holding: stationary, turned across the road, not twitching, for as long
+  // as the car belongs to the block (once the player is stopped the cordon
+  // may move a car that closes nothing to the gap it left behind).
+  const longHolds = plan.cars.filter(
+    (id) =>
+      frames.filter((f) =>
+        f.cars.some(
+          (c) => c.id === id && c.block === plan.id && c.state === "hold",
+        ),
+      ).length > 30,
+  );
+  assert.ok(longHolds.length >= 2, "the block stays up");
   for (const id of plan.cars) {
-    const track = holding.map((f) => f.cars.find((c) => c.id === id));
-    assert.ok(track.every((c) => c.state === "hold" && c.speed === 0));
+    const track = frames
+      .map((f) => f.cars.find((c) => c.id === id))
+      .filter((c) => c.block === plan.id && c.state === "hold");
+    if (!track.length) continue;
+    assert.ok(track.every((c) => c.speed === 0));
     const xs = track.map((c) => c.x),
       zs = track.map((c) => c.z);
     assert.ok(Math.max(...xs) - Math.min(...xs) < 0.05);
     assert.ok(Math.max(...zs) - Math.min(...zs) < 0.05);
-    const last = track.at(-1);
-    assert.ok(Math.abs(Math.sin(last.angle)) < 0.05, "parked across the road");
   }
+  // Cars that reached their slot are turned square across the road (a car
+  // whose slot the player's car took parks where it stopped instead).
+  const across = plan.cars.filter((id) => {
+    const last = frames
+      .map((f) => f.cars.find((c) => c.id === id))
+      .filter((c) => c.block === plan.id && c.state === "hold")
+      .at(-1);
+    return last && Math.abs(Math.sin(last.angle)) < 0.05;
+  });
+  assert.ok(across.length >= 2, "parked across the road");
   // The player is stopped by the block and arrested by the 3-second rule.
   assert.equal(s.result, "arrested");
   assert.ok(Math.abs(s.player.x - plan.x) < 6);
@@ -106,7 +141,7 @@ test("a held block stays put when the player pins itself against it and scrapes 
 
 test("when the player gets away from a block it is released and the blockers chase again", () => {
   const { s, frames } = blockScenario((sim) => ({
-    right: sim.player.x > -69 && sim.player.angle > -Math.PI + 0.08,
+    right: sim.player.x > -70 && sim.player.angle > -Math.PI + 0.08,
   }));
   const release = s.roadblockEvents.find((e) => e.type === "release");
   assert.ok(release, "the block was released");

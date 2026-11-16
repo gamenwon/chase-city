@@ -133,7 +133,8 @@ test("chase impact damage distinguishes glancing and head-on crashes, but low-sp
   const head = collidePolice(a, b);
   // V1.8: a head-on at chase speed is lethal for both cars.
   assert.equal(head, 100);
-  [a, b] = pair(5, 20);
+  // A glancing knock (relative speed about 14) damages but does not wreck.
+  [a, b] = pair(5, 10);
   const side = collidePolice(a, b);
   assert.ok(side > 0 && side < head);
   [a, b] = pair(6, 0);

@@ -790,3 +790,28 @@ body.pip-on #notice:not(:empty) {
     top: 240px;
   }
 }
+
+/* V1.8 BUSTED moment: red/blue police light wash at the screen edges while
+   the frozen arrest scene shows, before the result card. */
+body.busted::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  animation: busted-lights 0.45s steps(2, end) infinite;
+}
+@keyframes busted-lights {
+  from {
+    box-shadow: inset 0 0 120px 30px #ff263c88;
+  }
+  to {
+    box-shadow: inset 0 0 120px 30px #1689ff88;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.busted::after {
+    animation: none;
+    box-shadow: inset 0 0 120px 30px #ff263c66;
+  }
+}

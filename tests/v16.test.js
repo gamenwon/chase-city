@@ -48,7 +48,11 @@ test("normal START and legal steering lead real AI to 100 percent arrest with no
 
   assert.ok(r.elapsed < 45);
 });
-test("translating the formation preserves a sealed cordon and its capture geometry", () => {
+test("a settled formation around a stopped player is adopted as the cordon, holds still and captures", () => {
+  // V1.8: the old version of this test slid the whole formation sideways by
+  // hand every frame. Cordon cars now hold fixed, braked slots, so the
+  // capture geometry is checked on the real thing: four cars already boxing
+  // in a stopped player are adopted in place, stay put and make the arrest.
   const s = empty();
   Object.assign(s.player, { x: 0, z: 0, vx: 0, vz: 0, speed: 0 });
   s.police = Array.from({ length: 4 }, (_, i) =>
@@ -58,14 +62,13 @@ test("translating the formation preserves a sealed cordon and its capture geomet
       angle: (i * Math.PI) / 2,
     }),
   );
-  for (let frame = 0; frame < 190 && !s.result; frame++) {
-    // External contact displacement of the whole formation, with the same
-    // relative geometry. Normal AI and contact solving still run each step.
-    for (const c of [s.player, ...s.police]) c.x += 0.1;
-    s.update(1 / 60);
-  }
+  const start = s.police.map((c) => [c.x, c.z]);
+  for (let frame = 0; frame < 400 && !s.result; frame++) s.update(1 / 60);
   assert.equal(s.result, "arrested");
   assert.equal(s.stats.explosions, 0);
+  s.police.forEach((c, i) =>
+    assert.ok(Math.hypot(c.x - start[i][0], c.z - start[i][1]) < 1.5),
+  );
 });
 test("entering containment brakes a fast officer before contacts while normal high-speed pursuit still damages", () => {
   const s = empty();
@@ -119,7 +122,11 @@ test("a low-speed arrest cordon survives nearby blast chains; high-speed damaged
   s.explodePolice(source);
   assert.equal(captor.state, "active");
   assert.ok(captor.health >= 1);
-  assert.equal(pursuit.state, "wreck");
+  // V1.8: a blast alone never wrecks a car, however damaged; only a car
+  // already wrecked in the same crash goes up with it.
+  assert.equal(pursuit.state, "active");
+  assert.equal(pursuit.health, 1);
+  assert.ok(pursuit.vx < 19, "but it is thrown by the blast");
   assert.equal(alreadyDestroyed.state, "wreck");
 });
 test("real repeated collision wrecks remain independent of respawn and keep IDs/positions for 30 and 60 seconds", () => {

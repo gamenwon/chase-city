@@ -36,6 +36,7 @@ try {
 }
 ui.start.addEventListener("click", () => {
   if (!renderer) return;
+  document.body.classList.remove("busted");
   if (state === "over") {
     sim.reset();
     renderer.reset();
@@ -107,7 +108,15 @@ function frame(ms) {
       if (sim.result) {
         state = "over";
         audio.finish(sim.result === "success");
-        ui.gameover(sim);
+        if (sim.result === "arrested") {
+          // BUSTED: hold the frozen scene of officers covering the boxed-in
+          // car for a moment, with the lights flashing, before the result.
+          const run = sim.runNumber;
+          document.body.classList.add("busted");
+          setTimeout(() => {
+            if (state === "over" && sim.runNumber === run) ui.gameover(sim);
+          }, 900);
+        } else ui.gameover(sim);
         break;
       }
     }

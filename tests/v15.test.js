@@ -85,11 +85,16 @@ test("open space and a removed cordon officer clear the gauge quickly instead of
 test("high-speed impacts still destroy a police car after two strong real contacts", () => {
   const a = makePolice(0),
     b = makePolice(1);
-  for (let i = 0; i < 2; i++) {
-    Object.assign(a, { x: 0, z: 0, vx: 12, vz: 0, pairCooldown: 0 });
-    Object.assign(b, { x: 2, z: 0, vx: -12, vz: 0, pairCooldown: 0 });
-    assert.equal(collidePolice(a, b), 60);
+  // V1.8: knocks under the lethal line (closing 13) accumulate damage...
+  let hits = 0;
+  while (a.health > 0 && hits < 20) {
+    Object.assign(a, { x: 0, z: 0, vx: 11, vz: 0, pairCooldown: 0 });
+    Object.assign(b, { x: 2, z: 0, vx: -2, vz: 0, pairCooldown: 0 });
+    const damage = collidePolice(a, b);
+    assert.ok(damage > 0 && damage < 100);
+    hits++;
   }
+  assert.ok(hits >= 3);
   assert.equal(a.health, 0);
   assert.equal(b.health, 0);
   // V1.8: a head-on at chase speed wrecks both in a single impact.

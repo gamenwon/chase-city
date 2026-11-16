@@ -119,6 +119,68 @@ function eta(car, slot) {
   return (dx + dz) / (CONFIG.frontSprintSpeed * 0.85) + start + corner + 0.25;
 }
 
+// An officer ahead of the player on its road, going the same way.
+function aheadBlock(sim, road, active, nearest, pace) {
+  const p = sim.player,
+    start = coordOf(road, p);
+  const ahead = active
+    .filter((c) => {
+      const along = (coordOf(road, c) - start) * road.dir,
+        across = road.axis === "x" ? c.z : c.x,
+        heading =
+          ((road.axis === "x" ? c.vx : c.vz) * road.dir) /
+          (Math.hypot(c.vx, c.vz) || 1);
+      return (
+        along > 10 &&
+        along < 70 &&
+        Math.abs(across - road.center) < CONFIG.roadWidth / 2 + 1 &&
+        heading > 0.5
+      );
+    })
+    .sort((a, b) => coordOf(road, a) * road.dir - coordOf(road, b) * road.dir);
+  const lead = ahead[0];
+  if (!lead) return null;
+  // Where it can actually stop: its braking distance further on, but never
+  // closer to the player than 14.
+  const speed = Math.hypot(lead.vx, lead.vz);
+  const stop = (speed * speed) / (2 * CONFIG.blockDecel);
+  const along = Math.max((coordOf(road, lead) - start) * road.dir + stop, 14);
+  const s = start + road.dir * along;
+  const point = pointOn(road, s);
+  if (!sim.navigation.allowed(point)) return null;
+  const extent = roadExtent(sim, road, point);
+  const count = carsToSeal(extent.width) ?? CONFIG.blockMaxCars;
+  const spots = slotPositions(road, s, extent.lo, extent.hi, count);
+  const playerEta = along / pace;
+  const helpers = active
+    .filter((c) => c !== lead && c !== nearest)
+    .map((c) => ({ c, t: Math.min(...spots.map((q) => eta(c, q))) }))
+    .filter((e) => e.t < playerEta + CONFIG.blockEtaSlack)
+    .sort((a, b) => a.t - b.t)
+    .slice(0, count - 1)
+    .map((e) => e.c);
+  const cars = [lead, ...helpers];
+  // Fewer cars than the road needs: spread them evenly over its width; the
+  // player can still try to squeeze past or ram through.
+  const slots =
+    cars.length === count
+      ? spots
+      : slotPositions(road, s, extent.lo, extent.hi, cars.length);
+  const lateral = (q) => (road.axis === "x" ? q.z : q.x);
+  return {
+    found: {
+      s,
+      d: along,
+      point,
+      count,
+      partial: cars.length < count,
+      ...extent,
+    },
+    slots,
+    chosen: cars.sort((a, b) => lateral(a) - lateral(b)),
+  };
+}
+
 export function releaseRoadblock(sim, reason) {
   const block = sim.roadblock;
   if (!block) return;
@@ -190,21 +252,25 @@ export function updateRoadblock(sim, dt) {
   // Planning is a search, so it runs four times a second, not every frame.
   if (sim.elapsed < (sim.roadblockCheckAt || 0)) return;
   sim.roadblockCheckAt = sim.elapsed + 0.25;
-  // Only against a car that is really fleeing, never while a cordon forms.
+  // Only against a car that is really driving away, never while a cordon
+  // forms.
   if (
-    sim.elapsed < 1 ||
-    (p.fleeSpeed ?? 0) < 13 ||
     (p.netSpeed ?? 0) < 13 ||
     p.contained ||
-    p.cordonCandidate
+    p.cordonCandidate ||
+    p.cordonActive
   )
     return;
   const road = playerRoad(p);
   if (!road) return;
   const active = sim.police.filter(
-    (c) => c.state === "active" && c.mode !== "contain",
+    (c) => c.state === "active" && c.mode !== "contain" && !c.blockId,
   );
-  if (active.length < 3) return;
+  if (!active.length) return;
+  // A planned (full) block waits until the chase is under way; an officer
+  // already ahead of the player on its road blocks straight away.
+  const planFull =
+    sim.elapsed >= 1 && (p.fleeSpeed ?? 0) >= 13 && active.length >= 3;
   // Never the officer tailing the player: it keeps the rear pressure.
   const nearest = [...active].sort(
     (a, b) =>
@@ -216,7 +282,7 @@ export function updateRoadblock(sim, dt) {
   let found = null,
     slots = null,
     chosen = null;
-  for (const candidate of blockCandidates(sim, road)) {
+  for (const candidate of planFull ? blockCandidates(sim, road) : []) {
     const spots = slotPositions(
       road,
       candidate.s,
@@ -242,7 +308,15 @@ export function updateRoadblock(sim, dt) {
       .sort((a, b) => lateral(a) - lateral(b));
     break;
   }
-  if (!found) return;
+  // No full block in reach, but an officer is already driving ahead of the
+  // player on this road: it must not just keep driving ahead. It brakes to a
+  // stop across the road where it can, and whoever can get there in time
+  // joins it to close the rest.
+  if (!found) {
+    const emergency = aheadBlock(sim, road, active, nearest, pace);
+    if (!emergency) return;
+    ({ found, slots, chosen } = emergency);
+  }
   const id = (sim.roadblockId = (sim.roadblockId || 0) + 1);
   sim.roadblock = {
     id,
@@ -271,5 +345,6 @@ export function updateRoadblock(sim, dt) {
     z: found.point.z,
     cars: chosen.map((c) => c.id),
     ahead: found.d,
+    partial: !!found.partial,
   });
 }

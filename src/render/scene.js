@@ -9,6 +9,7 @@ import { CONFIG } from "../game/config.js";
 import { BuildingOcclusion } from "./occlusion.js";
 import { ExplosionEffects } from "./explosions.js";
 import { BonnetCamera } from "./pip.js";
+import { OfficerRenderer } from "./officers.js";
 const palette = [0xf34b32, 0xffbf22, 0x087cba, 0x13a783, 0xf38617, 0x2364ce];
 export class CityRenderer {
   constructor(canvas, layout) {
@@ -168,6 +169,7 @@ export class CityRenderer {
     this.trails = new VehicleTrails(this.scene);
     this.wreckRenderer = new WreckRenderer(this.scene);
     this.roadEvents = new RoadEventsRenderer(this.scene);
+    this.officers = new OfficerRenderer(this.scene);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -293,6 +295,7 @@ export class CityRenderer {
         wheel.rotation.y = wheel.position.z < 0 ? c.turn * 0.15 : 0;
       }
     });
+    this.officers.update(sim, sim.elapsed);
     this.effects.update(sim.events, sim.elapsed);
     if (sim.cameraRig !== this.cameraRig || !running)
       this.cameraRig.update(p, dt);
@@ -408,6 +411,7 @@ export class CityRenderer {
   reset() {
     this.roadEvents.reset();
     this.wreckRenderer.reset();
+    this.officers.reset();
     this.cameraRig.reset();
     this.trails.reset();
     this.resetMetrics();

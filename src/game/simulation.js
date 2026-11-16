@@ -8,9 +8,11 @@ import { chooseExit, constrainToWorld } from "./escape.js";
 import { updateBarricades } from "./barricades.js";
 import { createMission, updateMission } from "./missions.js";
 import { updateRoadblock } from "./roadblock.js";
+import { updateCordon, cordonSealed } from "./cordon.js";
 import {
   makePolice,
   steerPolice,
+  trafficBrake,
   collidePolice,
   policeContact,
   wallImpact,
@@ -64,6 +66,12 @@ export class Simulation {
     this.cordonSamples = [];
     this.roadblock = null;
     this.roadblockEvents = [];
+    this.cordon = null;
+    this.cordonEvents = [];
+    this.cordonCooldownUntil = 0;
+    this.cordonId = 0;
+    this.officers = [];
+    this.officerId = 0;
     this.roadblockCooldownUntil = 0;
     this.roadblockCheckAt = 0;
     this.roadblockId = 0;
@@ -294,10 +302,11 @@ export class Simulation {
         const blastDamage = protectedCordon
           ? Math.min(6, CONFIG.explosionDamage * strength * 0.1)
           : CONFIG.explosionDamage * strength * energy;
-        other.health = Math.max(
-          protectedCordon ? 1 : 0,
-          other.health - blastDamage,
-        );
+        // A blast shakes and damages neighbours but cannot wreck a car on its
+        // own: only real collisions do (cars already wrecked in the same
+        // crash still go up with it).
+        other.health =
+          other.health <= 0 ? 0 : Math.max(1, other.health - blastDamage);
         const impulse = protectedCordon ? 1.5 : 12;
         other.vx += (d ? dx / d : 1) * strength * impulse;
         other.vz += (d ? dz / d : 0) * strength * impulse;
@@ -446,6 +455,8 @@ export class Simulation {
       previous.set(c, { x: c.x, z: c.z });
     }
     updateRoadblock(this, dt);
+    updateCordon(this, dt);
+    p.cordonActive = !!this.cordon;
     for (let i = 0; i < this.police.length; i++) {
       const c = this.police[i];
       if (c.state !== "active") {
@@ -492,6 +503,7 @@ export class Simulation {
       c.wallCooldown = Math.max(0, (c.wallCooldown || 0) - dt);
       c.pairCooldown = Math.max(0, (c.pairCooldown || 0) - dt);
       steerPolice(c, i, p, dt, this.navigation, this.police, this.elapsed);
+      trafficBrake(c, this.police, p, dt);
       if (c.boostTimer > 0) this.stats.boostSeconds += dt;
       if (this.move(c, dt, CONFIG.policeRadius)) {
         this.applyPoliceObstacleDamage(c, c.lastImpact);
@@ -608,7 +620,7 @@ export class Simulation {
         ? Math.hypot(relative.x - oldest.x, relative.z - oldest.z) / span
         : 0;
     this.enclosureTimer -= dt;
-    if (near.length < 3) {
+    if (near.length < 2) {
       this.enclosure = {
         trapped: false,
         exits: 1,
@@ -624,16 +636,24 @@ export class Simulation {
       this.enclosure = inspectEnclosure(p, this.police, this.solids, (pose) =>
         this.navigation.allowed(pose),
       );
+      // A real cordon also leaves no gap the player's car fits through in any
+      // direction (walls count, moving police cars do not).
+      if (this.enclosure.trapped && !cordonSealed(this))
+        this.enclosure = {
+          ...this.enclosure,
+          trapped: false,
+          reason: "escape-gap",
+        };
       this.enclosureTimer = 0.15;
     }
-    const sealed = this.enclosure.trapped && near.length >= 3;
+    const sealed = this.enclosure.trapped && near.length >= 2;
     this.captureOpenTime = sealed ? 0 : this.captureOpenTime + dt;
     const holding =
       sealed ||
-      (this.arrest > 0 && near.length >= 3 && this.captureOpenTime < 0.35);
+      (this.arrest > 0 && near.length >= 2 && this.captureOpenTime < 0.35);
     p.contained = holding;
     p.captureProgress = this.arrest;
-    p.cordonCandidate = near.length >= 3 && (p.netSpeed < 5 || holding);
+    p.cordonCandidate = near.length >= 2 && (p.netSpeed < 5 || holding);
     if (holding && p.cordonHeading === undefined) p.cordonHeading = p.angle;
     if (!holding && this.arrest === 0) p.cordonHeading = undefined;
     this.arrest = clamp(

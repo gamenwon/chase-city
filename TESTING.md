@@ -2,6 +2,38 @@
 
 2026-11-13 (1차, `bca7805`), 2026-11-16 (2차). V1.7 `78b0c6d` 기반. 경찰 압박(측면·전방), 다중 충돌·2~3대 연쇄 폭발 연출, 영구 잔해를 강화했다. V1.7 검증 기록은 [V1.7 기록](docs/testing-v1.7.md)에 보존한다.
 
+## 경찰 AI 실동작 수정 (2026-11-16, 브랜치 `claude/v18-police-fix`, 기준 `c09c40a`)
+
+실제 플레이에서 요구대로 동작하지 않던 경찰 AI(포위·하차·충돌 폭발·전방 차단)를 고쳤다. PIP 코드(`src/render/pip.js` 등)는 바꾸지 않았다. 바꾼 내용은 [README](README.md)의 "경찰 AI 실동작 수정"에 있다.
+
+### 실제 브라우저 재현 A–E ([스펙](tests/browser/v18-police-fix.spec.js) · [증거 폴더](docs/evidence/v18-police-fix/) · [수치](docs/evidence/v18-police-fix/results.json))
+
+방법: 실제 게임 페이지에서 START를 누르는 순간 플레이어·경찰의 **시작 위치만** 배치하고(E는 플레이어 좌회전 입력 0.4초만 추가), 그 뒤는 수정하지 않은 게임이 실제 requestAnimationFrame 루프로 진행한다. 경찰 AI·충돌·피해·하차·BUSTED에 개입하지 않는다. 각 실행을 Playwright로 녹화하고(`*-game.mp4`), 0.25초(게임 시간)마다 게임 화면과 같은 장면의 근접 시점(게임 카메라가 투명 처리된 건물 뒤일 때가 있어 추가, 화면에는 표시 안 됨)을 저장했다(`*-overhead.mp4`, `*-sequence.jpg`). PC 1100×740과 휴대폰(iPhone 13 화면, Chromium) 각각 실행했다.
+
+| 상황 | 결과 | PC | 휴대폰 | 증거 |
+|---|---|---|---|---|
+| A. 벽 앞 정지 → 포위 → 정차 → 하차 → BUSTED | **성공** | 0.9초 포위 계획 → 2.0초 정지 → 2.65초 탈출로 없음 확인 → 2.77초 경찰 2명 하차(조준·경계) → **5.47초 BUSTED, 폭발 0**. 3초 판정 동안 포위차 3대 이동 0, 방향 변화 0 | 같은 흐름, 5.47초 BUSTED | [순서](docs/evidence/v18-police-fix/A-desktop-sequence.jpg) · [근접 영상](docs/evidence/v18-police-fix/A-desktop-overhead.mp4) · [게임 영상](docs/evidence/v18-police-fix/A-desktop-game.mp4) · [BUSTED](docs/evidence/v18-police-fix/A-desktop-final.jpg) |
+| B. 직진 → 전방 차단 → 정차 → 충돌 | **성공** | 시작 즉시 앞의 경찰차가 차단 역할 → 1.17초 플레이어 13 m 앞에서 도로를 가로질러 정차(이후 이동 0) → 1.7초 플레이어가 들이받고 정지 → 다른 차들이 틈을 메워 9.97초 BUSTED, 폭발 0 | 같음(14 m 앞 정차) | [순서](docs/evidence/v18-police-fix/B-desktop-sequence.jpg) · [근접 영상](docs/evidence/v18-police-fix/B-desktop-overhead.mp4) · [게임 영상](docs/evidence/v18-police-fix/B-desktop-game.mp4) |
+| B2. 넓은 도로 → 2대 이상으로 차단 | **성공** | 도로 폭을 재서 3대 배정, 플레이어 도착 전 정차, 체포·폭발 0 | 같음 | `B2-*` 파일 |
+| C. 2대 고속 충돌 → 폭발 → 잔해 유지 | **성공** | 0.18초 교차로 충돌(원인 vehicle) → 두 대 폭발(0.22초 간격) → 잔해 2개가 끝까지 같은 자리에서 불탐 | 같음 | [순서](docs/evidence/v18-police-fix/C-desktop-sequence.jpg) · [근접 영상](docs/evidence/v18-police-fix/C-desktop-overhead.mp4) |
+| D. 3대 근접 → 강한 충돌 차량만 폭발 | **성공** | 충돌한 2대만 폭발, 바로 뒤 3번째 차는 폭발 충격만 받고(내구도 98) 계속 추격 | 같음 | [순서](docs/evidence/v18-police-fix/D-desktop-sequence.jpg) · [근접 영상](docs/evidence/v18-police-fix/D-desktop-overhead.mp4) |
+| E. 포위 직전 탈출 → 해제 → 재추격 | **성공** | 0.9초 포위 계획 → 1.1초 플레이어가 벽을 따라 빠져나감 → 2.67초 `player-escaped`로 해제(포위 완료 0초) → 경찰이 다시 고속 추격 | 같음 | [순서](docs/evidence/v18-police-fix/E-desktop-sequence.jpg) · [근접 영상](docs/evidence/v18-police-fix/E-desktop-overhead.mp4) |
+
+E 참고: 해제 후 다시 추격하던 경찰 2대가 7.2초에 서로 세게 부딪혀 폭발했다(실제 충돌, 원인 vehicle). 휴대폰 화면 파일은 `*-iphone-*`.
+
+### 실행 중 찾아 고친 실제 결함
+
+- 다시 계획할 때마다 이미 자리에 선 포위차의 자리가 초기화돼 매번 다시 출발(떨림)하던 문제.
+- 벽에 대고 헛바퀴 도는 플레이어 때문에 포위 계획이 매 프레임 다시 짜이던 문제.
+- 서로 반대편에서 정지한 플레이어로 모여들던 경찰 2대가 정면충돌해 폭발하던 문제(플레이어 9 m 안에서만 급제동, 고속 추격 중 충돌은 그대로).
+- 정차한 동료 뒤에서 영원히 기다리던 문제(돌아서 감), 닿을 수 없는 자리를 계속 배정하던 문제, 실제로 틈을 막지 못하는 자리에 차를 보내던 문제.
+
+### 의도적으로 바꾼 기존 테스트
+
+- 충돌 기준 변경(충격 30 → 14, 폭발만으로는 파손 안 됨)에 맞춰 기대값 조정: `simulation`(34–36), `v15`, `v16`(폭발 이웃은 내구도 1로 생존), `v17`(스친 충돌은 상대 속도 14 이하로), `road-events`(추돌 속도 22 → 13), `v18` 연쇄(같은 충돌로 이미 부서진 차가 9 간격으로 차례로 폭발), 브라우저 `game.spec` 연쇄(이웃 내구도 0).
+- `v16` "포위 대형을 손으로 옆으로 미는" 테스트는 포위차가 고정 정차하는 지금 구조에 맞지 않아, "정지한 플레이어 주변에 이미 선 4대를 그대로 포위로 채택·정지 유지·체포"로 바꿨다.
+- `v18-blockade`: 봉쇄만으로는 뒤가 열려 있으면 체포되지 않으므로(요구사항) 뒤쫓는 경찰 2대를 추가했다. 정차 판정은 봉쇄 소속인 동안으로 한정하고, 탈출 경로의 회전 시작점을 −69 → −70으로 1 m 옮겼다(−69에서는 플레이어가 건물 모서리에 걸려 탈출 자체를 못 함).
+
 ## 도로 봉쇄·운전자 시점 PIP (2026-11-16, 브랜치 `claude/v18-blockade-pip`, 기준 `a41d518`)
 
 ### 미리보기·플레이 링크

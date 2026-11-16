@@ -201,7 +201,7 @@ test("a real vehicle impulse into a barrier applies obstacle damage in the same 
   Object.assign(s.player, { x: 60, z: 60, speed: 24, vx: 0, vz: -24 });
   s.police = [
     Object.assign(makePolice(0), { x: 0, z: 2.01, angle: 0, vx: 0, vz: 0 }),
-    Object.assign(makePolice(1), { x: 0, z: 4.5, angle: 0, vx: 0, vz: -22 }),
+    Object.assign(makePolice(1), { x: 0, z: 4.5, angle: 0, vx: 0, vz: -13 }),
   ];
   s.update(1 / 60, {});
   assert.ok(s.stats.pairCollisions > 0);

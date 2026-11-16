@@ -41,7 +41,32 @@ export function steerPolice(
 ) {
   if (!navigation) return;
   c.routeTimer = (c.routeTimer || 0) - dt;
-  if (c.blockSlot) return steerBlocker(c, index, player, dt, navigation);
+  // Stalled by a hard knock: no steering, just coast to a halt for a moment
+  // instead of grinding along the other car.
+  if (c.stunTimer > 0) {
+    c.stunTimer -= dt;
+    c.vx *= Math.exp(-dt * 3);
+    c.vz *= Math.exp(-dt * 3);
+    c.turn = 0;
+    return;
+  }
+  if (c.blockSlot) return steerBlocker(c, index, player, dt, navigation, fleet);
+  // While a cordon is closing, officers without a slot stand off instead of
+  // crowding in and shoving the cordon cars about.
+  if (
+    player.cordonActive &&
+    Math.hypot(c.x - player.x, c.z - player.z) < CONFIG.cordonStandoff
+  ) {
+    c.mode = "standby";
+    c.role = "standby";
+    c.vx *= Math.exp(-dt * 6);
+    c.vz *= Math.exp(-dt * 6);
+    const toward = Math.atan2(-(player.x - c.x), -(player.z - c.z));
+    const delta = clamp(angleDelta(toward, c.angle), -1.5 * dt, 1.5 * dt);
+    c.angle += Math.hypot(c.vx, c.vz) > 0.5 ? delta : 0;
+    c.turn = delta / dt;
+    return;
+  }
   const ranked = fleet
     .filter((p) => p.state === "active")
     .sort(
@@ -391,7 +416,7 @@ export function steerPolice(
 // V1.8 roadblock driving: get to the slot, brake to a stop exactly on it,
 // turn across the road and hold still. A car pushed off its slot creeps back
 // slowly instead of re-planning, so a held block does not twitch.
-export function steerBlocker(c, index, player, dt, navigation) {
+export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
   const slot = c.blockSlot,
     dx = slot.x - c.x,
     dz = slot.z - c.z,
@@ -402,6 +427,47 @@ export function steerBlocker(c, index, player, dt, navigation) {
   c.pressure = "front";
   if (c.blockState === "hold" && d > CONFIG.blockHoldLeave)
     c.blockState = "recover";
+  // Not getting any closer (the slot is wedged behind the player or another
+  // car): close to it, park where it is, still turned across; further out,
+  // look for another way round.
+  if (c.blockState !== "hold") {
+    if (d < (c.blockBest ?? Infinity) - 0.05) {
+      c.blockBest = d;
+      c.blockStall = 0;
+    } else c.blockStall = (c.blockStall || 0) + dt;
+    // Already right beside the player counts too: there it is part of the
+    // wall whether or not its exact slot can be reached.
+    const besidePlayer =
+      c.blockKind === "cordon" &&
+      Math.hypot(player.x - c.x, player.z - c.z) < 5.1;
+    if (c.blockStall > 1 && (d < 4 || besidePlayer)) {
+      // Park as it stands: turning on the spot next to the player would
+      // swing the car's ends and open a gap it is meant to close.
+      c.blockSlot = { ...slot, x: c.x, z: c.z, angle: c.angle };
+      c.blockState = "hold";
+      c.blockStall = 0;
+      c.vx = 0;
+      c.vz = 0;
+      return;
+    }
+    if (c.blockStall > 1.5) {
+      c.route = [];
+      c.routeTimer = 0;
+      c.blockStall = 0;
+      c.blockBest = Infinity;
+      // Still no way through after two tries (the slot is boxed in behind
+      // other cars): give it up so another car can be sent another way.
+      c.blockReroutes = (c.blockReroutes || 0) + 1;
+      if (c.blockReroutes > 2 && c.blockKind === "cordon") {
+        c.cordonGaveUp = 3;
+        c.blockId = null;
+        c.blockSlot = null;
+        c.blockState = null;
+        c.blockReroutes = 0;
+        return;
+      }
+    }
+  }
   if (
     c.blockState !== "hold" &&
     d < CONFIG.blockHoldEnter &&
@@ -433,9 +499,27 @@ export function steerBlocker(c, index, player, dt, navigation) {
       c.route.shift();
     waypoint = c.route[0] || slot;
   }
-  const wx = waypoint.x - c.x,
-    wz = waypoint.z - c.z,
-    wd = Math.hypot(wx, wz) || 1;
+  let wx = waypoint.x - c.x,
+    wz = waypoint.z - c.z;
+  const wd = Math.hypot(wx, wz) || 1;
+  // A parked police car straight in the way: steer round it at walking pace
+  // instead of waiting behind it for good.
+  for (const other of fleet) {
+    if (other === c || other.state !== "active" || other.blockState !== "hold")
+      continue;
+    const ox = other.x - c.x,
+      oz = other.z - c.z,
+      od = Math.hypot(ox, oz);
+    if (od > 0 && od < 6.5 && od < d && (ox * wx + oz * wz) / (od * wd) > 0.7) {
+      const side = wx * oz - wz * ox > 0 ? -1 : 1,
+        turn = 1.1 * side,
+        cs = Math.cos(turn),
+        sn = Math.sin(turn);
+      [wx, wz] = [wx * cs - wz * sn, wx * sn + wz * cs];
+      c.sidestep = true;
+      break;
+    }
+  }
   const desired = Math.atan2(-wx, -wz),
     error = angleDelta(desired, c.angle);
   const delta = clamp(error, -3.8 * dt, 3.8 * dt);
@@ -447,7 +531,40 @@ export function steerBlocker(c, index, player, dt, navigation) {
     c.blockState === "recover"
       ? 5
       : Math.sqrt(2 * CONFIG.blockDecel * Math.max(0, d - 0.3));
-  const speed = Math.min(CONFIG.frontSprintSpeed * corner, cap);
+  let limit = Math.min(CONFIG.frontSprintSpeed * corner, cap);
+  // Close to the player, come in slowly; never shove another police car.
+  const toPlayer = Math.hypot(player.x - c.x, player.z - c.z);
+  // Coming in toward the player: slow down near it. Driving past it (to get
+  // in front of a car sliding along a wall) is not slowed.
+  const closingOnPlayer =
+    ((player.x - c.x) * wx + (player.z - c.z) * wz) / ((toPlayer || 1) * wd);
+  if (toPlayer < 14 && closingOnPlayer > 0.3)
+    limit = Math.min(limit, 5 + toPlayer * 1.1);
+  for (const other of fleet) {
+    if (other === c || other.state !== "active") continue;
+    // Give way to parked cars and to the car with right of way (lower id),
+    // so two approaching cars never wait for each other forever.
+    if (other.blockState !== "hold" && other.id > c.id) continue;
+    if (other.blockState === "hold" && c.sidestep) continue;
+    const ox = other.x - c.x,
+      oz = other.z - c.z,
+      od = Math.hypot(ox, oz);
+    if (od < 6 && od > 0 && (ox * wx + oz * wz) / (od * wd) > 0.7)
+      limit = Math.min(limit, Math.max(0, (od - 3.6) * 2.2));
+    // Crossing traffic: if the two paths meet within the next second, hold
+    // back and let the other car through instead of T-boning it.
+    const rvx = other.vx - (wx / wd) * limit,
+      rvz = other.vz - (wz / wd) * limit,
+      rv2 = rvx * rvx + rvz * rvz;
+    if (rv2 > 1 && od < 14) {
+      const t = Math.max(0, Math.min(1, -(ox * rvx + oz * rvz) / rv2));
+      if (Math.hypot(ox + rvx * t, oz + rvz * t) < 3.4)
+        limit = Math.min(limit, 4);
+    }
+  }
+  if (c.sidestep) limit = Math.min(limit, 5);
+  c.sidestep = false;
+  const speed = limit;
   c.effectiveSpeed = speed;
   const grip = 1 - Math.exp(-dt * 7);
   c.vx += ((wx / wd) * speed - c.vx) * grip;
@@ -457,6 +574,34 @@ export function steerBlocker(c, index, player, dt, navigation) {
     c.vx *= 0.5;
     c.vz *= 0.5;
     c.routeTimer = 0;
+  }
+}
+// Close round the player (converging on it, forming a cordon) police cars
+// look out for each other: if another police car will be on top of this one
+// within half a second, brake hard instead of meeting it head-on. Away from
+// the player (high-speed chase) nothing changes: crashes there still happen.
+export function trafficBrake(c, fleet, player, dt) {
+  if (c.state !== "active") return;
+  if (Math.hypot(c.x - player.x, c.z - player.z) > 9) return;
+  for (const other of fleet) {
+    if (other === c || other.state !== "active") continue;
+    const ox = other.x - c.x,
+      oz = other.z - c.z,
+      od = Math.hypot(ox, oz);
+    if (od > 9 || od < 0.01) continue;
+    const rvx = other.vx - c.vx,
+      rvz = other.vz - c.vz,
+      closing = -(ox * rvx + oz * rvz) / od;
+    if (closing < 5) continue;
+    const rv2 = rvx * rvx + rvz * rvz;
+    const t = Math.max(0, Math.min(0.5, -(ox * rvx + oz * rvz) / rv2));
+    if (Math.hypot(ox + rvx * t, oz + rvz * t) > 3.4) continue;
+    // Only the car moving toward the other brakes.
+    if ((c.vx * ox + c.vz * oz) / od <= 1) continue;
+    const k = Math.exp(-dt * 12);
+    c.vx *= k;
+    c.vz *= k;
+    return;
   }
 }
 // SAT uses the visible oriented body (width 2.1, length 3.6), rather than a
@@ -494,19 +639,26 @@ export function collidePolice(a, b) {
   const { x: nx, z: nz, depth } = contact;
   // Body yaw is visual steering, not extra translational crash energy.
   const closing = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
-  const correction = depth / 2 + 0.001;
-  a.x -= nx * correction;
-  a.z -= nz * correction;
-  b.x += nx * correction;
-  b.z += nz * correction;
+  // A car parked in a cordon or roadblock is braced: the other car takes the
+  // whole push-back and the whole impulse.
+  const braced = (car) => car.blockState === "hold";
+  let wa = braced(a) ? 0 : 1,
+    wb = braced(b) ? 0 : 1;
+  if (!wa && !wb) wa = wb = 1;
+  const share = wa / (wa + wb);
+  const correction = depth + 0.002;
+  a.x -= nx * correction * share;
+  a.z -= nz * correction * share;
+  b.x += nx * correction * (1 - share);
+  b.z += nz * correction * (1 - share);
   if (closing <= 0) return 0;
   const relative = Math.hypot(a.vx - b.vx, a.vz - b.vz);
   const peakSpeed = Math.max(Math.hypot(a.vx, a.vz), Math.hypot(b.vx, b.vz));
-  const impulse = closing * 0.65;
-  a.vx -= nx * impulse;
-  a.vz -= nz * impulse;
-  b.vx += nx * impulse;
-  b.vz += nz * impulse;
+  const impulse = closing * 1.3;
+  a.vx -= nx * impulse * share;
+  a.vz -= nz * impulse * share;
+  b.vx += nx * impulse * (1 - share);
+  b.vz += nz * impulse * (1 - share);
   // Impulse/depenetration still applies, but a slow stationary cordon has no crash damage.
   if (
     closing < 5 ||
@@ -515,14 +667,27 @@ export function collidePolice(a, b) {
     (a.role === "contain" && b.role === "contain" && peakSpeed < 10)
   )
     return 0;
-  const tangentSquared = Math.max(0, relative * relative - closing * closing);
-  const impact = Math.sqrt(closing * closing + tangentSquared * 0.15);
+  // Severity: how hard they meet head-on, or most of their relative speed
+  // when one car runs into the other's corner or flank at speed (a corner hit
+  // has a small head-on component but is still a violent crash). Two cars
+  // drifting together in the same direction have little relative speed.
+  const impact = Math.max(closing, relative * 0.75);
   // A genuinely hard hit (head-on or T-bone) wrecks both cars at once;
   // lighter knocks still accumulate damage as before.
-  const damage =
-    impact >= CONFIG.lethalPairImpact
-      ? CONFIG.policeHealth
-      : impactDamage(impact, CONFIG.pairDamageScale);
+  const lethal = impact >= CONFIG.lethalPairImpact;
+  const damage = lethal
+    ? CONFIG.policeHealth
+    : impactDamage(impact, CONFIG.pairDamageScale);
+  // A strong knock that does not wreck them still stalls both cars, so they
+  // separate instead of grinding along each other at full chase speed.
+  if (!lethal && impact >= CONFIG.stunImpact && peakSpeed >= 12)
+    for (const car of [a, b])
+      if (!braced(car)) {
+        car.vx *= 0.35;
+        car.vz *= 0.35;
+        car.stunTimer = CONFIG.stunSeconds;
+        car.route = [];
+      }
   let applied = 0;
   for (const car of [a, b])
     if ((car.pairCooldown || 0) <= 0 && damage > 0) {

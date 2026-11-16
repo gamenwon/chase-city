@@ -1,0 +1,213 @@
+{
+ "desktop-chromium/A": {
+  "result": "arrested",
+  "elapsed": 5.47,
+  "explosions": 0,
+  "busted": true,
+  "officersOutAt": 2.767,
+  "officers": 2,
+  "cordonPlannedAt": 0.9,
+  "sealedAt": 2.65,
+  "playerStoppedAt": 2.017,
+  "holdDuringCount": {
+   "drift": 0,
+   "turn": 0,
+   "cars": 3
+  }
+ },
+ "desktop-chromium/B": {
+  "result": "arrested",
+  "elapsed": 9.97,
+  "explosions": 0,
+  "busted": true,
+  "officersOutAt": 7.3,
+  "officers": 2,
+  "cordonPlannedAt": 2.03,
+  "sealedAt": 6.983,
+  "playerStoppedAt": 1.717,
+  "roadblock": {
+   "at": 0.02,
+   "cars": [
+    0
+   ],
+   "ahead": 40.9
+  },
+  "frontHold": {
+   "at": 1.167,
+   "carX": -58.66,
+   "playerX": -72,
+   "gap": 13.3
+  }
+ },
+ "desktop-chromium/C": {
+  "result": null,
+  "elapsed": 6.32,
+  "explosions": 2,
+  "busted": false,
+  "cordonPlannedAt": 5.83,
+  "playerStoppedAt": 2.683,
+  "explosionEvents": [
+   {
+    "t": 0.18,
+    "delay": 0,
+    "cause": "vehicle"
+   },
+   {
+    "t": 0.18,
+    "delay": 0.22,
+    "cause": "vehicle"
+   }
+  ],
+  "wrecksAtEnd": 2
+ },
+ "desktop-chromium/D": {
+  "result": null,
+  "elapsed": 6.3,
+  "explosions": 2,
+  "busted": false,
+  "cordonPlannedAt": 4.93,
+  "explosionEvents": [
+   {
+    "t": 0.18,
+    "delay": 0,
+    "cause": "vehicle"
+   },
+   {
+    "t": 0.18,
+    "delay": 0.22,
+    "cause": "vehicle"
+   }
+  ],
+  "thirdCar": {
+   "state": "active",
+   "health": 98
+  },
+  "wrecksAtEnd": 2
+ },
+ "desktop-chromium/E": {
+  "result": null,
+  "elapsed": 8.35,
+  "explosions": 2,
+  "busted": false,
+  "cordonPlannedAt": 0.9,
+  "cordonRelease": "player-escaped",
+  "releasedAt": 2.67,
+  "explosionEvents": [
+   {
+    "t": 7.2,
+    "delay": 0,
+    "cause": "vehicle"
+   },
+   {
+    "t": 7.2,
+    "delay": 0.22,
+    "cause": "vehicle"
+   }
+  ]
+ },
+ "iphone-chromium/A": {
+  "result": "arrested",
+  "elapsed": 5.47,
+  "explosions": 0,
+  "busted": true,
+  "officersOutAt": 2.883,
+  "officers": 2,
+  "cordonPlannedAt": 0.9,
+  "sealedAt": 2.567,
+  "playerStoppedAt": 2.117,
+  "holdDuringCount": {
+   "drift": 0,
+   "turn": 0,
+   "cars": 3
+  }
+ },
+ "iphone-chromium/B": {
+  "result": "arrested",
+  "elapsed": 9.97,
+  "explosions": 0,
+  "busted": true,
+  "officersOutAt": 7.283,
+  "officers": 2,
+  "cordonPlannedAt": 2.03,
+  "sealedAt": 7.067,
+  "playerStoppedAt": 1.633,
+  "roadblock": {
+   "at": 0.02,
+   "cars": [
+    0
+   ],
+   "ahead": 40.9
+  },
+  "frontHold": {
+   "at": 1.133,
+   "carX": -58.66,
+   "playerX": -72.8,
+   "gap": 14.1
+  }
+ },
+ "iphone-chromium/C": {
+  "result": null,
+  "elapsed": 6.48,
+  "explosions": 2,
+  "busted": false,
+  "cordonPlannedAt": 3.82,
+  "explosionEvents": [
+   {
+    "t": 0.18,
+    "delay": 0,
+    "cause": "vehicle"
+   },
+   {
+    "t": 0.18,
+    "delay": 0.22,
+    "cause": "vehicle"
+   }
+  ],
+  "wrecksAtEnd": 2
+ },
+ "iphone-chromium/D": {
+  "result": null,
+  "elapsed": 6.35,
+  "explosions": 2,
+  "busted": false,
+  "cordonPlannedAt": 3.27,
+  "explosionEvents": [
+   {
+    "t": 0.18,
+    "delay": 0,
+    "cause": "vehicle"
+   },
+   {
+    "t": 0.18,
+    "delay": 0.22,
+    "cause": "vehicle"
+   }
+  ],
+  "thirdCar": {
+   "state": "active",
+   "health": 98
+  },
+  "wrecksAtEnd": 2
+ },
+ "iphone-chromium/E": {
+  "result": null,
+  "elapsed": 8.4,
+  "explosions": 2,
+  "busted": false,
+  "cordonPlannedAt": 0.9,
+  "cordonRelease": "player-escaped",
+  "releasedAt": 2.67,
+  "explosionEvents": [
+   {
+    "t": 7.2,
+    "delay": 0,
+    "cause": "vehicle"
+   },
+   {
+    "t": 7.2,
+    "delay": 0.22,
+    "cause": "vehicle"
+   }
+  ]
+ }
+}
