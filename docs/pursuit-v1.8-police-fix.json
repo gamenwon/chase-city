@@ -1,0 +1,4324 @@
+{
+ "root": "/home/user/chase-city",
+ "summary": {
+  "runs": 48,
+  "arrests": 73,
+  "destroyed": 2,
+  "avgPoliceWithin15": 1.99,
+  "frontPressurePct": 14.9,
+  "sidePressurePct": 30.3,
+  "frontOrSidePct": 34.6,
+  "threeWithin15Pct": 35.7,
+  "boxedIn3SidesPct": 16.3,
+  "explosionsPerRun": 6.71,
+  "visibleExplosionsPerRun": 5.5,
+  "visibleSharePct": 82,
+  "farExplosionsPerRun": 0.27,
+  "visibleMultiMomentsPerRun": 2.4,
+  "chainGroups2to3PerRun": 3.1,
+  "chainGroups4plusPerRun": 0,
+  "causes": {
+   "vehicle": 320,
+   "wall": 2
+  },
+  "blastShareOfExplosionsPct": 0,
+  "blocksPlannedPerRun": 1.29,
+  "blocksFacedPerRun": 0.67,
+  "blockHoldSecondsPerRun": 10.97,
+  "blockEscapesPerRun": 0.69,
+  "arrestsAtBlock": 73,
+  "bothWreckedInOneImpactPerRun": 3.27,
+  "blockDriftMax": 0.897
+ },
+ "runs": [
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 1,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.77838101849714
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.294069912466423
+    },
+    {
+     "run": 1,
+     "time": 37.61666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2257",
+     "visible": false,
+     "distance": 12.2544702001268
+    },
+    {
+     "run": 1,
+     "time": 37.836666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2257",
+     "visible": true,
+     "distance": 12.189945043947606
+    },
+    {
+     "run": 1,
+     "time": 50.516666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3031",
+     "visible": true,
+     "distance": 9.487594753691532
+    },
+    {
+     "run": 1,
+     "time": 50.736666666666665,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3031",
+     "visible": true,
+     "distance": 8.66486207302992
+    },
+    {
+     "run": 1,
+     "time": 58.9,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:3534",
+     "visible": true,
+     "distance": 14.91186864738488
+    }
+   ],
+   "frames": 3600,
+   "within15": 3311,
+   "front": 515,
+   "side": 582,
+   "frontOrSide": 629,
+   "surround3": 507,
+   "boxed": 232,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 9.233333333333372,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.5590530783260438,
+   "blockEscapes": 1,
+   "lethalPairs": 3,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 2
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 2,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 10.616666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:637",
+     "visible": false,
+     "distance": 12.2544702001268
+    },
+    {
+     "run": 0,
+     "time": 10.836666666666668,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:637",
+     "visible": true,
+     "distance": 12.189945043947606
+    },
+    {
+     "run": 0,
+     "time": 23.516666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1411",
+     "visible": true,
+     "distance": 9.487594753691532
+    },
+    {
+     "run": 0,
+     "time": 23.736666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1411",
+     "visible": true,
+     "distance": 8.66486207302992
+    },
+    {
+     "run": 0,
+     "time": 31.9,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1914",
+     "visible": true,
+     "distance": 14.91186864738488
+    },
+    {
+     "run": 0,
+     "time": 33.75,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:2025",
+     "visible": true,
+     "distance": 10.663573481040636
+    },
+    {
+     "run": 0,
+     "time": 33.97,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:2025",
+     "visible": true,
+     "distance": 7.614922473897954
+    },
+    {
+     "run": 1,
+     "time": 46.13333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2768",
+     "visible": true,
+     "distance": 13.77838101849714
+    },
+    {
+     "run": 1,
+     "time": 46.35333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2768",
+     "visible": true,
+     "distance": 12.294069912466423
+    }
+   ],
+   "frames": 3600,
+   "within15": 2791,
+   "front": 54,
+   "side": 465,
+   "frontOrSide": 512,
+   "surround3": 358,
+   "boxed": 193,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 4.099999999999991,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.3350664986346635,
+   "blockEscapes": 1,
+   "lethalPairs": 4,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 3
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 3,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.77838101849714
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.294069912466423
+    },
+    {
+     "run": 1,
+     "time": 38.18333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2291",
+     "visible": true,
+     "distance": 8.772278051304571
+    },
+    {
+     "run": 1,
+     "time": 38.40333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2291",
+     "visible": true,
+     "distance": 6.064256697386838
+    },
+    {
+     "run": 1,
+     "time": 55.21666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3313",
+     "visible": true,
+     "distance": 17.22130918126209
+    },
+    {
+     "run": 1,
+     "time": 55.43666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3313",
+     "visible": true,
+     "distance": 14.61554074996605
+    },
+    {
+     "run": 1,
+     "time": 57.13333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:3428",
+     "visible": true,
+     "distance": 11.089848988299888
+    },
+    {
+     "run": 1,
+     "time": 57.35333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:3428",
+     "visible": true,
+     "distance": 7.548858309260414
+    },
+    {
+     "run": 1,
+     "time": 58.46666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:7",
+     "frameKey": "1:3508",
+     "visible": false,
+     "distance": 11.69929322646195
+    },
+    {
+     "run": 1,
+     "time": 59.38333333333333,
+     "cause": "wall",
+     "chainRoot": "1:8",
+     "frameKey": "1:3563",
+     "visible": false,
+     "distance": 33.28281953713167
+    }
+   ],
+   "frames": 3600,
+   "within15": 5975,
+   "front": 456,
+   "side": 656,
+   "frontOrSide": 739,
+   "surround3": 811,
+   "boxed": 371,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 5.616666666666652,
+   "blocksFaced": 2,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8961711927969898,
+   "blockEscapes": 2,
+   "lethalPairs": 4,
+   "arrestSeconds": 3.5333333333333257,
+   "restarts": 1,
+   "multiMoments": 4
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 4,
+   "results": {
+    "arrested": 0,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 13.8,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:828",
+     "visible": true,
+     "distance": 8.772278051304571
+    },
+    {
+     "run": 0,
+     "time": 14.020000000000001,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:828",
+     "visible": true,
+     "distance": 6.064256697386838
+    },
+    {
+     "run": 0,
+     "time": 30.833333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1850",
+     "visible": true,
+     "distance": 17.22130918126209
+    },
+    {
+     "run": 0,
+     "time": 31.05333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1850",
+     "visible": true,
+     "distance": 14.61554074996605
+    },
+    {
+     "run": 0,
+     "time": 32.75,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1965",
+     "visible": true,
+     "distance": 11.089848988299888
+    },
+    {
+     "run": 0,
+     "time": 32.97,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1965",
+     "visible": true,
+     "distance": 7.548858309260414
+    },
+    {
+     "run": 0,
+     "time": 34.083333333333336,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2045",
+     "visible": false,
+     "distance": 11.69929322646195
+    },
+    {
+     "run": 0,
+     "time": 35,
+     "cause": "wall",
+     "chainRoot": "0:8",
+     "frameKey": "0:2100",
+     "visible": false,
+     "distance": 33.28281953713167
+    },
+    {
+     "run": 0,
+     "time": 40.88333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:9",
+     "frameKey": "0:2453",
+     "visible": true,
+     "distance": 12.318696893926367
+    },
+    {
+     "run": 0,
+     "time": 41.10333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:9",
+     "frameKey": "0:2453",
+     "visible": true,
+     "distance": 14.738182682428155
+    },
+    {
+     "run": 0,
+     "time": 41.68333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:11",
+     "frameKey": "0:2501",
+     "visible": false,
+     "distance": 17.63504357652954
+    },
+    {
+     "run": 0,
+     "time": 41.90333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:11",
+     "frameKey": "0:2501",
+     "visible": false,
+     "distance": 15.120394488204578
+    },
+    {
+     "run": 0,
+     "time": 45.21666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:13",
+     "frameKey": "0:2713",
+     "visible": true,
+     "distance": 41.525830349413
+    },
+    {
+     "run": 0,
+     "time": 45.43666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:13",
+     "frameKey": "0:2713",
+     "visible": true,
+     "distance": 39.405561448004626
+    }
+   ],
+   "frames": 3600,
+   "within15": 7810,
+   "front": 510,
+   "side": 1037,
+   "frontOrSide": 1311,
+   "surround3": 1301,
+   "boxed": 191,
+   "blocksPlanned": 3,
+   "blockHoldSeconds": 20.466666666666786,
+   "blocksFaced": 3,
+   "arrestsAtBlock": 0,
+   "blockDriftMax": 0.7644139187068002,
+   "blockEscapes": 2,
+   "lethalPairs": 6,
+   "arrestSeconds": 0.24999999999999997,
+   "restarts": 0,
+   "multiMoments": 5
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 5,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.827545573650804
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.373349897641758
+    },
+    {
+     "run": 0,
+     "time": 28.5,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1710",
+     "visible": true,
+     "distance": 34.87259639501067
+    },
+    {
+     "run": 0,
+     "time": 28.72,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1710",
+     "visible": true,
+     "distance": 37.47266236052849
+    },
+    {
+     "run": 0,
+     "time": 30.5,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1830",
+     "visible": true,
+     "distance": 10.892025670121225
+    },
+    {
+     "run": 0,
+     "time": 30.72,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1830",
+     "visible": true,
+     "distance": 9.367166676281927
+    }
+   ],
+   "frames": 3600,
+   "within15": 10760,
+   "front": 990,
+   "side": 1226,
+   "frontOrSide": 1318,
+   "surround3": 1664,
+   "boxed": 921,
+   "blocksPlanned": 3,
+   "blockHoldSeconds": 15.43333333333368,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.753701432895993,
+   "blockEscapes": 2,
+   "lethalPairs": 3,
+   "arrestSeconds": 3.5333333333333257,
+   "restarts": 1,
+   "multiMoments": 3
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 6,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 10.716666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:643",
+     "visible": true,
+     "distance": 11.913372399688567
+    },
+    {
+     "run": 0,
+     "time": 10.936666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:643",
+     "visible": true,
+     "distance": 12.161536673187918
+    },
+    {
+     "run": 0,
+     "time": 24.583333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1475",
+     "visible": true,
+     "distance": 14.903198827820908
+    },
+    {
+     "run": 0,
+     "time": 24.80333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1475",
+     "visible": true,
+     "distance": 16.451131660037515
+    },
+    {
+     "run": 0,
+     "time": 34.11666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:2047",
+     "visible": true,
+     "distance": 8.417693987091319
+    },
+    {
+     "run": 0,
+     "time": 34.336666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:2047",
+     "visible": true,
+     "distance": 12.221432186451763
+    },
+    {
+     "run": 0,
+     "time": 35.56666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2134",
+     "visible": false,
+     "distance": 44.63492800782386
+    },
+    {
+     "run": 0,
+     "time": 35.78666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2134",
+     "visible": false,
+     "distance": 45.459873476865894
+    },
+    {
+     "run": 1,
+     "time": 57.96666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:3478",
+     "visible": true,
+     "distance": 13.827545573650804
+    },
+    {
+     "run": 1,
+     "time": 58.18666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:3478",
+     "visible": true,
+     "distance": 12.373349897641758
+    }
+   ],
+   "frames": 3600,
+   "within15": 8157,
+   "front": 834,
+   "side": 1000,
+   "frontOrSide": 1000,
+   "surround3": 1148,
+   "boxed": 565,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 14.083333333333613,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.895451412265291,
+   "blockEscapes": 0,
+   "lethalPairs": 5,
+   "arrestSeconds": 4.033333333333324,
+   "restarts": 1,
+   "multiMoments": 4
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 7,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.827545573650804
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.373349897641758
+    },
+    {
+     "run": 0,
+     "time": 24.083333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1445",
+     "visible": false,
+     "distance": 30.310537497064374
+    },
+    {
+     "run": 0,
+     "time": 24.30333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1445",
+     "visible": true,
+     "distance": 33.820792082997315
+    },
+    {
+     "run": 2,
+     "time": 53.85,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3231",
+     "visible": true,
+     "distance": 12.896439971338168
+    },
+    {
+     "run": 2,
+     "time": 54.07,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3231",
+     "visible": true,
+     "distance": 10.85253025452265
+    }
+   ],
+   "frames": 3600,
+   "within15": 6166,
+   "front": 436,
+   "side": 932,
+   "frontOrSide": 1017,
+   "surround3": 1205,
+   "boxed": 327,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 9.550000000000054,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.38666247999507497,
+   "blockEscapes": 1,
+   "lethalPairs": 3,
+   "arrestSeconds": 6.549999999999982,
+   "restarts": 2,
+   "multiMoments": 2
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 8,
+   "results": {
+    "arrested": 3,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 24.8,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1488",
+     "visible": true,
+     "distance": 12.896439971338168
+    },
+    {
+     "run": 1,
+     "time": 25.02,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1488",
+     "visible": true,
+     "distance": 10.85253025452265
+    },
+    {
+     "run": 3,
+     "time": 59.18333333333333,
+     "cause": "vehicle",
+     "chainRoot": "3:1",
+     "frameKey": "3:3551",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 3,
+     "time": 59.40333333333333,
+     "cause": "vehicle",
+     "chainRoot": "3:1",
+     "frameKey": "3:3551",
+     "visible": true,
+     "distance": 12.072953148605631
+    }
+   ],
+   "frames": 3600,
+   "within15": 6132,
+   "front": 365,
+   "side": 1214,
+   "frontOrSide": 1241,
+   "surround3": 1178,
+   "boxed": 314,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 16.450000000000347,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 3,
+   "blockDriftMax": 0.3532816084680986,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 12.400000000000196,
+   "restarts": 3,
+   "multiMoments": 2
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 9,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 8.2,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:492",
+     "visible": true,
+     "distance": 12.896439971338168
+    },
+    {
+     "run": 0,
+     "time": 8.42,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:492",
+     "visible": true,
+     "distance": 10.85253025452265
+    },
+    {
+     "run": 2,
+     "time": 42.583333333333336,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2555",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 2,
+     "time": 42.803333333333335,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2555",
+     "visible": true,
+     "distance": 12.072953148605631
+    },
+    {
+     "run": 2,
+     "time": 51.75,
+     "cause": "vehicle",
+     "chainRoot": "2:3",
+     "frameKey": "2:3105",
+     "visible": true,
+     "distance": 9.520072764153275
+    },
+    {
+     "run": 2,
+     "time": 51.97,
+     "cause": "vehicle",
+     "chainRoot": "2:3",
+     "frameKey": "2:3105",
+     "visible": true,
+     "distance": 5.707472655356089
+    }
+   ],
+   "frames": 3600,
+   "within15": 6312,
+   "front": 294,
+   "side": 1108,
+   "frontOrSide": 1135,
+   "surround3": 1073,
+   "boxed": 313,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 15.450000000000347,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8590746633381375,
+   "blockEscapes": 0,
+   "lethalPairs": 3,
+   "arrestSeconds": 8.866666666666687,
+   "restarts": 2,
+   "multiMoments": 3
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 10,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 24.616666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1477",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 1,
+     "time": 24.836666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1477",
+     "visible": true,
+     "distance": 12.072953148605631
+    },
+    {
+     "run": 1,
+     "time": 33.78333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2027",
+     "visible": true,
+     "distance": 9.520072764153275
+    },
+    {
+     "run": 1,
+     "time": 34.00333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2027",
+     "visible": true,
+     "distance": 5.707472655356089
+    }
+   ],
+   "frames": 3600,
+   "within15": 8694,
+   "front": 813,
+   "side": 1371,
+   "frontOrSide": 1398,
+   "surround3": 1610,
+   "boxed": 745,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 19.51666666666684,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8859269732716021,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 9.966666666666741,
+   "restarts": 2,
+   "multiMoments": 2
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 11,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.072953148605631
+    },
+    {
+     "run": 0,
+     "time": 13.2,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:792",
+     "visible": true,
+     "distance": 9.520072764153275
+    },
+    {
+     "run": 0,
+     "time": 13.42,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:792",
+     "visible": true,
+     "distance": 5.707472655356089
+    },
+    {
+     "run": 1,
+     "time": 45.583333333333336,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2735",
+     "visible": false,
+     "distance": 14.125158230569154
+    },
+    {
+     "run": 1,
+     "time": 45.803333333333335,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2735",
+     "visible": false,
+     "distance": 10.397520446706446
+    },
+    {
+     "run": 1,
+     "time": 49.833333333333336,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2990",
+     "visible": true,
+     "distance": 14.074328875661248
+    },
+    {
+     "run": 1,
+     "time": 50.053333333333335,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2990",
+     "visible": true,
+     "distance": 15.393016614028626
+    }
+   ],
+   "frames": 3600,
+   "within15": 7377,
+   "front": 869,
+   "side": 1117,
+   "frontOrSide": 1180,
+   "surround3": 1178,
+   "boxed": 551,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 12.216666666666853,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8859269732716021,
+   "blockEscapes": 0,
+   "lethalPairs": 4,
+   "arrestSeconds": 4.116666666666657,
+   "restarts": 1,
+   "multiMoments": 3
+  },
+  {
+   "width": 1100,
+   "mode": "roads",
+   "seed": 12,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 14.583333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:875",
+     "visible": false,
+     "distance": 14.125158230569154
+    },
+    {
+     "run": 0,
+     "time": 14.803333333333335,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:875",
+     "visible": false,
+     "distance": 10.397520446706446
+    },
+    {
+     "run": 0,
+     "time": 18.833333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1130",
+     "visible": true,
+     "distance": 14.074328875661248
+    },
+    {
+     "run": 0,
+     "time": 19.05333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1130",
+     "visible": true,
+     "distance": 15.393016614028626
+    },
+    {
+     "run": 0,
+     "time": 30.833333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1850",
+     "visible": true,
+     "distance": 10.09497682891939
+    },
+    {
+     "run": 0,
+     "time": 31.05333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1850",
+     "visible": true,
+     "distance": 11.789430280480424
+    },
+    {
+     "run": 0,
+     "time": 42.18333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2531",
+     "visible": true,
+     "distance": 16.06842211804137
+    },
+    {
+     "run": 0,
+     "time": 43.05,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:2583",
+     "visible": true,
+     "distance": 22.08729932001889
+    },
+    {
+     "run": 0,
+     "time": 43.269999999999996,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:2583",
+     "visible": true,
+     "distance": 20.739487540722923
+    },
+    {
+     "run": 0,
+     "time": 45.28333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:10",
+     "frameKey": "0:2717",
+     "visible": true,
+     "distance": 8.789872973418332
+    }
+   ],
+   "frames": 3600,
+   "within15": 9198,
+   "front": 707,
+   "side": 1251,
+   "frontOrSide": 1407,
+   "surround3": 1612,
+   "boxed": 851,
+   "blocksPlanned": 4,
+   "blockHoldSeconds": 10.950000000000124,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8935916320644673,
+   "blockEscapes": 0,
+   "lethalPairs": 5,
+   "arrestSeconds": 3.949999999999991,
+   "restarts": 1,
+   "multiMoments": 3
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 1,
+   "results": {
+    "arrested": 3,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [],
+   "frames": 3600,
+   "within15": 8326,
+   "front": 728,
+   "side": 1567,
+   "frontOrSide": 1662,
+   "surround3": 1935,
+   "boxed": 944,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 11.050000000000129,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 3,
+   "blockDriftMax": 0.4691502369604392,
+   "blockEscapes": 0,
+   "lethalPairs": 0,
+   "arrestSeconds": 9.566666666666721,
+   "restarts": 3,
+   "multiMoments": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 2,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 2,
+     "time": 56.21666666666667,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3373",
+     "visible": true,
+     "distance": 9.891325026034528
+    }
+   ],
+   "frames": 3600,
+   "within15": 8638,
+   "front": 687,
+   "side": 1534,
+   "frontOrSide": 1667,
+   "surround3": 1958,
+   "boxed": 743,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 9.566666666666721,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.4691502369604392,
+   "blockEscapes": 2,
+   "lethalPairs": 1,
+   "arrestSeconds": 7.233333333333313,
+   "restarts": 2,
+   "multiMoments": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 3,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 36.46666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2188",
+     "visible": true,
+     "distance": 9.891325026034528
+    },
+    {
+     "run": 2,
+     "time": 48.8,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2928",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 2,
+     "time": 49.019999999999996,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2928",
+     "visible": false,
+     "distance": 39.69792019493835
+    }
+   ],
+   "frames": 3600,
+   "within15": 6800,
+   "front": 408,
+   "side": 1205,
+   "frontOrSide": 1366,
+   "surround3": 1471,
+   "boxed": 615,
+   "blocksPlanned": 3,
+   "blockHoldSeconds": 9.883333333333404,
+   "blocksFaced": 2,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.4691502369604392,
+   "blockEscapes": 2,
+   "lethalPairs": 2,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 0
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 4,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 25.433333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1526",
+     "visible": true,
+     "distance": 9.891325026034528
+    },
+    {
+     "run": 1,
+     "time": 37.766666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2266",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 1,
+     "time": 37.986666666666665,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2266",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 1,
+     "time": 59.733333333333334,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3584",
+     "visible": true,
+     "distance": 9.896216867877266
+    },
+    {
+     "run": 1,
+     "time": 59.95333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3584",
+     "visible": true,
+     "distance": 13.497818167577684
+    }
+   ],
+   "frames": 3600,
+   "within15": 7544,
+   "front": 317,
+   "side": 1176,
+   "frontOrSide": 1337,
+   "surround3": 1648,
+   "boxed": 347,
+   "blocksPlanned": 3,
+   "blockHoldSeconds": 6.449999999999982,
+   "blocksFaced": 2,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.2833871653070684,
+   "blockEscapes": 2,
+   "lethalPairs": 3,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 1
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 5,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 6.216666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 0,
+     "time": 6.4366666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 0,
+     "time": 28.183333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1691",
+     "visible": true,
+     "distance": 9.896216867877266
+    },
+    {
+     "run": 0,
+     "time": 28.403333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1691",
+     "visible": true,
+     "distance": 13.497818167577684
+    },
+    {
+     "run": 0,
+     "time": 40.916666666666664,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:2455",
+     "visible": true,
+     "distance": 10.834649786955975
+    },
+    {
+     "run": 0,
+     "time": 41.13666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:2455",
+     "visible": true,
+     "distance": 7.054437278816975
+    },
+    {
+     "run": 0,
+     "time": 43.233333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2594",
+     "visible": true,
+     "distance": 3.6679062069617787
+    }
+   ],
+   "frames": 3600,
+   "within15": 8540,
+   "front": 373,
+   "side": 1468,
+   "frontOrSide": 1546,
+   "surround3": 1750,
+   "boxed": 333,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 10.900000000000121,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.7729541035337067,
+   "blockEscapes": 0,
+   "lethalPairs": 3,
+   "arrestSeconds": 4.566666666666656,
+   "restarts": 1,
+   "multiMoments": 2
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 6,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 33.166666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1990",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 1,
+     "time": 33.38666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1990",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 1,
+     "time": 50.983333333333334,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3059",
+     "visible": true,
+     "distance": 9.814113331206514
+    },
+    {
+     "run": 1,
+     "time": 51.20333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3059",
+     "visible": true,
+     "distance": 7.147640655132595
+    }
+   ],
+   "frames": 3600,
+   "within15": 6260,
+   "front": 207,
+   "side": 993,
+   "frontOrSide": 1057,
+   "surround3": 1140,
+   "boxed": 451,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 8.366666666666662,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8860275196930375,
+   "blockEscapes": 1,
+   "lethalPairs": 2,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 1
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 7,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 6.216666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 0,
+     "time": 6.4366666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 0,
+     "time": 24.033333333333335,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1442",
+     "visible": true,
+     "distance": 9.814113331206514
+    },
+    {
+     "run": 0,
+     "time": 24.253333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1442",
+     "visible": true,
+     "distance": 7.147640655132595
+    },
+    {
+     "run": 2,
+     "time": 59.36666666666667,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3562",
+     "visible": false,
+     "distance": 5.32258337459951
+    },
+    {
+     "run": 2,
+     "time": 59.586666666666666,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3562",
+     "visible": true,
+     "distance": 8.72103202869887
+    }
+   ],
+   "frames": 3600,
+   "within15": 6084,
+   "front": 786,
+   "side": 983,
+   "frontOrSide": 1342,
+   "surround3": 972,
+   "boxed": 573,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 10.383333333333429,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8926254989884057,
+   "blockEscapes": 1,
+   "lethalPairs": 3,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 1
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 8,
+   "results": {
+    "arrested": 3,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 27.783333333333335,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1667",
+     "visible": false,
+     "distance": 5.32258337459951
+    },
+    {
+     "run": 1,
+     "time": 28.003333333333334,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1667",
+     "visible": true,
+     "distance": 8.72103202869887
+    },
+    {
+     "run": 2,
+     "time": 47.15,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2829",
+     "visible": true,
+     "distance": 16.087938330044356
+    },
+    {
+     "run": 2,
+     "time": 47.37,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2829",
+     "visible": true,
+     "distance": 19.81976206654134
+    }
+   ],
+   "frames": 3600,
+   "within15": 7260,
+   "front": 916,
+   "side": 1496,
+   "frontOrSide": 1815,
+   "surround3": 1506,
+   "boxed": 971,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 16.766666666666996,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 3,
+   "blockDriftMax": 0.8926254989884057,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 9.983333333333409,
+   "restarts": 3,
+   "multiMoments": 1
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 9,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 9.166666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:550",
+     "visible": false,
+     "distance": 5.32258337459951
+    },
+    {
+     "run": 0,
+     "time": 9.386666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:550",
+     "visible": true,
+     "distance": 8.72103202869887
+    },
+    {
+     "run": 1,
+     "time": 28.533333333333335,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1712",
+     "visible": true,
+     "distance": 16.087938330044356
+    },
+    {
+     "run": 1,
+     "time": 28.753333333333334,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1712",
+     "visible": true,
+     "distance": 19.81976206654134
+    },
+    {
+     "run": 2,
+     "time": 44.583333333333336,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2675",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 2,
+     "time": 44.803333333333335,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2675",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 7146,
+   "front": 264,
+   "side": 1546,
+   "frontOrSide": 1589,
+   "surround3": 1295,
+   "boxed": 648,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 11.766666666666831,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8911911339332317,
+   "blockEscapes": 0,
+   "lethalPairs": 3,
+   "arrestSeconds": 6.966666666666647,
+   "restarts": 2,
+   "multiMoments": 2
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 10,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 13.416666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:805",
+     "visible": true,
+     "distance": 16.087938330044356
+    },
+    {
+     "run": 0,
+     "time": 13.636666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:805",
+     "visible": true,
+     "distance": 19.81976206654134
+    },
+    {
+     "run": 1,
+     "time": 29.466666666666665,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1768",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 1,
+     "time": 29.686666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1768",
+     "visible": true,
+     "distance": 6.471433581450601
+    },
+    {
+     "run": 1,
+     "time": 45.28333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2717",
+     "visible": true,
+     "distance": 18.85512611407575
+    },
+    {
+     "run": 1,
+     "time": 45.50333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2717",
+     "visible": true,
+     "distance": 16.10384901735999
+    },
+    {
+     "run": 1,
+     "time": 49.916666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:2995",
+     "visible": true,
+     "distance": 9.113848389370247
+    },
+    {
+     "run": 1,
+     "time": 50.13666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:2995",
+     "visible": true,
+     "distance": 10.633756047617993
+    }
+   ],
+   "frames": 3600,
+   "within15": 7802,
+   "front": 184,
+   "side": 1461,
+   "frontOrSide": 1470,
+   "surround3": 1427,
+   "boxed": 614,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 9.183333333333369,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8911911339332317,
+   "blockEscapes": 0,
+   "lethalPairs": 4,
+   "arrestSeconds": 3.949999999999991,
+   "restarts": 1,
+   "multiMoments": 4
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 11,
+   "results": {
+    "arrested": 0,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 6.816666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:409",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 0,
+     "time": 7.036666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:409",
+     "visible": true,
+     "distance": 6.471433581450601
+    },
+    {
+     "run": 0,
+     "time": 22.633333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1358",
+     "visible": true,
+     "distance": 18.85512611407575
+    },
+    {
+     "run": 0,
+     "time": 22.85333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1358",
+     "visible": true,
+     "distance": 16.10384901735999
+    },
+    {
+     "run": 0,
+     "time": 27.266666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1636",
+     "visible": true,
+     "distance": 9.113848389370247
+    },
+    {
+     "run": 0,
+     "time": 27.486666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1636",
+     "visible": true,
+     "distance": 10.633756047617993
+    },
+    {
+     "run": 0,
+     "time": 42.21666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2533",
+     "visible": true,
+     "distance": 38.458309367155515
+    },
+    {
+     "run": 0,
+     "time": 42.43666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2533",
+     "visible": true,
+     "distance": 39.40176674885448
+    },
+    {
+     "run": 0,
+     "time": 42.78333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:9",
+     "frameKey": "0:2567",
+     "visible": true,
+     "distance": 13.072576279840558
+    },
+    {
+     "run": 0,
+     "time": 43.00333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:9",
+     "frameKey": "0:2567",
+     "visible": true,
+     "distance": 13.547591761576365
+    },
+    {
+     "run": 0,
+     "time": 47.95,
+     "cause": "vehicle",
+     "chainRoot": "0:11",
+     "frameKey": "0:2877",
+     "visible": false,
+     "distance": 17.446099835486244
+    },
+    {
+     "run": 0,
+     "time": 48.17,
+     "cause": "vehicle",
+     "chainRoot": "0:11",
+     "frameKey": "0:2877",
+     "visible": true,
+     "distance": 16.620084532294808
+    },
+    {
+     "run": 0,
+     "time": 51.916666666666664,
+     "cause": "vehicle",
+     "chainRoot": "0:13",
+     "frameKey": "0:3115",
+     "visible": true,
+     "distance": 8.412069689946327
+    },
+    {
+     "run": 0,
+     "time": 52.95,
+     "cause": "vehicle",
+     "chainRoot": "0:14",
+     "frameKey": "0:3177",
+     "visible": true,
+     "distance": 9.642739947026312
+    },
+    {
+     "run": 0,
+     "time": 53.17,
+     "cause": "vehicle",
+     "chainRoot": "0:14",
+     "frameKey": "0:3177",
+     "visible": true,
+     "distance": 9.152814841866482
+    },
+    {
+     "run": 0,
+     "time": 55.416666666666664,
+     "cause": "vehicle",
+     "chainRoot": "0:16",
+     "frameKey": "0:3325",
+     "visible": true,
+     "distance": 10.474609138835367
+    }
+   ],
+   "frames": 3600,
+   "within15": 6760,
+   "front": 56,
+   "side": 996,
+   "frontOrSide": 996,
+   "surround3": 906,
+   "boxed": 73,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 1.3833333333333333,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 0,
+   "blockDriftMax": 0.8780937995341602,
+   "blockEscapes": 0,
+   "lethalPairs": 7,
+   "arrestSeconds": 0,
+   "restarts": 0,
+   "multiMoments": 5
+  },
+  {
+   "width": 1100,
+   "mode": "evasive",
+   "seed": 12,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 22.316666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1339",
+     "visible": true,
+     "distance": 11.041266406143409
+    },
+    {
+     "run": 0,
+     "time": 22.536666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1339",
+     "visible": true,
+     "distance": 10.022468886431216
+    },
+    {
+     "run": 1,
+     "time": 43.36666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2602",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 1,
+     "time": 43.586666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2602",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 8833,
+   "front": 510,
+   "side": 1527,
+   "frontOrSide": 1546,
+   "surround3": 1556,
+   "boxed": 883,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 14.466666666666965,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8907482986523336,
+   "blockEscapes": 2,
+   "lethalPairs": 2,
+   "arrestSeconds": 3.5333333333333257,
+   "restarts": 1,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 1,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.77838101849714
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.294069912466423
+    },
+    {
+     "run": 1,
+     "time": 37.75,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2265",
+     "visible": false,
+     "distance": 12.2544702001268
+    },
+    {
+     "run": 1,
+     "time": 37.97,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2265",
+     "visible": true,
+     "distance": 12.189945043947606
+    }
+   ],
+   "frames": 3600,
+   "within15": 5130,
+   "front": 185,
+   "side": 965,
+   "frontOrSide": 1000,
+   "surround3": 979,
+   "boxed": 682,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 13.050000000000228,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8704896081243442,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 5.199999999999987,
+   "restarts": 1,
+   "multiMoments": 1
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 2,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 10.616666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:637",
+     "visible": false,
+     "distance": 12.2544702001268
+    },
+    {
+     "run": 0,
+     "time": 10.836666666666668,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:637",
+     "visible": true,
+     "distance": 12.189945043947606
+    },
+    {
+     "run": 1,
+     "time": 37.733333333333334,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2264",
+     "visible": true,
+     "distance": 13.77838101849714
+    },
+    {
+     "run": 1,
+     "time": 37.95333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2264",
+     "visible": true,
+     "distance": 12.294069912466423
+    },
+    {
+     "run": 1,
+     "time": 47.916666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2875",
+     "visible": true,
+     "distance": 10.654547313479583
+    },
+    {
+     "run": 1,
+     "time": 48.13666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2875",
+     "visible": true,
+     "distance": 12.408068085524938
+    }
+   ],
+   "frames": 3600,
+   "within15": 6328,
+   "front": 532,
+   "side": 1142,
+   "frontOrSide": 1177,
+   "surround3": 1204,
+   "boxed": 714,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 10.983333333333459,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8948064046894804,
+   "blockEscapes": 0,
+   "lethalPairs": 3,
+   "arrestSeconds": 5.816666666666651,
+   "restarts": 1,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 3,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.77838101849714
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.294069912466423
+    },
+    {
+     "run": 0,
+     "time": 14.216666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:853",
+     "visible": true,
+     "distance": 10.654547313479583
+    },
+    {
+     "run": 0,
+     "time": 14.436666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:853",
+     "visible": true,
+     "distance": 12.408068085524938
+    },
+    {
+     "run": 1,
+     "time": 43.21666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2593",
+     "visible": true,
+     "distance": 8.97553835509097
+    },
+    {
+     "run": 1,
+     "time": 43.43666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2593",
+     "visible": true,
+     "distance": 9.002435623012174
+    }
+   ],
+   "frames": 3600,
+   "within15": 7677,
+   "front": 826,
+   "side": 1139,
+   "frontOrSide": 1183,
+   "surround3": 1155,
+   "boxed": 707,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 11.983333333333508,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.8948064046894804,
+   "blockEscapes": 0,
+   "lethalPairs": 3,
+   "arrestSeconds": 3.7499999999999916,
+   "restarts": 1,
+   "multiMoments": 3
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 4,
+   "results": {
+    "arrested": 0,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 15.966666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:958",
+     "visible": true,
+     "distance": 8.97553835509097
+    },
+    {
+     "run": 0,
+     "time": 16.186666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:958",
+     "visible": true,
+     "distance": 9.002435623012174
+    },
+    {
+     "run": 0,
+     "time": 54.233333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:3254",
+     "visible": true,
+     "distance": 7.751016431694674
+    },
+    {
+     "run": 0,
+     "time": 54.45333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:3254",
+     "visible": true,
+     "distance": 9.944157745851784
+    },
+    {
+     "run": 0,
+     "time": 59.916666666666664,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:3595",
+     "visible": true,
+     "distance": 13.276651834118544
+    },
+    {
+     "run": 0,
+     "time": 60.13666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:3595",
+     "visible": true,
+     "distance": 9.839112050038336
+    }
+   ],
+   "frames": 3600,
+   "within15": 11160,
+   "front": 1007,
+   "side": 1303,
+   "frontOrSide": 1434,
+   "surround3": 1628,
+   "boxed": 1127,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 18.450000000000234,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 0,
+   "blockDriftMax": 0.8783866011365212,
+   "blockEscapes": 1,
+   "lethalPairs": 3,
+   "arrestSeconds": 2.116666666666664,
+   "restarts": 0,
+   "multiMoments": 3
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 5,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.827545573650804
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.373349897641758
+    },
+    {
+     "run": 0,
+     "time": 20.883333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1253",
+     "visible": false,
+     "distance": 14.227216590423827
+    },
+    {
+     "run": 0,
+     "time": 21.10333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1253",
+     "visible": false,
+     "distance": 13.083824147052486
+    },
+    {
+     "run": 0,
+     "time": 22.2,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1332",
+     "visible": true,
+     "distance": 8.873001726880116
+    },
+    {
+     "run": 0,
+     "time": 22.419999999999998,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1332",
+     "visible": true,
+     "distance": 10.203701569993665
+    },
+    {
+     "run": 1,
+     "time": 45.15,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2709",
+     "visible": true,
+     "distance": 11.913372399688567
+    },
+    {
+     "run": 1,
+     "time": 45.37,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2709",
+     "visible": true,
+     "distance": 12.161536673187918
+    },
+    {
+     "run": 1,
+     "time": 57.3,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3438",
+     "visible": true,
+     "distance": 5.649268576593315
+    },
+    {
+     "run": 1,
+     "time": 57.519999999999996,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3438",
+     "visible": true,
+     "distance": 9.3404550425065
+    },
+    {
+     "run": 1,
+     "time": 59,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:3540",
+     "visible": true,
+     "distance": 10.543007625115795
+    }
+   ],
+   "frames": 3600,
+   "within15": 5607,
+   "front": 358,
+   "side": 523,
+   "frontOrSide": 636,
+   "surround3": 802,
+   "boxed": 349,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 6.249999999999983,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.2785533214656326,
+   "blockEscapes": 0,
+   "lethalPairs": 5,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 4
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 6,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 10.716666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:643",
+     "visible": true,
+     "distance": 11.913372399688567
+    },
+    {
+     "run": 0,
+     "time": 10.936666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:643",
+     "visible": true,
+     "distance": 12.161536673187918
+    },
+    {
+     "run": 0,
+     "time": 22.866666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1372",
+     "visible": true,
+     "distance": 5.649268576593315
+    },
+    {
+     "run": 0,
+     "time": 23.086666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1372",
+     "visible": true,
+     "distance": 9.3404550425065
+    },
+    {
+     "run": 0,
+     "time": 24.566666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1474",
+     "visible": true,
+     "distance": 10.543007625115795
+    },
+    {
+     "run": 0,
+     "time": 27.033333333333335,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:1622",
+     "visible": true,
+     "distance": 5.976253819007316
+    },
+    {
+     "run": 0,
+     "time": 27.253333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:1622",
+     "visible": true,
+     "distance": 8.601461459301214
+    },
+    {
+     "run": 0,
+     "time": 33.85,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:2031",
+     "visible": true,
+     "distance": 6.96073758526126
+    },
+    {
+     "run": 0,
+     "time": 34.07,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:2031",
+     "visible": true,
+     "distance": 8.753417654516369
+    },
+    {
+     "run": 0,
+     "time": 34.53333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:10",
+     "frameKey": "0:2072",
+     "visible": false,
+     "distance": 41.906593759724394
+    },
+    {
+     "run": 0,
+     "time": 34.75333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:10",
+     "frameKey": "0:2072",
+     "visible": false,
+     "distance": 38.43091114878398
+    },
+    {
+     "run": 1,
+     "time": 49.36666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2962",
+     "visible": true,
+     "distance": 13.827545573650804
+    },
+    {
+     "run": 1,
+     "time": 49.586666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2962",
+     "visible": true,
+     "distance": 12.373349897641758
+    }
+   ],
+   "frames": 3600,
+   "within15": 6131,
+   "front": 226,
+   "side": 583,
+   "frontOrSide": 618,
+   "surround3": 904,
+   "boxed": 231,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 3.766666666666658,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.22598580018147868,
+   "blockEscapes": 0,
+   "lethalPairs": 6,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 5
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 7,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.827545573650804
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.373349897641758
+    },
+    {
+     "run": 0,
+     "time": 20.666666666666668,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1240",
+     "visible": false,
+     "distance": 13.661939326941686
+    },
+    {
+     "run": 0,
+     "time": 20.886666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1240",
+     "visible": true,
+     "distance": 14.11056725692954
+    },
+    {
+     "run": 0,
+     "time": 27.033333333333335,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1622",
+     "visible": true,
+     "distance": 9.000596715962157
+    },
+    {
+     "run": 0,
+     "time": 27.25,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:1635",
+     "visible": true,
+     "distance": 15.028860745523207
+    },
+    {
+     "run": 0,
+     "time": 33,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:1980",
+     "visible": true,
+     "distance": 8.697754828371515
+    },
+    {
+     "run": 0,
+     "time": 35.38333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:2123",
+     "visible": true,
+     "distance": 9.286014915576397
+    }
+   ],
+   "frames": 3600,
+   "within15": 5844,
+   "front": 428,
+   "side": 699,
+   "frontOrSide": 702,
+   "surround3": 826,
+   "boxed": 203,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 7.649999999999978,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.3532816084680986,
+   "blockEscapes": 0,
+   "lethalPairs": 4,
+   "arrestSeconds": 6.549999999999982,
+   "restarts": 2,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 8,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 24.8,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1488",
+     "visible": true,
+     "distance": 12.896439971338168
+    },
+    {
+     "run": 1,
+     "time": 25.02,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1488",
+     "visible": true,
+     "distance": 10.85253025452265
+    }
+   ],
+   "frames": 3600,
+   "within15": 7834,
+   "front": 1188,
+   "side": 860,
+   "frontOrSide": 1542,
+   "surround3": 1671,
+   "boxed": 759,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 21.3833333333334,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.5181458383516745,
+   "blockEscapes": 1,
+   "lethalPairs": 1,
+   "arrestSeconds": 6.549999999999982,
+   "restarts": 2,
+   "multiMoments": 1
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 9,
+   "results": {
+    "arrested": 1,
+    "destroyed": 1,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 8.2,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:492",
+     "visible": true,
+     "distance": 12.896439971338168
+    },
+    {
+     "run": 0,
+     "time": 8.42,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:492",
+     "visible": true,
+     "distance": 10.85253025452265
+    },
+    {
+     "run": 2,
+     "time": 53.733333333333334,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3224",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 2,
+     "time": 53.95333333333333,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3224",
+     "visible": true,
+     "distance": 12.072953148605631
+    }
+   ],
+   "frames": 3600,
+   "within15": 8867,
+   "front": 1340,
+   "side": 548,
+   "frontOrSide": 1608,
+   "surround3": 1739,
+   "boxed": 1132,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 23.466666666666615,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.5181458383516745,
+   "blockEscapes": 1,
+   "lethalPairs": 2,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 2,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 10,
+   "results": {
+    "arrested": 0,
+    "destroyed": 1,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 35.766666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2146",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 1,
+     "time": 35.986666666666665,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2146",
+     "visible": true,
+     "distance": 12.072953148605631
+    },
+    {
+     "run": 1,
+     "time": 44.416666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2665",
+     "visible": true,
+     "distance": 9.74643413017236
+    },
+    {
+     "run": 1,
+     "time": 44.63666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2665",
+     "visible": true,
+     "distance": 9.357567819136266
+    },
+    {
+     "run": 1,
+     "time": 46.2,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:2772",
+     "visible": true,
+     "distance": 5.4549880048932184
+    },
+    {
+     "run": 1,
+     "time": 51.916666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:6",
+     "frameKey": "1:3115",
+     "visible": true,
+     "distance": 16.381495475498998
+    },
+    {
+     "run": 1,
+     "time": 52.13666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:6",
+     "frameKey": "1:3115",
+     "visible": true,
+     "distance": 13.575465442244603
+    },
+    {
+     "run": 1,
+     "time": 55.63333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:8",
+     "frameKey": "1:3338",
+     "visible": true,
+     "distance": 13.769531415718554
+    },
+    {
+     "run": 1,
+     "time": 55.85333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:8",
+     "frameKey": "1:3338",
+     "visible": true,
+     "distance": 9.914127796379484
+    }
+   ],
+   "frames": 3600,
+   "within15": 9307,
+   "front": 1335,
+   "side": 431,
+   "frontOrSide": 1565,
+   "surround3": 1715,
+   "boxed": 1166,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 18.750000000000217,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 0,
+   "blockDriftMax": 0.5181458383516745,
+   "blockEscapes": 1,
+   "lethalPairs": 4,
+   "arrestSeconds": 0,
+   "restarts": 1,
+   "multiMoments": 4
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 11,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 4.033333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 0,
+     "time": 4.253333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:242",
+     "visible": true,
+     "distance": 12.072953148605631
+    },
+    {
+     "run": 0,
+     "time": 12.683333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:761",
+     "visible": true,
+     "distance": 9.74643413017236
+    },
+    {
+     "run": 0,
+     "time": 12.903333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:761",
+     "visible": true,
+     "distance": 9.357567819136266
+    },
+    {
+     "run": 0,
+     "time": 14.466666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:868",
+     "visible": true,
+     "distance": 5.4549880048932184
+    },
+    {
+     "run": 0,
+     "time": 20.183333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:1211",
+     "visible": true,
+     "distance": 16.381495475498998
+    },
+    {
+     "run": 0,
+     "time": 20.403333333333332,
+     "cause": "vehicle",
+     "chainRoot": "0:6",
+     "frameKey": "0:1211",
+     "visible": true,
+     "distance": 13.575465442244603
+    },
+    {
+     "run": 0,
+     "time": 23.9,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:1434",
+     "visible": true,
+     "distance": 13.769531415718554
+    },
+    {
+     "run": 0,
+     "time": 24.119999999999997,
+     "cause": "vehicle",
+     "chainRoot": "0:8",
+     "frameKey": "0:1434",
+     "visible": true,
+     "distance": 9.914127796379484
+    }
+   ],
+   "frames": 3600,
+   "within15": 6586,
+   "front": 541,
+   "side": 730,
+   "frontOrSide": 897,
+   "surround3": 846,
+   "boxed": 499,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 6.483333333333316,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.867010066982553,
+   "blockEscapes": 0,
+   "lethalPairs": 4,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 4
+  },
+  {
+   "width": 390,
+   "mode": "roads",
+   "seed": 12,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 30,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1800",
+     "visible": false,
+     "distance": 20.380115002430355
+    },
+    {
+     "run": 0,
+     "time": 30.22,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1800",
+     "visible": false,
+     "distance": 16.785216446333916
+    },
+    {
+     "run": 0,
+     "time": 36.71666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:2203",
+     "visible": false,
+     "distance": 13.604426371527472
+    },
+    {
+     "run": 0,
+     "time": 36.93666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:2203",
+     "visible": false,
+     "distance": 15.345583181696746
+    },
+    {
+     "run": 0,
+     "time": 43.68333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:2621",
+     "visible": false,
+     "distance": 8.71568649212151
+    },
+    {
+     "run": 0,
+     "time": 43.90333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:2621",
+     "visible": true,
+     "distance": 7.649444544431786
+    },
+    {
+     "run": 0,
+     "time": 46.65,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2799",
+     "visible": true,
+     "distance": 11.382254617719397
+    },
+    {
+     "run": 0,
+     "time": 46.87,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:2799",
+     "visible": true,
+     "distance": 8.086818889431653
+    },
+    {
+     "run": 1,
+     "time": 55.8,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:3348",
+     "visible": true,
+     "distance": 13.594540125954845
+    },
+    {
+     "run": 1,
+     "time": 56.019999999999996,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:3348",
+     "visible": true,
+     "distance": 12.072953148605631
+    }
+   ],
+   "frames": 3600,
+   "within15": 5314,
+   "front": 338,
+   "side": 608,
+   "frontOrSide": 802,
+   "surround3": 782,
+   "boxed": 371,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 4.19999999999999,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.437760593725709,
+   "blockEscapes": 1,
+   "lethalPairs": 5,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 1,
+   "results": {
+    "arrested": 3,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 26.016666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1561",
+     "visible": false,
+     "distance": 14.24264469753958
+    },
+    {
+     "run": 1,
+     "time": 38.63333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:2",
+     "frameKey": "1:2318",
+     "visible": false,
+     "distance": 25.711246579268092
+    },
+    {
+     "run": 1,
+     "time": 38.85333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:2",
+     "frameKey": "1:2318",
+     "visible": true,
+     "distance": 25.585709850863697
+    }
+   ],
+   "frames": 3600,
+   "within15": 7289,
+   "front": 599,
+   "side": 1359,
+   "frontOrSide": 1439,
+   "surround3": 1517,
+   "boxed": 875,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 11.600000000000156,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 3,
+   "blockDriftMax": 0.4691502369604392,
+   "blockEscapes": 1,
+   "lethalPairs": 2,
+   "arrestSeconds": 9.05000000000003,
+   "restarts": 3,
+   "multiMoments": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 2,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 14.983333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:899",
+     "visible": false,
+     "distance": 14.24264469753958
+    },
+    {
+     "run": 0,
+     "time": 27.6,
+     "cause": "vehicle",
+     "chainRoot": "0:2",
+     "frameKey": "0:1656",
+     "visible": false,
+     "distance": 25.711246579268092
+    },
+    {
+     "run": 0,
+     "time": 27.82,
+     "cause": "vehicle",
+     "chainRoot": "0:2",
+     "frameKey": "0:1656",
+     "visible": true,
+     "distance": 25.585709850863697
+    }
+   ],
+   "frames": 3600,
+   "within15": 7851,
+   "front": 636,
+   "side": 1361,
+   "frontOrSide": 1448,
+   "surround3": 1679,
+   "boxed": 709,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 8.166666666666652,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.4691502369604392,
+   "blockEscapes": 1,
+   "lethalPairs": 2,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 0
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 3,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 28.166666666666668,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1690",
+     "visible": false,
+     "distance": 22.583524053213623
+    },
+    {
+     "run": 1,
+     "time": 28.386666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1690",
+     "visible": true,
+     "distance": 22.031354763374477
+    },
+    {
+     "run": 1,
+     "time": 34.68333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2081",
+     "visible": true,
+     "distance": 6.6722854946234555
+    },
+    {
+     "run": 1,
+     "time": 34.90333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2081",
+     "visible": true,
+     "distance": 9.15850657769338
+    }
+   ],
+   "frames": 3600,
+   "within15": 8648,
+   "front": 336,
+   "side": 1645,
+   "frontOrSide": 1652,
+   "surround3": 1824,
+   "boxed": 723,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 6.849999999999981,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.4691502369604392,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 1
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 4,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 17.133333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1028",
+     "visible": false,
+     "distance": 22.583524053213623
+    },
+    {
+     "run": 0,
+     "time": 17.35333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1028",
+     "visible": true,
+     "distance": 22.031354763374477
+    },
+    {
+     "run": 0,
+     "time": 23.65,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1419",
+     "visible": true,
+     "distance": 6.6722854946234555
+    },
+    {
+     "run": 0,
+     "time": 23.869999999999997,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:1419",
+     "visible": true,
+     "distance": 9.15850657769338
+    },
+    {
+     "run": 1,
+     "time": 49.06666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2944",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 1,
+     "time": 49.28666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2944",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 1,
+     "time": 56.75,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3405",
+     "visible": true,
+     "distance": 8.039159148767197
+    },
+    {
+     "run": 1,
+     "time": 56.97,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3405",
+     "visible": true,
+     "distance": 10.153572383598503
+    }
+   ],
+   "frames": 3600,
+   "within15": 7729,
+   "front": 289,
+   "side": 1348,
+   "frontOrSide": 1399,
+   "surround3": 1473,
+   "boxed": 453,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 3.4166666666666594,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.43964524327750437,
+   "blockEscapes": 0,
+   "lethalPairs": 4,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 5,
+   "results": {
+    "arrested": 1,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 6.216666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 0,
+     "time": 6.4366666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 0,
+     "time": 13.9,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:834",
+     "visible": true,
+     "distance": 8.039159148767197
+    },
+    {
+     "run": 0,
+     "time": 14.120000000000001,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:834",
+     "visible": true,
+     "distance": 10.153572383598503
+    },
+    {
+     "run": 0,
+     "time": 20.883333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1253",
+     "visible": true,
+     "distance": 19.637403453337555
+    },
+    {
+     "run": 0,
+     "time": 21.10333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:1253",
+     "visible": true,
+     "distance": 21.041042967042834
+    },
+    {
+     "run": 0,
+     "time": 26.016666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:1561",
+     "visible": true,
+     "distance": 15.39426095693801
+    },
+    {
+     "run": 0,
+     "time": 26.236666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:1561",
+     "visible": true,
+     "distance": 18.95375955909149
+    },
+    {
+     "run": 0,
+     "time": 27.75,
+     "cause": "vehicle",
+     "chainRoot": "0:9",
+     "frameKey": "0:1665",
+     "visible": true,
+     "distance": 13.873938430497567
+    },
+    {
+     "run": 0,
+     "time": 27.97,
+     "cause": "vehicle",
+     "chainRoot": "0:9",
+     "frameKey": "0:1665",
+     "visible": false,
+     "distance": 10.872709278351104
+    },
+    {
+     "run": 0,
+     "time": 31.383333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:11",
+     "frameKey": "0:1883",
+     "visible": false,
+     "distance": 15.187370331710643
+    },
+    {
+     "run": 0,
+     "time": 31.60333333333333,
+     "cause": "vehicle",
+     "chainRoot": "0:11",
+     "frameKey": "0:1883",
+     "visible": false,
+     "distance": 17.439229429557624
+    },
+    {
+     "run": 1,
+     "time": 55.05,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:3303",
+     "visible": true,
+     "distance": 12.099589850535484
+    },
+    {
+     "run": 1,
+     "time": 55.269999999999996,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:3303",
+     "visible": true,
+     "distance": 9.634345406396687
+    },
+    {
+     "run": 1,
+     "time": 57.516666666666666,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3451",
+     "visible": true,
+     "distance": 9.733177817183535
+    },
+    {
+     "run": 1,
+     "time": 57.736666666666665,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:3451",
+     "visible": true,
+     "distance": 11.420651596991975
+    }
+   ],
+   "frames": 3600,
+   "within15": 4494,
+   "front": 87,
+   "side": 734,
+   "frontOrSide": 793,
+   "surround3": 642,
+   "boxed": 98,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 5.599999999999985,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 1,
+   "blockDriftMax": 0.6509487907281225,
+   "blockEscapes": 0,
+   "lethalPairs": 8,
+   "arrestSeconds": 3.016666666666661,
+   "restarts": 1,
+   "multiMoments": 5
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 6,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 12.7,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:762",
+     "visible": true,
+     "distance": 12.099589850535484
+    },
+    {
+     "run": 0,
+     "time": 12.92,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:762",
+     "visible": true,
+     "distance": 9.634345406396687
+    },
+    {
+     "run": 0,
+     "time": 15.166666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:910",
+     "visible": true,
+     "distance": 9.733177817183535
+    },
+    {
+     "run": 0,
+     "time": 15.386666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:910",
+     "visible": true,
+     "distance": 11.420651596991975
+    },
+    {
+     "run": 1,
+     "time": 31.35,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1881",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 1,
+     "time": 31.57,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1881",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 1,
+     "time": 38.96666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2338",
+     "visible": true,
+     "distance": 8.180295901882275
+    },
+    {
+     "run": 1,
+     "time": 39.18666666666667,
+     "cause": "vehicle",
+     "chainRoot": "1:3",
+     "frameKey": "1:2338",
+     "visible": true,
+     "distance": 10.696545117998634
+    },
+    {
+     "run": 1,
+     "time": 41.43333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:2486",
+     "visible": true,
+     "distance": 7.26063915990242
+    },
+    {
+     "run": 1,
+     "time": 41.65333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:5",
+     "frameKey": "1:2486",
+     "visible": true,
+     "distance": 11.106425913549398
+    },
+    {
+     "run": 1,
+     "time": 50.7,
+     "cause": "vehicle",
+     "chainRoot": "1:7",
+     "frameKey": "1:3042",
+     "visible": true,
+     "distance": 7.938169455653461
+    },
+    {
+     "run": 1,
+     "time": 50.92,
+     "cause": "vehicle",
+     "chainRoot": "1:7",
+     "frameKey": "1:3042",
+     "visible": true,
+     "distance": 8.800542199919766
+    }
+   ],
+   "frames": 3600,
+   "within15": 6049,
+   "front": 150,
+   "side": 1124,
+   "frontOrSide": 1221,
+   "surround3": 1174,
+   "boxed": 681,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 13.316666666666908,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8970783473742338,
+   "blockEscapes": 1,
+   "lethalPairs": 6,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 5
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 7,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 6.216666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 40.88484845488425
+    },
+    {
+     "run": 0,
+     "time": 6.4366666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:373",
+     "visible": false,
+     "distance": 39.69792019493835
+    },
+    {
+     "run": 0,
+     "time": 13.833333333333334,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:830",
+     "visible": true,
+     "distance": 8.180295901882275
+    },
+    {
+     "run": 0,
+     "time": 14.053333333333335,
+     "cause": "vehicle",
+     "chainRoot": "0:3",
+     "frameKey": "0:830",
+     "visible": true,
+     "distance": 10.696545117998634
+    },
+    {
+     "run": 0,
+     "time": 16.3,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:978",
+     "visible": true,
+     "distance": 7.26063915990242
+    },
+    {
+     "run": 0,
+     "time": 16.52,
+     "cause": "vehicle",
+     "chainRoot": "0:5",
+     "frameKey": "0:978",
+     "visible": true,
+     "distance": 11.106425913549398
+    },
+    {
+     "run": 0,
+     "time": 25.566666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:1534",
+     "visible": true,
+     "distance": 7.938169455653461
+    },
+    {
+     "run": 0,
+     "time": 25.786666666666665,
+     "cause": "vehicle",
+     "chainRoot": "0:7",
+     "frameKey": "0:1534",
+     "visible": true,
+     "distance": 8.800542199919766
+    },
+    {
+     "run": 2,
+     "time": 58.81666666666667,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3529",
+     "visible": true,
+     "distance": 5.32258337459951
+    },
+    {
+     "run": 2,
+     "time": 59.03666666666667,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3529",
+     "visible": true,
+     "distance": 8.72103202869887
+    }
+   ],
+   "frames": 3600,
+   "within15": 5488,
+   "front": 821,
+   "side": 849,
+   "frontOrSide": 1241,
+   "surround3": 890,
+   "boxed": 493,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 9.916666666666739,
+   "blocksFaced": 2,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.8970783473742338,
+   "blockEscapes": 1,
+   "lethalPairs": 5,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 4
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 8,
+   "results": {
+    "arrested": 3,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 27.783333333333335,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1667",
+     "visible": true,
+     "distance": 5.32258337459951
+    },
+    {
+     "run": 1,
+     "time": 28.003333333333334,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1667",
+     "visible": true,
+     "distance": 8.72103202869887
+    },
+    {
+     "run": 3,
+     "time": 58.45,
+     "cause": "vehicle",
+     "chainRoot": "3:1",
+     "frameKey": "3:3507",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 3,
+     "time": 58.67,
+     "cause": "vehicle",
+     "chainRoot": "3:1",
+     "frameKey": "3:3507",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 7156,
+   "front": 958,
+   "side": 1362,
+   "frontOrSide": 1681,
+   "surround3": 1350,
+   "boxed": 844,
+   "blocksPlanned": 1,
+   "blockHoldSeconds": 13.066666666666896,
+   "blocksFaced": 1,
+   "arrestsAtBlock": 3,
+   "blockDriftMax": 0.8926254989884057,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 9.05000000000003,
+   "restarts": 3,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 9,
+   "results": {
+    "arrested": 3,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 9.166666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:550",
+     "visible": true,
+     "distance": 5.32258337459951
+    },
+    {
+     "run": 0,
+     "time": 9.386666666666667,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:550",
+     "visible": true,
+     "distance": 8.72103202869887
+    },
+    {
+     "run": 2,
+     "time": 39.833333333333336,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2390",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 2,
+     "time": 40.053333333333335,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:2390",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 7016,
+   "front": 299,
+   "side": 1335,
+   "frontOrSide": 1378,
+   "surround3": 1334,
+   "boxed": 723,
+   "blocksPlanned": 0,
+   "blockHoldSeconds": 11.266666666666806,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 3,
+   "blockDriftMax": 0.8896981290085578,
+   "blockEscapes": 0,
+   "lethalPairs": 2,
+   "arrestSeconds": 9.05000000000003,
+   "restarts": 3,
+   "multiMoments": 2
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 10,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 1,
+     "time": 24.716666666666665,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1483",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 1,
+     "time": 24.936666666666664,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:1483",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 8157,
+   "front": 380,
+   "side": 1362,
+   "frontOrSide": 1427,
+   "surround3": 1620,
+   "boxed": 715,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 8.04999999999998,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.5623538636839972,
+   "blockEscapes": 1,
+   "lethalPairs": 1,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 1
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 11,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 6.816666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:409",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 0,
+     "time": 7.036666666666666,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:409",
+     "visible": true,
+     "distance": 6.471433581450601
+    },
+    {
+     "run": 1,
+     "time": 46.833333333333336,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2810",
+     "visible": true,
+     "distance": 8.477817709905844
+    },
+    {
+     "run": 1,
+     "time": 47.053333333333335,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2810",
+     "visible": true,
+     "distance": 9.755563231291022
+    },
+    {
+     "run": 2,
+     "time": 59.86666666666667,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3592",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 2,
+     "time": 60.086666666666666,
+     "cause": "vehicle",
+     "chainRoot": "2:1",
+     "frameKey": "2:3592",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 7609,
+   "front": 320,
+   "side": 1239,
+   "frontOrSide": 1339,
+   "surround3": 1435,
+   "boxed": 575,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 7.849999999999977,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.7690035252195132,
+   "blockEscapes": 2,
+   "lethalPairs": 3,
+   "arrestSeconds": 6.033333333333317,
+   "restarts": 2,
+   "multiMoments": 3
+  },
+  {
+   "width": 390,
+   "mode": "evasive",
+   "seed": 12,
+   "results": {
+    "arrested": 2,
+    "destroyed": 0,
+    "success": 0
+   },
+   "explosions": [
+    {
+     "run": 0,
+     "time": 28.25,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1695",
+     "visible": true,
+     "distance": 8.477817709905844
+    },
+    {
+     "run": 0,
+     "time": 28.47,
+     "cause": "vehicle",
+     "chainRoot": "0:1",
+     "frameKey": "0:1695",
+     "visible": true,
+     "distance": 9.755563231291022
+    },
+    {
+     "run": 1,
+     "time": 41.28333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2477",
+     "visible": true,
+     "distance": 8.515297393043369
+    },
+    {
+     "run": 1,
+     "time": 41.50333333333333,
+     "cause": "vehicle",
+     "chainRoot": "1:1",
+     "frameKey": "1:2477",
+     "visible": true,
+     "distance": 6.471433581450601
+    }
+   ],
+   "frames": 3600,
+   "within15": 7150,
+   "front": 330,
+   "side": 1192,
+   "frontOrSide": 1292,
+   "surround3": 1340,
+   "boxed": 597,
+   "blocksPlanned": 2,
+   "blockHoldSeconds": 7.699999999999978,
+   "blocksFaced": 0,
+   "arrestsAtBlock": 2,
+   "blockDriftMax": 0.7873071490063728,
+   "blockEscapes": 2,
+   "lethalPairs": 2,
+   "arrestSeconds": 6.199999999999983,
+   "restarts": 2,
+   "multiMoments": 2
+  }
+ ]
+}
