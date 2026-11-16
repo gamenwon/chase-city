@@ -4,11 +4,11 @@
   "elapsed": 5.47,
   "explosions": 0,
   "busted": true,
-  "officersOutAt": 2.767,
-  "officers": 2,
+  "officersOutAt": 2.917,
+  "officers": 3,
   "cordonPlannedAt": 0.9,
-  "sealedAt": 2.65,
-  "playerStoppedAt": 2.017,
+  "sealedAt": 2.6,
+  "playerStoppedAt": 2.2,
   "holdDuringCount": {
    "drift": 0,
    "turn": 0,
@@ -16,15 +16,12 @@
   }
  },
  "desktop-chromium/B": {
-  "result": "arrested",
-  "elapsed": 9.97,
+  "result": null,
+  "elapsed": 11.25,
   "explosions": 0,
-  "busted": true,
-  "officersOutAt": 7.3,
-  "officers": 2,
+  "busted": false,
   "cordonPlannedAt": 2.03,
-  "sealedAt": 6.983,
-  "playerStoppedAt": 1.717,
+  "playerStoppedAt": 1.683,
   "roadblock": {
    "at": 0.02,
    "cars": [
@@ -33,19 +30,38 @@
    "ahead": 40.9
   },
   "frontHold": {
-   "at": 1.167,
+   "at": 1.05,
    "carX": -58.66,
-   "playerX": -72,
-   "gap": 13.3
+   "playerX": -74.8,
+   "gap": 16.1
+  }
+ },
+ "desktop-chromium/B2": {
+  "result": "arrested",
+  "elapsed": 9.83,
+  "explosions": 0,
+  "busted": true,
+  "officersOutAt": 7.117,
+  "officers": 3,
+  "cordonPlannedAt": 2.67,
+  "sealedAt": 6.917,
+  "playerStoppedAt": 2.867,
+  "roadblock": {
+   "at": 1.02,
+   "cars": [
+    1,
+    2,
+    3
+   ],
+   "ahead": 34
   }
  },
  "desktop-chromium/C": {
   "result": null,
-  "elapsed": 6.32,
+  "elapsed": 6.27,
   "explosions": 2,
   "busted": false,
   "cordonPlannedAt": 5.83,
-  "playerStoppedAt": 2.683,
   "explosionEvents": [
    {
     "t": 0.18,
@@ -62,7 +78,7 @@
  },
  "desktop-chromium/D": {
   "result": null,
-  "elapsed": 6.3,
+  "elapsed": 6.35,
   "explosions": 2,
   "busted": false,
   "cordonPlannedAt": 4.93,
@@ -86,7 +102,7 @@
  },
  "desktop-chromium/E": {
   "result": null,
-  "elapsed": 8.35,
+  "elapsed": 8.32,
   "explosions": 2,
   "busted": false,
   "cordonPlannedAt": 0.9,
@@ -94,12 +110,12 @@
   "releasedAt": 2.67,
   "explosionEvents": [
    {
-    "t": 7.2,
+    "t": 6.92,
     "delay": 0,
     "cause": "vehicle"
    },
    {
-    "t": 7.2,
+    "t": 6.92,
     "delay": 0.22,
     "cause": "vehicle"
    }
@@ -111,10 +127,10 @@
   "explosions": 0,
   "busted": true,
   "officersOutAt": 2.883,
-  "officers": 2,
+  "officers": 3,
   "cordonPlannedAt": 0.9,
   "sealedAt": 2.567,
-  "playerStoppedAt": 2.117,
+  "playerStoppedAt": 2.25,
   "holdDuringCount": {
    "drift": 0,
    "turn": 0,
@@ -122,15 +138,12 @@
   }
  },
  "iphone-chromium/B": {
-  "result": "arrested",
-  "elapsed": 9.97,
+  "result": null,
+  "elapsed": 11.37,
   "explosions": 0,
-  "busted": true,
-  "officersOutAt": 7.283,
-  "officers": 2,
+  "busted": false,
   "cordonPlannedAt": 2.03,
-  "sealedAt": 7.067,
-  "playerStoppedAt": 1.633,
+  "playerStoppedAt": 1.717,
   "roadblock": {
    "at": 0.02,
    "cars": [
@@ -139,15 +152,35 @@
    "ahead": 40.9
   },
   "frontHold": {
-   "at": 1.133,
+   "at": 1.167,
    "carX": -58.66,
-   "playerX": -72.8,
-   "gap": 14.1
+   "playerX": -72,
+   "gap": 13.3
+  }
+ },
+ "iphone-chromium/B2": {
+  "result": "arrested",
+  "elapsed": 9.83,
+  "explosions": 0,
+  "busted": true,
+  "officersOutAt": 7.2,
+  "officers": 3,
+  "cordonPlannedAt": 2.67,
+  "sealedAt": 6.883,
+  "playerStoppedAt": 2.783,
+  "roadblock": {
+   "at": 1.02,
+   "cars": [
+    1,
+    2,
+    3
+   ],
+   "ahead": 34
   }
  },
  "iphone-chromium/C": {
   "result": null,
-  "elapsed": 6.48,
+  "elapsed": 6.33,
   "explosions": 2,
   "busted": false,
   "cordonPlannedAt": 3.82,
@@ -167,10 +200,11 @@
  },
  "iphone-chromium/D": {
   "result": null,
-  "elapsed": 6.35,
+  "elapsed": 6.43,
   "explosions": 2,
   "busted": false,
   "cordonPlannedAt": 3.27,
+  "playerStoppedAt": 2.683,
   "explosionEvents": [
    {
     "t": 0.18,
@@ -191,7 +225,7 @@
  },
  "iphone-chromium/E": {
   "result": null,
-  "elapsed": 8.4,
+  "elapsed": 8.28,
   "explosions": 2,
   "busted": false,
   "cordonPlannedAt": 0.9,
@@ -199,12 +233,12 @@
   "releasedAt": 2.67,
   "explosionEvents": [
    {
-    "t": 7.2,
+    "t": 6.92,
     "delay": 0,
     "cause": "vehicle"
    },
    {
-    "t": 7.2,
+    "t": 6.92,
     "delay": 0.22,
     "cause": "vehicle"
    }
