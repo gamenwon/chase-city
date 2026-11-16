@@ -431,7 +431,9 @@ export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
   // car): close to it, park where it is, still turned across; further out,
   // look for another way round.
   if (c.blockState !== "hold") {
-    if (d < (c.blockBest ?? Infinity) - 0.05) {
+    // Progress means really closing in (0.5 m), not creeping a few
+    // centimetres at a time behind another car.
+    if (d < (c.blockBest ?? Infinity) - 0.5) {
       c.blockBest = d;
       c.blockStall = 0;
     } else c.blockStall = (c.blockStall || 0) + dt;
@@ -644,7 +646,15 @@ export function collidePolice(a, b) {
   const braced = (car) => car.blockState === "hold";
   let wa = braced(a) ? 0 : 1,
     wb = braced(b) ? 0 : 1;
-  if (!wa && !wb) wa = wb = 1;
+  // Both parked (one stopped right against the other): only one gives way,
+  // so a car already holding its place is never shoved along. A roadblock
+  // car outranks a cordon car; otherwise the lower id stays put.
+  if (!wa && !wb) {
+    const rank = (car) => (car.blockKind === "cordon" ? 1 : 2);
+    if (rank(a) !== rank(b)) wa = rank(a) < rank(b) ? 1 : 0;
+    else wa = a.id > b.id ? 1 : 0;
+    wb = 1 - wa;
+  }
   const share = wa / (wa + wb);
   const correction = depth + 0.002;
   a.x -= nx * correction * share;

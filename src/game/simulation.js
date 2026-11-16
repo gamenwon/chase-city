@@ -562,7 +562,10 @@ export class Simulation {
           c.vx += nx * closing * 0.1;
           c.vz += nz * closing * 0.1;
         }
-        if (closing > 3) {
+        // Only a real hit hurts: a car pressed nose-first against a parked
+        // police car (throttle on, not actually moving) takes no damage, the
+        // same as pressing against a building.
+        if (closing > 3 && (p.groundSpeed ?? closing) > 3) {
           if (this.hitCooldown <= 0)
             this.recordImpact(p, closing, "player-police");
           this.damage(5);

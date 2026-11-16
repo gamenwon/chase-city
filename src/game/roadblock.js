@@ -332,6 +332,7 @@ export function updateRoadblock(sim, dt) {
   };
   chosen.forEach((c, i) => {
     c.blockId = id;
+    c.blockKind = "roadblock";
     c.blockSlot = slots[i];
     c.blockState = "approach";
     c.route = [];
