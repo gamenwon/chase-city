@@ -66,6 +66,10 @@ export function measure(seeds = [1, 2, 3, 4, 5, 6], seconds = 60) {
           width,
           height,
           random: random(seed + 40000),
+          // V1.9: CITY=1 measures the chase with the city on (props,
+          // pedestrians, traffic), with the phone budget at phone width.
+          city: process.env.CITY === "1",
+          cityProfile: width === 390 ? "mobile" : "desktop",
         });
         let drive = stageDriver(seed, mode);
         s.start();
@@ -175,6 +179,7 @@ export function measure(seeds = [1, 2, 3, 4, 5, 6], seconds = 60) {
         }
         run.lethalPairs += s.stats.lethalPairCollisions || 0;
         run.restarts = restarts;
+        if (s.city) run.city = s.city.stats;
         run.blocksFaced = faced.size;
         runs.push(run);
       }

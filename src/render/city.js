@@ -255,6 +255,10 @@ export class CityLifeRenderer {
   updatePeds(city, sim) {
     const M = this.pedMeshes;
     let n = 0;
+    // Colours only go to the GPU when the set of people changes.
+    const key = city.pedestrians.map((q) => q.id).join(",");
+    const recolor = key !== this.pedKey;
+    this.pedKey = key;
     for (const q of city.pedestrians) {
       if (n >= 24) break;
       const running =
@@ -264,7 +268,7 @@ export class CityLifeRenderer {
       const dive = q.state === "dive" ? 1 : 0;
       this.e.set(dive * 1.1, q.heading, 0, "YXZ");
       this.q.setFromEuler(this.e);
-// A little larger than life so people read on a phone screen.
+      // A little larger than life so people read on a phone screen.
       this.base.compose(
         this.v.set(q.x, 0.12 + dive * 0.25, q.z),
         this.q,
@@ -278,7 +282,8 @@ export class CityLifeRenderer {
         );
         this.m.multiplyMatrices(this.base, this.part);
         mesh.setMatrixAt(i, this.m);
-        if (color !== undefined) mesh.setColorAt(i, this.color.set(color));
+        if (recolor && color !== undefined)
+          mesh.setColorAt(i, this.color.set(color));
       };
       put(M.torso, n, 0, 1.08, 0, 0, SHIRTS[q.color]);
       put(M.head, n, 0, 1.55, 0, 0, SKIN[q.skin]);
@@ -302,14 +307,23 @@ export class CityLifeRenderer {
     M.head.count = n;
     M.legs.count = n * 2;
     M.arms.count = n * 2;
+    if (!n && !this.pedCount) return;
+    this.pedCount = n;
     for (const mesh of Object.values(M)) {
       mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      if (recolor && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
   }
   updateCars(city, sim) {
     let n = 0,
       smoke = 0;
+    const key = city.traffic
+      .map(
+        (t) => `${t.id}${t.state === "wreck" ? "w" : t.health < 60 ? "h" : ""}`,
+      )
+      .join(",");
+    const recolor = key !== this.carKey;
+    this.carKey = key;
     for (const t of city.traffic) {
       if (n >= 40) break;
       const wreck = t.state === "wreck";
@@ -318,10 +332,12 @@ export class CityLifeRenderer {
       this.q.setFromEuler(this.e);
       this.m.compose(this.v.set(t.x, 0, t.z), this.q, this.s.set(1, 1, 1));
       this.carMesh.setMatrixAt(n, this.m);
-      this.color.set(CAR_COLORS[t.color]);
-      if (wreck) this.color.multiplyScalar(0.35);
-      else if (hurt) this.color.multiplyScalar(0.7);
-      this.carMesh.setColorAt(n, this.color);
+      if (recolor) {
+        this.color.set(CAR_COLORS[t.color]);
+        if (wreck) this.color.multiplyScalar(0.35);
+        else if (hurt) this.color.multiplyScalar(0.7);
+        this.carMesh.setColorAt(n, this.color);
+      }
       n++;
       // Smoke from wrecked civilian cars (no fire, no explosion).
       if (wreck && smoke < 38)
@@ -335,12 +351,16 @@ export class CityLifeRenderer {
           this.smokeMesh.setMatrixAt(smoke++, this.m);
         }
     }
-    this.carMesh.count = n;
-    this.carMesh.instanceMatrix.needsUpdate = true;
-    if (this.carMesh.instanceColor)
-      this.carMesh.instanceColor.needsUpdate = true;
-    this.smokeMesh.count = smoke;
-    this.smokeMesh.instanceMatrix.needsUpdate = true;
+    if (n || this.carMesh.count) {
+      this.carMesh.count = n;
+      this.carMesh.instanceMatrix.needsUpdate = true;
+      if (recolor && this.carMesh.instanceColor)
+        this.carMesh.instanceColor.needsUpdate = true;
+    }
+    if (smoke || this.smokeMesh.count) {
+      this.smokeMesh.count = smoke;
+      this.smokeMesh.instanceMatrix.needsUpdate = true;
+    }
   }
   burst(x, z, count, color, power, lift = 4) {
     for (let i = 0; i < count; i++) {
@@ -381,6 +401,7 @@ export class CityLifeRenderer {
   }
   updateParticles(dt) {
     const mesh = this.particleMesh;
+    if (!this.particles.length && !mesh.count) return;
     let n = 0;
     this.particles = this.particles.filter((p) => (p.life -= dt) > 0);
     for (const p of this.particles) {
