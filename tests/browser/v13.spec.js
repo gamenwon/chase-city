@@ -13,9 +13,11 @@ test("real camera tracks routed pursuit, eight-car fleet and bounded rear effect
   const metrics = await page.evaluate(async () => {
     const { sim: s, renderer: r } = window.__CHASE__;
     const { stageDriver } = await import("/scripts/pursuit.js");
-    // Seed 2 is now legitimately arrested before the 41-second rendering window.
-    // Use another legal road route; all gameplay/health and assertions stay intact.
-    const control = stageDriver(3);
+    // Seeds 2 and 3 are now legitimately arrested before the 41-second
+    // rendering window (V1.8 roadblocks: route 3 at 27.2 s on PC). Use another
+    // legal road route, checked in the browser on PC and phone; all
+    // gameplay/health and assertions stay intact.
+    const control = stageDriver(4);
     s.reset();
     s.start();
     r.reset();

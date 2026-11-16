@@ -142,7 +142,7 @@ test("chain reactions are staged link by link and lose energy at each step", () 
   Object.assign(s.player, { x: 80, z: 80 });
   // Five damaged cars in a row, 3 units apart.
   s.police = [0, 3, 6, 9, 12].map((x, i) =>
-    Object.assign(makePolice(i), { x, z: 0, health: i ? 60 : 100 }),
+    Object.assign(makePolice(i), { x, z: 0, health: i ? 40 : 100 }),
   );
   s.explodePolice(s.police[0]);
   const events = s.events.filter((e) => e.type === "explosion");

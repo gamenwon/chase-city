@@ -13,14 +13,15 @@ test("V1.7 native chase: natural crashes and offscreen road reinforcements", asy
     const { sim: s, input, renderer: r } = window.__CHASE__;
     // V1.8: the same seeded road-control RNG as scripts/measure-v18.js, so
     // this native-frame run is repeatable (Math.random made it a coin flip
-    // under V1.8's stronger pressure). Route 12 survives 60 s on PC and
-    // phone in the real browser (checked there: Node's V8 differs in the last
-    // float bits, so a Node replay is not an exact predictor).
+    // under V1.8's stronger pressure). Route 6 survives 60 s on PC and phone
+    // in the real browser with the roadblock AI (checked by stepping the same
+    // simulation in the page: Node's V8 differs in the last float bits, so a
+    // Node replay is not an exact predictor).
     s.random = random(40003);
     s.lastExitId = null;
     s.reset();
     r.reset();
-    const drive = stageDriver(12, "evasive");
+    const drive = stageDriver(6, "evasive");
     let tick = -1,
       controls = {};
     for (const key of ["left", "right"])
@@ -134,7 +135,7 @@ test("V1.7 native chase: natural crashes and offscreen road reinforcements", asy
     const { sim: s, renderer: r } = window.__CHASE__;
     return {
       method:
-        "Normal START; native RAF; legal stageDriver(12,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
+        "Normal START; native RAF; legal stageDriver(6,evasive) steering only (seeded road-control RNG). No simulation stepping, police/health placement or forced explosions.",
       viewport: { width: innerWidth, height: innerHeight },
       elapsed: s.elapsed,
       result: s.result,

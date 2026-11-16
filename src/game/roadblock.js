@@ -1,0 +1,275 @@
+import { CONFIG } from "./config.js";
+import { clearSegment } from "./navigation.js";
+
+// V1.8 roadblocks. The simulation predicts the road the player is fleeing
+// along, picks a point mid-block ahead of it and sends one or two officers
+// that can get there first. They approach, brake, stop across the road and
+// hold still until the player gets past or turns off, then rejoin the chase.
+const SPACING = CONFIG.spacing;
+
+// The straight road the player is on, if any: axis "x" means driving along x.
+export function playerRoad(player) {
+  const fx = -Math.sin(player.angle),
+    fz = -Math.cos(player.angle);
+  const axis = Math.abs(fx) >= Math.abs(fz) ? "x" : "z";
+  const along = axis === "x" ? fx : fz;
+  // Only commit while the heading is clearly along the road.
+  if (Math.abs(along) < 0.85) return null;
+  const across = axis === "x" ? player.z : player.x;
+  const center = Math.round(across / SPACING) * SPACING || 0; // no -0
+  if (Math.abs(across - center) > CONFIG.roadWidth / 2) return null;
+  return { axis, dir: Math.sign(along), center };
+}
+
+const pointOn = (road, s) =>
+  road.axis === "x" ? { x: s, z: road.center } : { x: road.center, z: s };
+const coordOf = (road, p) => (road.axis === "x" ? p.x : p.z);
+
+// Car heading that faces across the road (perpendicular to travel).
+export function acrossAngle(road) {
+  return road.axis === "x" ? 0 : Math.PI / 2;
+}
+
+// Cars parked across the road, spaced so every gap (kerb, between cars,
+// kerb) is equal over the road's real drivable width [lo, hi].
+export function slotPositions(road, s, lo, hi, count) {
+  const length = 3.6,
+    gap = Math.max(0, (hi - lo - count * length) / (count + 1));
+  return Array.from({ length: count }, (_, i) => {
+    const o = lo + gap * (i + 1) + length * i + length / 2;
+    const p = pointOn(road, s);
+    if (road.axis === "x") p.z = o;
+    else p.x = o;
+    return { ...p, angle: acrossAngle(road) };
+  });
+}
+
+// Fewest cars whose gaps are all narrower than the player car can pass.
+export function carsToSeal(width) {
+  for (let n = 2; n <= CONFIG.blockMaxCars; n++)
+    if ((width - 3.6 * n) / (n + 1) <= CONFIG.blockMaxGap) return n;
+  return null;
+}
+
+// How far the drivable surface really reaches either side of the road
+// centre at this point (kerbs, open plazas and the outer edge differ).
+// Widths only change when the solids do (wrecks, barricades), which bumps
+// the navigation revision, so they are cached per revision.
+const extentCache = new WeakMap();
+export function roadExtent(sim, road, point, reach = 9) {
+  let cache = extentCache.get(sim.navigation);
+  if (!cache || cache.revision !== sim.navigation.revision) {
+    cache = { revision: sim.navigation.revision, map: new Map() };
+    extentCache.set(sim.navigation, cache);
+  }
+  const key = `${road.axis}:${road.center}:${Math.round(coordOf(road, point) * 2)}:${reach}`;
+  if (!cache.map.has(key))
+    cache.map.set(key, measureExtent(sim, road, point, reach));
+  return cache.map.get(key);
+}
+function measureExtent(sim, road, point, reach) {
+  const probe = (o) => {
+    const q = { ...point };
+    if (road.axis === "x") q.z = road.center + o;
+    else q.x = road.center + o;
+    return sim.navigation.allowed(q) && clearSegment(q, q, sim.solids, 0.02);
+  };
+  // Take the outermost free point on each side, not the first obstacle: a
+  // bench or lamp post on the pavement can be driven round on its far side.
+  let lo = 0,
+    hi = 0;
+  for (let o = 0.1; o <= reach; o += 0.1) {
+    if (probe(-o)) lo = -o;
+    if (probe(o)) hi = o;
+  }
+  return { lo: road.center + lo, hi: road.center + hi, width: hi - lo };
+}
+
+// Mid-block points ahead of the player that two cars can seal and that the
+// player can actually reach on this road.
+export function* blockCandidates(sim, road) {
+  const p = sim.player,
+    start = coordOf(road, p);
+  for (let d = CONFIG.blockMinAhead; d <= CONFIG.blockMaxAhead; d += 2) {
+    const s = start + road.dir * d;
+    const phase = ((s % SPACING) + SPACING) % SPACING;
+    // Keep out of intersections so the block actually seals the road.
+    if (phase < 9 || phase > SPACING - 9) continue;
+    const point = pointOn(road, s);
+    if (!sim.navigation.allowed(point)) continue;
+    const extent = roadExtent(sim, road, point);
+    // Every gap must be narrower than the 2.1-wide player car, or the block
+    // cannot seal: skip spots too wide for the cars we can spare.
+    const count = carsToSeal(extent.width);
+    if (!count) continue;
+    if (!sim.navigation.clear(p, point, 1)) continue;
+    yield { s, d, point, count, ...extent };
+  }
+}
+
+// Cars drive the street grid and slow for corners, so estimate arrival from
+// the Manhattan distance at a realistic average speed.
+function eta(car, slot) {
+  const dx = Math.abs(car.x - slot.x),
+    dz = Math.abs(car.z - slot.z);
+  // Getting up to speed from a slow start, plus a corner when the trip is not
+  // along a single street, plus braking to a stop on the slot.
+  const start = Math.max(0, 1 - Math.hypot(car.vx, car.vz) / 20) * 0.4;
+  const corner = Math.min(dx, dz) > 4 ? 0.3 : 0;
+  return (dx + dz) / (CONFIG.frontSprintSpeed * 0.85) + start + corner + 0.25;
+}
+
+export function releaseRoadblock(sim, reason) {
+  const block = sim.roadblock;
+  if (!block) return;
+  const members = sim.police.filter((c) => c.blockId === block.id);
+  const holding = members.filter((c) => c.blockState === "hold").length;
+  for (const car of sim.police)
+    if (car.blockId === block.id) {
+      car.blockId = null;
+      car.blockSlot = null;
+      car.blockState = null;
+      car.route = [];
+      car.routeTimer = 0;
+    }
+  sim.roadblockEvents.push({
+    id: block.id,
+    type: "release",
+    reason,
+    time: sim.elapsed,
+    held: block.heldAt === null ? 0 : sim.elapsed - block.heldAt,
+    members: members.length,
+    holding,
+  });
+  sim.roadblock = null;
+  sim.roadblockCooldownUntil = sim.elapsed + CONFIG.blockCooldown;
+}
+
+export function updateRoadblock(sim, dt) {
+  const p = sim.player,
+    block = sim.roadblock;
+  if (block) {
+    const members = sim.police.filter(
+      (c) => c.blockId === block.id && c.state === "active",
+    );
+    if (!members.length) return releaseRoadblock(sim, "members-lost");
+    const road = block.road;
+    // Signed distance from the player to the block along the road.
+    const ahead = (block.s - coordOf(road, p)) * road.dir;
+    const across = road.axis === "x" ? p.z : p.x;
+    const offRoad = Math.abs(across - road.center) > CONFIG.roadWidth / 2 + 1;
+    const heading = playerRoad(p);
+    const sameRoad =
+      heading &&
+      heading.axis === road.axis &&
+      heading.center === road.center &&
+      heading.dir === road.dir;
+    // Scraping along the block while pinned against it changes the player's
+    // heading; that is not turning off, so only count it away from the block.
+    const atBlock = Math.hypot(block.x - p.x, block.z - p.z) < 10;
+    block.lostFor =
+      !atBlock && (offRoad || (!sameRoad && Math.hypot(p.vx, p.vz) > 6))
+        ? block.lostFor + dt
+        : 0;
+    if (atBlock) block.engaged = true;
+    if (members.every((c) => c.blockState === "hold") && block.heldAt === null)
+      block.heldAt = sim.elapsed;
+    // Got past the block: escaped through or around it.
+    if (ahead < -3) return releaseRoadblock(sim, "player-passed");
+    // Backed off and got away from a block it ran into: chase again.
+    if (block.engaged && Math.hypot(block.x - p.x, block.z - p.z) > 18)
+      return releaseRoadblock(sim, "player-escaped");
+    // Turned off onto another road: the block no longer matters.
+    if (block.lostFor > CONFIG.blockLostSeconds)
+      return releaseRoadblock(sim, "player-turned");
+    if (sim.elapsed - block.born > CONFIG.blockMaxSeconds && ahead > 12)
+      return releaseRoadblock(sim, "timeout");
+    return;
+  }
+  if (sim.elapsed < (sim.roadblockCooldownUntil || 0)) return;
+  // Planning is a search, so it runs four times a second, not every frame.
+  if (sim.elapsed < (sim.roadblockCheckAt || 0)) return;
+  sim.roadblockCheckAt = sim.elapsed + 0.25;
+  // Only against a car that is really fleeing, never while a cordon forms.
+  if (
+    sim.elapsed < 1 ||
+    (p.fleeSpeed ?? 0) < 13 ||
+    (p.netSpeed ?? 0) < 13 ||
+    p.contained ||
+    p.cordonCandidate
+  )
+    return;
+  const road = playerRoad(p);
+  if (!road) return;
+  const active = sim.police.filter(
+    (c) => c.state === "active" && c.mode !== "contain",
+  );
+  if (active.length < 3) return;
+  // Never the officer tailing the player: it keeps the rear pressure.
+  const nearest = [...active].sort(
+    (a, b) =>
+      Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z),
+  )[0];
+  const pace = Math.max(12, p.groundSpeed || 24);
+  // The nearest spot ahead where enough officers can arrive before the
+  // player does: further down the road if the near ones are out of reach.
+  let found = null,
+    slots = null,
+    chosen = null;
+  for (const candidate of blockCandidates(sim, road)) {
+    const spots = slotPositions(
+      road,
+      candidate.s,
+      candidate.lo,
+      candidate.hi,
+      candidate.count,
+    );
+    const playerEta = candidate.d / pace;
+    const able = active
+      .filter((c) => c !== nearest)
+      .map((c) => ({ c, t: Math.min(...spots.map((q) => eta(c, q))) }))
+      .filter((e) => e.t < playerEta + CONFIG.blockEtaSlack)
+      .sort((a, b) => a.t - b.t);
+    if (able.length < candidate.count) continue;
+    // Hand out the slots in order across the road, matching the officers'
+    // own order across it, so their paths to the slots do not cross.
+    const lateral = (q) => (road.axis === "x" ? q.z : q.x);
+    found = candidate;
+    slots = spots;
+    chosen = able
+      .slice(0, candidate.count)
+      .map((e) => e.c)
+      .sort((a, b) => lateral(a) - lateral(b));
+    break;
+  }
+  if (!found) return;
+  const id = (sim.roadblockId = (sim.roadblockId || 0) + 1);
+  sim.roadblock = {
+    id,
+    road,
+    s: found.s,
+    x: found.point.x,
+    z: found.point.z,
+    slots,
+    born: sim.elapsed,
+    heldAt: null,
+    lostFor: 0,
+    engaged: false,
+  };
+  chosen.forEach((c, i) => {
+    c.blockId = id;
+    c.blockSlot = slots[i];
+    c.blockState = "approach";
+    c.route = [];
+    c.routeTimer = 0;
+  });
+  sim.roadblockEvents.push({
+    id,
+    type: "plan",
+    time: sim.elapsed,
+    x: found.point.x,
+    z: found.point.z,
+    cars: chosen.map((c) => c.id),
+    ahead: found.d,
+  });
+}

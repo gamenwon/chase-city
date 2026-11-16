@@ -86,12 +86,17 @@ test("high-speed impacts still destroy a police car after two strong real contac
   const a = makePolice(0),
     b = makePolice(1);
   for (let i = 0; i < 2; i++) {
-    Object.assign(a, { x: 0, z: 0, vx: 20, vz: 0, pairCooldown: 0 });
-    Object.assign(b, { x: 2, z: 0, vx: -20, vz: 0, pairCooldown: 0 });
+    Object.assign(a, { x: 0, z: 0, vx: 12, vz: 0, pairCooldown: 0 });
+    Object.assign(b, { x: 2, z: 0, vx: -12, vz: 0, pairCooldown: 0 });
     assert.equal(collidePolice(a, b), 60);
   }
   assert.equal(a.health, 0);
   assert.equal(b.health, 0);
+  // V1.8: a head-on at chase speed wrecks both in a single impact.
+  const c = Object.assign(makePolice(2), { x: 0, z: 0, vx: 20, vz: 0 }),
+    d = Object.assign(makePolice(3), { x: 2, z: 0, vx: -20, vz: 0 });
+  assert.equal(collidePolice(c, d), 100);
+  assert.equal(c.health + d.health, 0);
 });
 test("containment uses four distinct sides and arrives gently rather than ramming its slots", () => {
   const s = make();

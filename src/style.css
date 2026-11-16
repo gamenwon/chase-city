@@ -703,3 +703,90 @@ kbd {
   height: 22px;
   background: #77ff9a;
 }
+
+/* V1.8 driver's-view PIP. The bonnet camera is drawn on the game canvas
+   inside this frame; the frame only adds the border and label. Desktop: top
+   centre, below the HUD band, with the mission card moved below it. Phone:
+   right column under the WANTED meter, clear of the steering buttons.
+   Landscape phone: left column under the logo. */
+#pip {
+  --pip-w: clamp(200px, 24vw, 300px);
+  position: fixed;
+  z-index: 2;
+  top: 132px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--pip-w);
+  aspect-ratio: 16 / 9;
+  border: 2px solid #ffd120;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px #071f2b80;
+  pointer-events: none;
+  display: none;
+}
+body.playing #pip:not([hidden]) {
+  display: block;
+}
+#pip span {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  font: 700 9px monospace;
+  letter-spacing: 1.5px;
+  color: #fff8e7;
+  text-shadow: 0 1px 3px #071f2b;
+}
+body.pip-on #mission-hud {
+  top: calc(142px + clamp(200px, 24vw, 300px) * 9 / 16);
+}
+body.pip-on #notice:not(:empty) {
+  top: calc(200px + clamp(200px, 24vw, 300px) * 9 / 16);
+}
+.stats #pip-toggle {
+  width: auto;
+  min-width: 38px;
+  font-size: 10px;
+  padding: 0 6px;
+}
+.stats #pip-toggle[aria-pressed="true"] {
+  background: #ffd120;
+  border-color: #ffd120;
+  color: #102a32;
+}
+@media (max-width: 700px) {
+  #pip {
+    --pip-w: min(46vw, 176px);
+    left: auto;
+    right: 20px;
+    transform: none;
+    top: 225px;
+  }
+  body.pip-on #mission-hud {
+    top: 100px;
+  }
+  body.pip-on #notice:not(:empty) {
+    top: 175px;
+  }
+  .stats #pip-toggle {
+    min-width: 30px;
+    font-size: 9px;
+    padding: 0 4px;
+  }
+}
+@media (max-height: 520px) {
+  #pip {
+    --pip-w: min(24vw, 176px);
+    left: max(20px, env(safe-area-inset-left));
+    right: auto;
+    transform: none;
+    top: 96px;
+  }
+  body.pip-on #mission-hud {
+    top: 85px;
+  }
+}
+@media (max-width: 360px) {
+  #pip {
+    top: 240px;
+  }
+}

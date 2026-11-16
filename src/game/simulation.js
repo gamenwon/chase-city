@@ -7,6 +7,7 @@ import { addWreck, updateWrecks } from "./wrecks.js";
 import { chooseExit, constrainToWorld } from "./escape.js";
 import { updateBarricades } from "./barricades.js";
 import { createMission, updateMission } from "./missions.js";
+import { updateRoadblock } from "./roadblock.js";
 import {
   makePolice,
   steerPolice,
@@ -61,6 +62,11 @@ export class Simulation {
     this.enclosure = { trapped: false, exits: 1, nearby: 0 };
     this.enclosureTimer = 0;
     this.cordonSamples = [];
+    this.roadblock = null;
+    this.roadblockEvents = [];
+    this.roadblockCooldownUntil = 0;
+    this.roadblockCheckAt = 0;
+    this.roadblockId = 0;
     this.barricades = [];
     this.barricadeEvents = [];
     this.barricadeWarnings = new Set();
@@ -108,6 +114,7 @@ export class Simulation {
       barricadeDamage: 0,
       boostSeconds: 0,
       spawnDeferrals: 0,
+      lethalPairCollisions: 0,
     };
 
     this.police = Array.from({ length: CONFIG.policeCount }, (_, i) =>
@@ -281,7 +288,7 @@ export class Simulation {
         const beforeHealth = other.health;
         const protectedCordon =
           other.health > 0 &&
-          other.role === "contain" &&
+          (other.role === "contain" || other.role === "block") &&
           Math.hypot(other.vx, other.vz) <= 8 &&
           Math.hypot(other.x - this.player.x, other.z - this.player.z) < 12;
         const blastDamage = protectedCordon
@@ -438,6 +445,7 @@ export class Simulation {
       this.police.push(c);
       previous.set(c, { x: c.x, z: c.z });
     }
+    updateRoadblock(this, dt);
     for (let i = 0; i < this.police.length; i++) {
       const c = this.police[i];
       if (c.state !== "active") {
@@ -517,6 +525,7 @@ export class Simulation {
           });
           this.stats.pairCollisions++;
           this.stats.pairDamage += damage * 2;
+          if (damage >= CONFIG.policeHealth) this.stats.lethalPairCollisions++;
           this.recordImpact(a, a.lastCollisionStrength || speed, "police-pair");
         }
       }
@@ -527,15 +536,20 @@ export class Simulation {
       const contact = policeContact(p, c);
       if (contact) {
         const { x: nx, z: nz, depth } = contact;
-        p.x -= nx * (depth * 0.8 + 0.001);
-        p.z -= nz * (depth * 0.8 + 0.001);
-        c.x += nx * depth * 0.2;
-        c.z += nz * depth * 0.2;
+        // A car holding a roadblock is braced across the road: the player
+        // cannot shove it aside, only bounce off it.
+        const share = c.blockState === "hold" ? 0 : 0.2;
+        p.x -= nx * (depth * (1 - share) + 0.001);
+        p.z -= nz * (depth * (1 - share) + 0.001);
+        c.x += nx * depth * share;
+        c.z += nz * depth * share;
         const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
         p.vx -= nx * closing * 0.9;
         p.vz -= nz * closing * 0.9;
-        c.vx += nx * closing * 0.1;
-        c.vz += nz * closing * 0.1;
+        if (share) {
+          c.vx += nx * closing * 0.1;
+          c.vz += nz * closing * 0.1;
+        }
         if (closing > 3) {
           if (this.hitCooldown <= 0)
             this.recordImpact(p, closing, "player-police");

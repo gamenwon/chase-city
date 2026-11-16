@@ -84,7 +84,8 @@ test("entering containment brakes a fast officer before contacts while normal hi
   assert.equal(c.boostTimer, 0);
   const a = Object.assign(makePolice(1), { x: 0, z: 0, vx: 20, vz: 0 }),
     b = Object.assign(makePolice(2), { x: 2, z: 0, vx: -20, vz: 0 });
-  assert.equal(collidePolice(a, b), 60);
+  // V1.8: a head-on at chase speed wrecks both cars in one impact.
+  assert.equal(collidePolice(a, b), 100);
 });
 test("a low-speed arrest cordon survives nearby blast chains; high-speed damaged neighbors still chain", () => {
   const s = empty();

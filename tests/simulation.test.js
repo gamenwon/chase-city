@@ -130,17 +130,23 @@ test("several moderate impacts accumulate damage and high-energy impact is letha
   }
   assert.equal(a.health, 0);
   assert.equal(b.health, 0);
-  const [c, d] = pair(20);
+  // A strong (but not head-on lethal) knock takes 60; a second one wrecks.
+  const [c, d] = pair(12);
   assert.equal(collidePolice(c, d), 60);
   assert.equal(c.health, 40);
-  Object.assign(c, { x: 0, vx: 20, pairCooldown: 0 });
-  Object.assign(d, { x: 2, vx: -20, pairCooldown: 0 });
+  Object.assign(c, { x: 0, vx: 12, pairCooldown: 0 });
+  Object.assign(d, { x: 2, vx: -12, pairCooldown: 0 });
   collidePolice(c, d);
   assert.equal(c.health, 0);
+  // V1.8: a hard head-on impact wrecks both cars at once.
+  const [e, f] = pair(20);
+  assert.equal(collidePolice(e, f), 100);
+  assert.equal(e.health, 0);
+  assert.equal(f.health, 0);
 });
 test("actual simulation contacts reduce durability, then explode after a second strong impact", () => {
   const s = create();
-  s.police = pair(20);
+  s.police = pair(12);
   s.player.x = 50;
   s.player.z = 50;
   tick(s, 1 / 60);
@@ -157,7 +163,7 @@ test("blast impulses and weakened neighbors produce bounded chain reactions", ()
     Object.assign(makePolice(i), {
       x,
       z: 0,
-      health: i === 1 || i === 2 ? 50 : 100,
+      health: i === 1 || i === 2 ? 30 : 100,
     }),
   );
   s.explodePolice(s.police[0]);
@@ -176,6 +182,12 @@ test("blast impulses and weakened neighbors produce bounded chain reactions", ()
   s2.explodePolice(s2.police[0]);
   assert.ok(s2.police[1].vx > 0);
   assert.ok(s2.police[1].health < 100);
+  // V1.8: an undamaged neighbour right next to a blast survives it; only
+  // already-damaged cars carry a chain on.
+  const s3 = create();
+  s3.police = [0, 4].map((x, i) => Object.assign(makePolice(i), { x, z: 0 }));
+  s3.explodePolice(s3.police[0]);
+  assert.equal(s3.police[1].state, "active");
 });
 test("wrecks stop chasing and respawn on roads away from player after delay", () => {
   const s = create();

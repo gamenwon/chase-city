@@ -19,7 +19,7 @@ export const CONFIG = Object.freeze({
   maxImpactDamage: 60,
   policeRadius: 1.4,
   explosionRadius: 10,
-  explosionDamage: 90,
+  explosionDamage: 60,
   wreckSeconds: 0.9,
   initialWreckSlots: 16,
   respawnSeconds: 2.5,
@@ -30,6 +30,20 @@ export const CONFIG = Object.freeze({
   flankSprintSpeed: 27.5,
   chainStepSeconds: 0.22,
   chainFalloff: 0.72,
+  // V1.8 roadblocks: predicted-route blocks that stop across the road.
+  blockMaxGap: 1.8,
+  blockMaxCars: 3,
+  blockMinAhead: 36,
+  blockMaxAhead: 80,
+  blockEtaSlack: 0,
+  blockCooldown: 2.5,
+  blockLostSeconds: 0.8,
+  blockMaxSeconds: 14,
+  blockDecel: 12,
+  blockHoldEnter: 0.9,
+  blockHoldLeave: 1.8,
+  // A hard enough police-police impact wrecks both cars at once.
+  lethalPairImpact: 30,
 });
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 export const angleDelta = (a, b) =>

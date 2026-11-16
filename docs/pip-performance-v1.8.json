@@ -1,0 +1,203 @@
+{
+ "note": "Software GL (SwiftShader), internal resolution 0.5. frozenScene = same paused scene rendered with PIP OFF/ON alternated 3x40 frames each, gl.finish() included. live = alternating 2-second windows of real play.",
+ "desktop": {
+  "project": "desktop-chromium",
+  "viewport": {
+   "w": 1100,
+   "h": 740
+  },
+  "pipFrame": {
+   "l": 418,
+   "t": 132,
+   "r": 682,
+   "b": 280.5
+  },
+  "note": "Software GL (SwiftShader), internal resolution 0.5: compare ON vs OFF only, not absolute FPS.",
+  "frozenScene": {
+   "frames": 240,
+   "offMs": 1.03,
+   "onMs": 4.86,
+   "mainDrawCalls": 130,
+   "pipDrawCalls": 44
+  },
+  "live": {
+   "off": {
+    "fps": 18.7,
+    "drawMs": 2.38,
+    "intervalP95": 141.65
+   },
+   "on": {
+    "fps": 20.75,
+    "drawMs": 3.91,
+    "intervalP95": 66.7,
+    "pipPassMs": 0.35
+   },
+   "windows": {
+    "off": [
+     {
+      "frames": 22,
+      "fps": 10.9,
+      "interval": {
+       "mean": 91.39,
+       "p95": 216.7
+      },
+      "draw": {
+       "mean": 2.53,
+       "p95": 5.5
+      },
+      "pipPassMs": 3.6,
+      "mainDrawCalls": 107,
+      "pipDrawCalls": 0
+     },
+     {
+      "frames": 54,
+      "fps": 26.5,
+      "interval": {
+       "mean": 37.77,
+       "p95": 66.6
+      },
+      "draw": {
+       "mean": 2.23,
+       "p95": 6.4
+      },
+      "pipPassMs": 0.3,
+      "mainDrawCalls": 137,
+      "pipDrawCalls": 0
+     }
+    ],
+    "on": [
+     {
+      "frames": 35,
+      "fps": 17.2,
+      "interval": {
+       "mean": 58.3,
+       "p95": 83.3
+      },
+      "draw": {
+       "mean": 3.89,
+       "p95": 10.9
+      },
+      "pipPassMs": 0.3,
+      "mainDrawCalls": 102,
+      "pipDrawCalls": 15
+     },
+     {
+      "frames": 49,
+      "fps": 24.3,
+      "interval": {
+       "mean": 41.16,
+       "p95": 50.1
+      },
+      "draw": {
+       "mean": 3.93,
+       "p95": 8.5
+      },
+      "pipPassMs": 0.4,
+      "mainDrawCalls": 154,
+      "pipDrawCalls": 14
+     }
+    ]
+   }
+  }
+ },
+ "phone": {
+  "project": "iphone-chromium",
+  "viewport": {
+   "w": 390,
+   "h": 664
+  },
+  "pipFrame": {
+   "l": 194,
+   "t": 225,
+   "r": 370,
+   "b": 324
+  },
+  "note": "Software GL (SwiftShader), internal resolution 0.5: compare ON vs OFF only, not absolute FPS.",
+  "frozenScene": {
+   "frames": 240,
+   "offMs": 0.88,
+   "onMs": 2.86,
+   "mainDrawCalls": 92,
+   "pipDrawCalls": 45
+  },
+  "live": {
+   "off": {
+    "fps": 43.65,
+    "drawMs": 0.99,
+    "intervalP95": 50
+   },
+   "on": {
+    "fps": 41.35,
+    "drawMs": 1.89,
+    "intervalP95": 33.4,
+    "pipPassMs": 0.25
+   },
+   "windows": {
+    "off": [
+     {
+      "frames": 61,
+      "fps": 30.4,
+      "interval": {
+       "mean": 32.88,
+       "p95": 66.7
+      },
+      "draw": {
+       "mean": 1.04,
+       "p95": 3.2
+      },
+      "pipPassMs": 0.5,
+      "mainDrawCalls": 71,
+      "pipDrawCalls": 0
+     },
+     {
+      "frames": 114,
+      "fps": 56.9,
+      "interval": {
+       "mean": 17.59,
+       "p95": 33.3
+      },
+      "draw": {
+       "mean": 0.95,
+       "p95": 3
+      },
+      "pipPassMs": 0.2,
+      "mainDrawCalls": 144,
+      "pipDrawCalls": 0
+     }
+    ],
+    "on": [
+     {
+      "frames": 77,
+      "fps": 38.4,
+      "interval": {
+       "mean": 26.07,
+       "p95": 33.4
+      },
+      "draw": {
+       "mean": 2.14,
+       "p95": 5.7
+      },
+      "pipPassMs": 0.2,
+      "mainDrawCalls": 100,
+      "pipDrawCalls": 15
+     },
+     {
+      "frames": 90,
+      "fps": 44.3,
+      "interval": {
+       "mean": 22.58,
+       "p95": 33.4
+      },
+      "draw": {
+       "mean": 1.63,
+       "p95": 4.1
+      },
+      "pipPassMs": 0.3,
+      "mainDrawCalls": 149,
+      "pipDrawCalls": 14
+     }
+    ]
+   }
+  }
+ }
+}

@@ -41,6 +41,7 @@ export function steerPolice(
 ) {
   if (!navigation) return;
   c.routeTimer = (c.routeTimer || 0) - dt;
+  if (c.blockSlot) return steerBlocker(c, index, player, dt, navigation);
   const ranked = fleet
     .filter((p) => p.state === "active")
     .sort(
@@ -214,9 +215,20 @@ export function steerPolice(
         oz = other.z - c.z,
         dist = Math.hypot(ox, oz),
         otherSpeed = Math.hypot(other.vx, other.vz);
-      if (dist > 9 || dist === 0 || otherSpeed < 4) continue;
-      const inPath = (ox * dx + oz * dz) / (dist * d),
-        sameWay = (other.vx * dx + other.vz * dz) / (otherSpeed * d);
+      if (dist > 9 || dist === 0) continue;
+      const inPath = (ox * dx + oz * dz) / (dist * d);
+      // A colleague parked in the way (a cordon or roadblock car) is braked
+      // for, not rammed: arriving at speed would wreck both and break the
+      // very cordon that is about to make the arrest.
+      if (otherSpeed < 4) {
+        if (inPath > 0.7)
+          followCap = Math.min(
+            followCap ?? Infinity,
+            Math.max(0, dist - 4) * 2.2,
+          );
+        continue;
+      }
+      const sameWay = (other.vx * dx + other.vz * dz) / (otherSpeed * d);
       // Far from the suspect there is no reason to collide at all: oncoming
       // or crossing officers keep right and slow down. Near the suspect
       // (inside 22 units) contacts stay fully physical.
@@ -376,6 +388,77 @@ export function steerPolice(
     c.blocked = (c.blocked || 0) + dt;
   } else c.blocked = 0;
 }
+// V1.8 roadblock driving: get to the slot, brake to a stop exactly on it,
+// turn across the road and hold still. A car pushed off its slot creeps back
+// slowly instead of re-planning, so a held block does not twitch.
+export function steerBlocker(c, index, player, dt, navigation) {
+  const slot = c.blockSlot,
+    dx = slot.x - c.x,
+    dz = slot.z - c.z,
+    d = Math.hypot(dx, dz);
+  c.role = "block";
+  c.mode = "block";
+  c.boostTimer = 0;
+  c.pressure = "front";
+  if (c.blockState === "hold" && d > CONFIG.blockHoldLeave)
+    c.blockState = "recover";
+  if (
+    c.blockState !== "hold" &&
+    d < CONFIG.blockHoldEnter &&
+    Math.hypot(c.vx, c.vz) < 3
+  )
+    c.blockState = "hold";
+  if (c.blockState === "hold") {
+    c.vx = 0;
+    c.vz = 0;
+    c.route = [];
+    // Turn across the road on the spot (shortest way, either end first).
+    let error = angleDelta(slot.angle, c.angle);
+    if (Math.abs(error) > Math.PI / 2)
+      error = angleDelta(slot.angle + Math.PI, c.angle);
+    const delta = clamp(error, -2.5 * dt, 2.5 * dt);
+    c.angle += delta;
+    c.turn = delta / dt;
+    return;
+  }
+  let waypoint = slot;
+  if (d > 6 && !navigation.clear(c, slot)) {
+    if (c.routeTimer <= 0 || !c.route?.length) {
+      c.route = navigation.findPath(c, slot);
+      c.routeTimer = 0.6 + (index % 3) * 0.08;
+    }
+    while (c.route.length > 1 && navigation.clear(c, c.route[1]))
+      c.route.shift();
+    if (c.route[0] && Math.hypot(c.x - c.route[0].x, c.z - c.route[0].z) < 1.5)
+      c.route.shift();
+    waypoint = c.route[0] || slot;
+  }
+  const wx = waypoint.x - c.x,
+    wz = waypoint.z - c.z,
+    wd = Math.hypot(wx, wz) || 1;
+  const desired = Math.atan2(-wx, -wz),
+    error = angleDelta(desired, c.angle);
+  const delta = clamp(error, -3.8 * dt, 3.8 * dt);
+  c.angle += delta;
+  c.turn = delta / dt;
+  const corner = clamp(1 - Math.abs(error) * 0.45, 0.35, 1);
+  // Brake so the car comes to rest on the slot (v^2 = 2 a d).
+  const cap =
+    c.blockState === "recover"
+      ? 5
+      : Math.sqrt(2 * CONFIG.blockDecel * Math.max(0, d - 0.3));
+  const speed = Math.min(CONFIG.frontSprintSpeed * corner, cap);
+  c.effectiveSpeed = speed;
+  const grip = 1 - Math.exp(-dt * 7);
+  c.vx += ((wx / wd) * speed - c.vx) * grip;
+  c.vz += ((wz / wd) * speed - c.vz) * grip;
+  const next = { x: c.x + c.vx * dt * 3, z: c.z + c.vz * dt * 3 };
+  if (!navigation.clear(c, next, CONFIG.policeRadius - 0.02)) {
+    c.vx *= 0.5;
+    c.vz *= 0.5;
+    c.routeTimer = 0;
+  }
+}
 // SAT uses the visible oriented body (width 2.1, length 3.6), rather than a
 // short centre circle that let noses overlap without generating an impact.
 export function policeContact(a, b) {
@@ -434,7 +517,12 @@ export function collidePolice(a, b) {
     return 0;
   const tangentSquared = Math.max(0, relative * relative - closing * closing);
   const impact = Math.sqrt(closing * closing + tangentSquared * 0.15);
-  const damage = impactDamage(impact, CONFIG.pairDamageScale);
+  // A genuinely hard hit (head-on or T-bone) wrecks both cars at once;
+  // lighter knocks still accumulate damage as before.
+  const damage =
+    impact >= CONFIG.lethalPairImpact
+      ? CONFIG.policeHealth
+      : impactDamage(impact, CONFIG.pairDamageScale);
   let applied = 0;
   for (const car of [a, b])
     if ((car.pairCooldown || 0) <= 0 && damage > 0) {

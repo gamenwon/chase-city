@@ -206,7 +206,8 @@ test("real building materials fade and restore; chain explosions render debris/f
       Object.assign(s.police[i], {
         x: 0,
         z: s.player.z - 12 + i * 4,
-        health: i === 0 ? 100 : 50,
+        // V1.8: blasts only carry on through already badly damaged cars.
+        health: i === 0 ? 100 : 20,
         vx: 0,
         vz: 0,
       });

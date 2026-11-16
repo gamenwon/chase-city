@@ -22,11 +22,22 @@
           <small>차량 내구도</small><strong id="health">100%</strong>
           <div class="meter"><i id="health-bar"></i></div>
         </div>
+        <button
+          id="pip-toggle"
+          aria-label="운전자 시점 보조 화면"
+          aria-pressed="false"
+          aria-controls="pip"
+        >
+          PIP
+        </button>
         <button id="mute" aria-label="효과음 음소거" aria-pressed="false">
           소리 ON
         </button>
         <button id="pause" aria-label="일시정지">Ⅱ</button>
       </div>
+    </div>
+    <div id="pip" hidden aria-hidden="true">
+      <span>BONNET CAM · V</span>
     </div>
     <div class="district">
       <span class="live"></span> DOWNTOWN / 01
@@ -66,7 +77,8 @@
         <button id="start" class="primary">START →</button>
         <div class="instructions">
           <span><kbd>←</kbd><kbd>→</kbd> 조향</span
-          ><span><kbd>P</kbd> 일시정지</span>
+          ><span><kbd>P</kbd> 일시정지</span
+          ><span><kbd>V</kbd> 운전자 시점</span>
         </div>
         <small class="mobile-hint"
           >모바일: 좌우 버튼을 누르고 있으면 조향합니다</small

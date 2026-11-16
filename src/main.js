@@ -61,6 +61,32 @@ mute.addEventListener("click", () => {
   mute.textContent = audio.muted ? "소리 OFF" : "소리 ON";
   mute.setAttribute("aria-pressed", String(audio.muted));
 });
+// V1.8 driver's-view PIP: on by default on desktop, off on phones and
+// touch screens (small screen, battery). The viewer's choice is remembered.
+const pipToggle = document.querySelector("#pip-toggle");
+const pipKey = "chase-city-pip";
+function readPipChoice() {
+  try {
+    const saved = localStorage.getItem(pipKey);
+    if (saved === "on" || saved === "off") return saved === "on";
+  } catch {}
+  return !(matchMedia("(pointer: coarse)").matches || innerWidth < 700);
+}
+function setPip(enabled, remember = false) {
+  renderer?.setPip(enabled);
+  document.body.classList.toggle("pip-on", enabled);
+  pipToggle.setAttribute("aria-pressed", String(enabled));
+  pipToggle.title = enabled ? "운전자 시점 끄기 (V)" : "운전자 시점 켜기 (V)";
+  if (remember)
+    try {
+      localStorage.setItem(pipKey, enabled ? "on" : "off");
+    } catch {}
+}
+setPip(readPipChoice());
+pipToggle.addEventListener("click", () => setPip(!renderer?.pipEnabled, true));
+window.addEventListener("keydown", (e) => {
+  if (e.code === "KeyV" && !e.repeat) setPip(!renderer?.pipEnabled, true);
+});
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && state === "running") pause();
 });

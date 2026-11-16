@@ -8,6 +8,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { CONFIG } from "../game/config.js";
 import { BuildingOcclusion } from "./occlusion.js";
 import { ExplosionEffects } from "./explosions.js";
+import { BonnetCamera } from "./pip.js";
 const palette = [0xf34b32, 0xffbf22, 0x087cba, 0x13a783, 0xf38617, 0x2364ce];
 export class CityRenderer {
   constructor(canvas, layout) {
@@ -167,6 +168,10 @@ export class CityRenderer {
     this.trails = new VehicleTrails(this.scene);
     this.wreckRenderer = new WreckRenderer(this.scene);
     this.roadEvents = new RoadEventsRenderer(this.scene);
+    // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
+    this.bonnet = new BonnetCamera();
+    this.pipFrame = document.querySelector("#pip");
+    this.pipEnabled = false;
     this.resetMetrics();
     this.follow = new THREE.Vector3(0, 0, 0);
     this.resize();
@@ -333,6 +338,19 @@ export class CityRenderer {
     this.cameraRig.withShake(dt, sim.elapsed, () =>
       this.renderer.render(this.scene, this.camera),
     );
+    this.lastMainCalls = this.renderer.info.render.calls;
+    this.renderPip(p);
+  }
+  setPip(enabled) {
+    this.pipEnabled = enabled;
+    if (this.pipFrame) this.pipFrame.hidden = !enabled;
+  }
+  renderPip(player) {
+    if (!this.pipEnabled) return;
+    const rect = this.bonnet.frameRect(this.pipFrame, this.renderer.domElement);
+    if (!rect) return;
+    this.bonnet.update(player);
+    this.bonnet.render(this.renderer, this.scene, this.buildings, rect);
   }
   captureFrame(width, height) {
     const target = new THREE.WebGLRenderTarget(width, height);
