@@ -35,14 +35,16 @@ const tick = (s, t) => {
 test("four real low-speed containment officers arrest in three seconds without damage or explosions", () => {
   const s = make();
   s.police = ring();
+  // V1.8: the four stopped cars first join the cordon (braced in place, a
+  // few frames), then the 3-second count runs.
   tick(s, 2.9);
   assert.equal(s.result, null);
-  assert.ok(s.arrest > 2.8);
+  assert.ok(s.arrest > 2.6);
   assert.ok(s.police.every((c) => c.health === 100));
   assert.equal(s.events.length, 0);
-  tick(s, 0.2);
+  tick(s, 0.4);
   assert.equal(s.result, "arrested");
-  assert.ok(s.elapsed >= 3 && s.elapsed < 3.2);
+  assert.ok(s.elapsed >= 3 && s.elapsed < 3.3);
   const t = s.elapsed;
   tick(s, 1);
   assert.equal(s.elapsed, t);
@@ -75,7 +77,7 @@ test("open space and a removed cordon officer clear the gauge quickly instead of
   );
   const s = make();
   s.police = ring();
-  tick(s, 1.6);
+  tick(s, 1.8);
   assert.ok(s.arrest > 1.5);
   Object.assign(s.police[2], { x: 30, z: 30 });
   tick(s, 0.75);

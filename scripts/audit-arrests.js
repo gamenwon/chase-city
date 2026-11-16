@@ -88,6 +88,14 @@ if (
   for (const width of [1100, 390])
     for (const mode of ["roads", "evasive"])
       for (let seed = 1; seed <= seedCount; seed++) {
+        // AUDIT_ONLY="1100,evasive,8;390,roads,11" limits the audit to runs.
+        if (
+          process.env.AUDIT_ONLY &&
+          !process.env.AUDIT_ONLY.split(";").includes(
+            `${width},${mode},${seed}`,
+          )
+        )
+          continue;
         const height = width === 390 ? 664 : 740;
         const s = new Simulation(layout, {
           width,

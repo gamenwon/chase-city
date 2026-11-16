@@ -50,7 +50,9 @@ function blockScenario(steer = () => ({})) {
     ),
   ];
   const frames = [];
-  for (let f = 0; f < 60 * 14 && !s.result; f++) {
+  // 30 s: the cordon may take a while to close the last crooked gap (an
+  // arrest before that would be a false one; see scripts/audit-arrests.js).
+  for (let f = 0; f < 60 * 30 && !s.result; f++) {
     s.update(1 / 60, steer(s));
     frames.push({
       t: s.elapsed,
@@ -131,9 +133,18 @@ test("a roadblock is planned on the predicted road, cars stop across it and hold
 
 test("a held block stays put when the player pins itself against it and scrapes along", () => {
   // Steer into the kerb side of the block: heading changes must not release it.
-  const { s } = blockScenario((sim) => ({
-    left: sim.player.x > -55 && sim.player.angle < -1.2,
-  }));
+  // Start turning 6 m short of wherever the block was planned (the planner
+  // now picks a spot the cars can reach well before the player).
+  let blockX = null;
+  const { s } = blockScenario((sim) => {
+    blockX ??= sim.roadblock?.x ?? null;
+    return {
+      left:
+        blockX !== null &&
+        sim.player.x > blockX - 6 - 2.4 &&
+        sim.player.angle < -1.2,
+    };
+  });
   const releases = s.roadblockEvents.filter((e) => e.type === "release");
   assert.equal(s.result, "arrested");
   assert.ok(releases.every((e) => e.reason !== "player-turned"));

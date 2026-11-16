@@ -1,0 +1,160 @@
+[
+ {
+  "browser": "pc",
+  "arrests": 8,
+  "falseArrests": 0,
+  "rows": [
+   {
+    "width": 1100,
+    "mode": "roads",
+    "seed": 10,
+    "run": 0,
+    "t": 17.72,
+    "best": 0,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "roads",
+    "seed": 10,
+    "run": 1,
+    "t": 26.75,
+    "best": 3.58,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "roads",
+    "seed": 11,
+    "run": 0,
+    "t": 26.75,
+    "best": 3.58,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "evasive",
+    "seed": 7,
+    "run": 0,
+    "t": 40.17,
+    "best": 0,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "evasive",
+    "seed": 8,
+    "run": 0,
+    "t": 39.38,
+    "best": 0,
+    "falseArrest": false
+   },
+   {
+    "width": 390,
+    "mode": "roads",
+    "seed": 11,
+    "run": 0,
+    "t": 26.02,
+    "best": 2.64,
+    "falseArrest": false
+   },
+   {
+    "width": 390,
+    "mode": "evasive",
+    "seed": 7,
+    "run": 0,
+    "t": 32.98,
+    "best": 0.06,
+    "falseArrest": false
+   },
+   {
+    "width": 390,
+    "mode": "evasive",
+    "seed": 8,
+    "run": 0,
+    "t": 35.3,
+    "best": 0,
+    "falseArrest": false
+   }
+  ]
+ },
+ {
+  "browser": "phone",
+  "arrests": 8,
+  "falseArrests": 0,
+  "rows": [
+   {
+    "width": 1100,
+    "mode": "roads",
+    "seed": 10,
+    "run": 0,
+    "t": 17.72,
+    "best": 0,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "roads",
+    "seed": 10,
+    "run": 1,
+    "t": 26.75,
+    "best": 3.58,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "roads",
+    "seed": 11,
+    "run": 0,
+    "t": 26.75,
+    "best": 3.58,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "evasive",
+    "seed": 7,
+    "run": 0,
+    "t": 40.17,
+    "best": 0,
+    "falseArrest": false
+   },
+   {
+    "width": 1100,
+    "mode": "evasive",
+    "seed": 8,
+    "run": 0,
+    "t": 39.38,
+    "best": 0,
+    "falseArrest": false
+   },
+   {
+    "width": 390,
+    "mode": "roads",
+    "seed": 11,
+    "run": 0,
+    "t": 26.02,
+    "best": 2.64,
+    "falseArrest": false
+   },
+   {
+    "width": 390,
+    "mode": "evasive",
+    "seed": 7,
+    "run": 0,
+    "t": 32.98,
+    "best": 0.06,
+    "falseArrest": false
+   },
+   {
+    "width": 390,
+    "mode": "evasive",
+    "seed": 8,
+    "run": 0,
+    "t": 35.3,
+    "best": 0,
+    "falseArrest": false
+   }
+  ]
+ }
+]

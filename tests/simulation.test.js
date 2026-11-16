@@ -225,6 +225,13 @@ test("destroyed, arrested, and reset lifecycle is retained", () => {
       z: 8 + Math.cos((i * Math.PI) / 2) * 3.4,
       angle: (i * Math.PI) / 2,
       speed: 0,
+      // V1.8: parked (braced) cordon cars; only those close a gap.
+      blockState: "hold",
+      blockSlot: {
+        x: Math.sin((i * Math.PI) / 2) * 3.4,
+        z: 8 + Math.cos((i * Math.PI) / 2) * 3.4,
+        angle: (i * Math.PI) / 2,
+      },
     }),
   );
   s.update(0.05, none);

@@ -35,7 +35,9 @@ export const CONFIG = Object.freeze({
   blockMaxCars: 3,
   blockMinAhead: 24,
   blockMaxAhead: 80,
-  blockEtaSlack: 0,
+  // Block cars must reach their slots this long before the player does, so
+  // they are parked across the road (braked, turned) when it gets there.
+  blockEtaSlack: -0.6,
   blockCooldown: 2.5,
   blockLostSeconds: 0.8,
   blockMaxSeconds: 14,

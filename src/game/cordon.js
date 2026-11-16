@@ -10,6 +10,10 @@ import { CONFIG, clamp } from "./config.js";
 export const RING = 3.5; // distance of a cordon car's centre from the player
 const RAY_REACH = 5.5; // a gap this deep counts as a way out
 const PLAYER_HALF_WIDTH = 1.05;
+// Against walls and buildings the physics keeps the player's centre
+// CONFIG.radius away (wider than the body), so alleys narrower than that
+// are not a way out.
+const WALL_RADIUS = CONFIG.radius;
 const CAR_HALF = { w: 1.05, l: 1.8 };
 
 // Circle-vs-box tests for the escape rays.
@@ -44,10 +48,97 @@ export function freeDistance(sim, from, angle, cars, reach = RAY_REACH + 1) {
   for (let s = 0.25; s <= reach; s += 0.25) {
     const q = { x: from.x + ux * s, z: from.z + uz * s };
     if (!sim.navigation.allowed(q)) return s;
-    if (near.some((b) => hitsBox(q, PLAYER_HALF_WIDTH, b))) return s;
+    if (near.some((b) => hitsBox(q, WALL_RADIUS, b))) return s;
     if (cars.some((c) => hitsCar(q, PLAYER_HALF_WIDTH, c))) return s;
   }
   return reach;
+}
+
+// Is there any path out of the cordon a car can use, straight or not (pivot
+// on the spot, then thread diagonally between two car corners)? Flood fill
+// of the free space for the player's car as a circle of (nearly) its
+// half-width, from where it stands to OUT metres away. Walls, buildings, the
+// map edge and the given (parked) cars block. Returns the direction (radians)
+// the way out leaves in, or null when there is none.
+const FLOOD_CELL = 0.2;
+const FLOOD_OUT = 7.5;
+const FLOOD_RADIUS = PLAYER_HALF_WIDTH - 0.04; // grid slack, not a smaller car
+// With `atRadius`, the direction returned is where that way out crosses the
+// circle of that radius (where a cordon car would have to stand to close it).
+export function floodEscape(sim, from, cars, atRadius = null) {
+  const n = Math.ceil(FLOOD_OUT / FLOOD_CELL);
+  const size = 2 * n + 1;
+  const near = sim.solids.filter(
+    (b) =>
+      Math.abs(b.x - from.x) < b.w / 2 + FLOOD_OUT + 2 &&
+      Math.abs(b.z - from.z) < b.d / 2 + FLOOD_OUT + 2,
+  );
+  const state = new Uint8Array(size * size); // 0 unknown, 1 free, 2 blocked
+  const point = (i, j) => ({
+    x: from.x + (i - n) * FLOOD_CELL,
+    z: from.z + (j - n) * FLOOD_CELL,
+  });
+  const free = (i, j) => {
+    const k = j * size + i;
+    if (!state[k]) {
+      const q = point(i, j);
+      state[k] =
+        !sim.navigation.allowed(q) ||
+        near.some((b) => hitsBox(q, WALL_RADIUS - 0.04, b)) ||
+        cars.some((c) => hitsCar(q, FLOOD_RADIUS, c))
+          ? 2
+          : 1;
+    }
+    return state[k] === 1;
+  };
+  // Start from every free cell under the car itself (a pinned car's own
+  // centre may touch the car it is pressed against).
+  const queue = [];
+  const seen = new Uint8Array(size * size);
+  const parent = new Int32Array(size * size).fill(-1);
+  const reach = Math.ceil(1.2 / FLOOD_CELL);
+  for (let j = n - reach; j <= n + reach; j++)
+    for (let i = n - reach; i <= n + reach; i++)
+      if (Math.hypot(i - n, j - n) * FLOOD_CELL <= 1.2 && free(i, j)) {
+        seen[j * size + i] = 1;
+        queue.push(j * size + i);
+      }
+  for (let head = 0; head < queue.length; head++) {
+    const k = queue[head],
+      i = k % size,
+      j = (k - i) / size;
+    if (Math.hypot(i - n, j - n) * FLOOD_CELL >= FLOOD_OUT) {
+      if (atRadius === null) return Math.atan2(j - n, i - n);
+      // Walk back along the path to where it crosses atRadius.
+      let c = k;
+      while (parent[c] >= 0) {
+        const pi = parent[c] % size,
+          pj = (parent[c] - pi) / size;
+        if (Math.hypot(pi - n, pj - n) * FLOOD_CELL < atRadius) break;
+        c = parent[c];
+      }
+      const ci = c % size;
+      return Math.atan2((c - ci) / size - n, ci - n);
+    }
+    for (const [di, dj] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const a = i + di,
+        b = j + dj;
+      if (a < 0 || b < 0 || a >= size || b >= size) continue;
+      const m = b * size + a;
+      if (seen[m]) continue;
+      seen[m] = 1;
+      if (free(a, b)) {
+        parent[m] = k;
+        queue.push(m);
+      }
+    }
+  }
+  return null;
 }
 
 // Directions (radians) in which the player could still drive out.
@@ -209,10 +300,18 @@ function available(sim, cordon, c) {
   );
 }
 
-function assign(sim, cordon, slots) {
+function assign(sim, cordon, slots, keepParked = false) {
   const p = sim.player;
+  // keepParked: this cordon's parked cars stay exactly where they are (they
+  // are part of the wall); only the others are (re)assigned.
+  const parked = keepParked
+    ? sim.police.filter(
+        (c) => c.blockId === cordon.id && c.blockState === "hold",
+      )
+    : [];
   const free = sim.police.filter(
     (c) =>
+      !parked.includes(c) &&
       available(sim, cordon, c) &&
       Math.hypot(c.x - p.x, c.z - p.z) < CONFIG.cordonRecruitRange,
   );
@@ -266,7 +365,7 @@ function assign(sim, cordon, slots) {
       c.routeTimer = 0;
     }
   }
-  cordon.slots = slots;
+  cordon.slots = [...parked.map((c) => c.blockSlot), ...slots];
   cordon.unfilled = slots.filter((s) => !usedSlots.has(s)).length;
 }
 
@@ -354,17 +453,51 @@ function updateOfficers(sim, dt) {
   );
 }
 
-// Is the player sealed in: no escape ray clears RAY_REACH against walls and
-// stationary police cars?
+// Would these cars (with the walls) leave the player no way out at all,
+// straight or crooked?
+function sealedBy(sim, cars) {
+  if (escapeDirections(sim, sim.player, cars).length) return false;
+  return floodEscape(sim, sim.player, cars) === null;
+}
+
+// Is the player sealed in? Only cars parked in a cordon or roadblock slot
+// count: they are braced and cannot be shoved aside, whereas a police car
+// merely standing there can be pushed out of the way.
 export function cordonSealed(sim) {
-  // Parked or creeping into place (a car at walking pace still blocks).
-  const stationary = sim.police.filter(
+  return sealedBy(
+    sim,
+    sim.police.filter(
+      (c) =>
+        c.state === "active" &&
+        c.blockState === "hold" &&
+        Math.hypot(c.x - sim.player.x, c.z - sim.player.z) < 9,
+    ),
+  );
+}
+
+// A police car that has stopped right by the player joins the cordon where
+// it stands and is braced there (parked), so it really is part of the wall.
+const ADOPT_RANGE = 6.5;
+function adoptStopped(sim, id) {
+  const p = sim.player;
+  const cars = sim.police.filter(
     (c) =>
       c.state === "active" &&
+      !c.blockId &&
       Math.hypot(c.vx, c.vz) < 3 &&
-      Math.hypot(c.x - sim.player.x, c.z - sim.player.z) < 9,
+      Math.hypot(c.x - p.x, c.z - p.z) < ADOPT_RANGE,
   );
-  return escapeDirections(sim, sim.player, stationary).length === 0;
+  for (const c of cars) {
+    c.blockId = id;
+    c.blockKind = "cordon";
+    c.blockSlot = { x: c.x, z: c.z, angle: c.angle, dir: 0 };
+    c.blockState = "hold";
+    c.blockBest = Infinity;
+    c.blockStall = 0;
+    c.vx = 0;
+    c.vz = 0;
+  }
+  return cars;
 }
 
 // Where to centre the cordon: a player scraping along a wall is boxed in a
@@ -439,6 +572,10 @@ export function updateCordon(sim, dt) {
       cordon.replans = (cordon.replans || 0) + 1;
       return;
     }
+    for (const c of adoptStopped(sim, cordon.id)) {
+      members.push(c);
+      cordon.slots.push(c.blockSlot);
+    }
     const held = members.filter((c) => c.blockState === "hold");
     const allHeld = held.length === members.length;
     // Everyone parked, the player stopped, and still a way out: the slots
@@ -455,14 +592,13 @@ export function updateCordon(sim, dt) {
       cordon.reshapes = (cordon.reshapes || 0) + 1;
       cordon.x = p.x;
       cordon.z = p.z;
+      // Every parked car (this cordon's too) stays put as part of the wall;
+      // only the gaps left between them get new slots.
       const fixed = sim.police.filter(
-        (c) =>
-          c.state === "active" &&
-          c.blockState === "hold" &&
-          c.blockId !== cordon.id,
+        (c) => c.state === "active" && c.blockState === "hold",
       );
       const slots = planSlots(sim, p, fixed);
-      if (slots.length) assign(sim, cordon, slots);
+      if (slots.length) assign(sim, cordon, slots, true);
       return;
     }
     if (allHeld && cordon.heldAt === null) cordon.heldAt = sim.elapsed;
@@ -486,14 +622,32 @@ export function updateCordon(sim, dt) {
         (c) =>
           c.state === "active" &&
           c.blockId !== cordon.id &&
-          Math.hypot(c.vx, c.vz) < 1,
+          c.blockState === "hold",
       );
       // Cars of this cordon count where they are going to be.
       const planned = members.map((c) =>
         c.blockState === "hold" ? c : { ...c, ...c.blockSlot },
       );
       const blockers = [...settled, ...planned];
-      const open = escapeDirections(sim, p, blockers);
+      const straight = escapeDirections(sim, p, blockers);
+      // No straight way out but a crooked one (pivot, then squeeze between
+      // two corners): close that one.
+      const crooked = straight.length
+        ? null
+        : floodEscape(sim, p, blockers, RING + 0.5);
+      const open = crooked === null ? straight : [crooked];
+      const closes = (cars, target) =>
+        crooked === null
+          ? !escapeDirections(sim, p, cars).includes(target)
+          : (() => {
+              const a = floodEscape(sim, p, cars);
+              return (
+                a === null ||
+                Math.abs(
+                  Math.atan2(Math.sin(a - target), Math.cos(a - target)),
+                ) > 0.6
+              );
+            })();
       // Cars that can be sent: free ones (not one that just gave up on a
       // slot it could not reach), and parked cordon cars whose spot closes
       // nothing (taking them away leaves the same ways out).
@@ -511,7 +665,10 @@ export function updateCordon(sim, dt) {
               sim,
               p,
               blockers.filter((b) => b.id !== c.id),
-            ).length === open.length,
+            ).length === straight.length &&
+            // With only a crooked way out, never pull a parked car: which
+            // cars that path depends on is not known.
+            crooked === null,
         ),
       ];
       // Close the gap the player is facing most first, else the others.
@@ -534,8 +691,13 @@ export function updateCordon(sim, dt) {
             t = clamp(((p.x - c.x) * vx + (p.z - c.z) * vz) / len2, 0, 1);
           return Math.hypot(c.x + vx * t - p.x, c.z + vz * t - p.z) > 3;
         };
-        const ordered = candidates
-          .filter(reachable)
+        // Cars with a clear run come first; if there are none, any car is
+        // sent (it drives round by the road network).
+        const pool = candidates.some(reachable)
+          ? candidates.filter(reachable)
+          : candidates;
+        const ordered = pool
+          .slice()
           .sort(
             (a, b) =>
               Math.hypot(a.x - gx, a.z - gz) - Math.hypot(b.x - gx, b.z - gz),
@@ -545,13 +707,8 @@ export function updateCordon(sim, dt) {
           // Slightly further out first: still closes the gap, and can be
           // reached from outside instead of from inside the cordon. A slot
           // only counts if a car parked there really shuts that way out.
-          slot = slotAt(
-            sim,
-            p,
-            target,
-            0,
-            [5, 4.4, 3.8, 5.5],
-            (q) => !escapeDirections(sim, p, [...others, q]).includes(target),
+          slot = slotAt(sim, p, target, 0, [5, 4.4, 3.8, 5.5], (q) =>
+            closes([...others, q], target),
           );
           if (slot) {
             spare = car;
@@ -559,6 +716,34 @@ export function updateCordon(sim, dt) {
           }
         }
         if (slot) break;
+      }
+      // Last resort, for a crooked gap with no car left to send: move one of
+      // this cordon's parked cars, but only to a spot where the whole
+      // cordon then really seals the player in (checked in full, at most
+      // every 2 s since it is the costly check).
+      if (
+        !spare &&
+        crooked !== null &&
+        sim.elapsed - (cordon.shuffledAt ?? -Infinity) > 2
+      ) {
+        cordon.shuffledAt = sim.elapsed;
+        const movable = members
+          .filter((c) => c.blockState === "hold")
+          .sort(
+            (a, b) =>
+              Math.hypot(a.x - p.x, a.z - p.z) -
+              Math.hypot(b.x - p.x, b.z - p.z),
+          );
+        for (const car of movable) {
+          const others = blockers.filter((b) => b.id !== car.id);
+          slot = slotAt(sim, p, crooked, 0, [RING, RING + 0.6], (q) =>
+            sealedBy(sim, [...others, q]),
+          );
+          if (slot) {
+            spare = car;
+            break;
+          }
+        }
       }
       if (spare) {
         spare.blockId = cordon.id;
@@ -606,26 +791,25 @@ export function updateCordon(sim, dt) {
     dismountedAt: null,
     slots: [],
   };
-  // Already sealed in by the cars around it: keep every car exactly where it
-  // is (moving one to a "better" slot would open the seal it is part of).
+  // Already sealed in by the cars stopped around it: keep every car exactly
+  // where it is (moving one to a "better" slot would open the seal it is
+  // part of) and brace them there.
   const settled = sim.police.filter(
     (c) =>
       c.state === "active" &&
       !c.blockId &&
       Math.hypot(c.vx, c.vz) < 3 &&
-      Math.hypot(c.x - p.x, c.z - p.z) < 7,
+      Math.hypot(c.x - p.x, c.z - p.z) < ADOPT_RANGE,
+  );
+  const parked = sim.police.filter(
+    (c) =>
+      c.state === "active" &&
+      c.blockState === "hold" &&
+      Math.hypot(c.x - p.x, c.z - p.z) < 9,
   );
   let slots;
-  if (sim.enclosure.trapped && settled.length) {
-    slots = settled.map((c) => ({ x: c.x, z: c.z, angle: c.angle, dir: 0 }));
-    settled.forEach((c, i) => {
-      c.blockId = id;
-      c.blockKind = "cordon";
-      c.blockSlot = slots[i];
-      c.blockState = "hold";
-      c.vx = 0;
-      c.vz = 0;
-    });
+  if (settled.length && sealedBy(sim, [...settled, ...parked])) {
+    slots = adoptStopped(sim, id).map((c) => c.blockSlot);
     sim.cordon.slots = slots;
     sim.cordon.adopted = true;
   } else {
