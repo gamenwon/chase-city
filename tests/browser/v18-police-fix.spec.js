@@ -11,7 +11,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 const SCENARIOS = {
   // A. Player drives into a building face and stops against it.
   A: {
-    seconds: 12,
+    // V1.9: 20 s - with the city on, the car can scrape off along the wall
+    // past the street furniture before the cordon closes on it again.
+    seconds: 20,
     player: { x: -40.4, z: -6, angle: Math.PI, vx: 0, vz: 20, speed: 20 },
     police: [
       [-38.5, -16],

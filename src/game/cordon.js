@@ -552,7 +552,23 @@ export function updateCordon(sim, dt) {
       (p.netSpeed ?? 0) > 14 && !sim.enclosure.trapped
         ? (cordon.fastFor || 0) + dt
         : 0;
-    const escaped = away > CONFIG.cordonEscapeDistance || cordon.fastFor > 0.8;
+    // Breaking away: fast and heading out from the cordon (a car circling
+    // round it is not). Uses the current speed: the averaged one lags a
+    // second behind a car that has just broken out.
+    const gs = p.groundSpeed ?? 0,
+      outward =
+        away > 0.5
+          ? ((p.x - cordon.x) * p.vx + (p.z - cordon.z) * p.vz) /
+            (away * (Math.hypot(p.vx, p.vz) || 1))
+          : 0;
+    cordon.breakFor =
+      gs > 16 && outward > 0.7 && !sim.enclosure.trapped
+        ? (cordon.breakFor || 0) + dt
+        : 0;
+    const escaped =
+      away > CONFIG.cordonEscapeDistance ||
+      cordon.fastFor > 0.8 ||
+      cordon.breakFor > 0.2;
     if (escaped || !members.length) {
       if (!cordon.releasing) {
         cordon.releasing = true;
@@ -578,7 +594,10 @@ export function updateCordon(sim, dt) {
       // Only a car still scraping along slowly is followed; one driving off
       // faster than that is getting away (or the cordon would trail it for
       // ever and never let go).
-      (p.netSpeed ?? 0) <= CONFIG.cordonStartSpeed
+      (p.netSpeed ?? 0) <= CONFIG.cordonStartSpeed &&
+      // ...and not one moving fast right now (the averaged speed lags a
+      // second behind a car that has just broken out).
+      (p.groundSpeed ?? 0) <= 16
     ) {
       const center = aim;
       cordon.x = center.x;
