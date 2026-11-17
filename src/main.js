@@ -63,6 +63,7 @@ const input = new Input(pause);
 try {
   renderer = new CityRenderer(document.querySelector("#game"), sim.layout, {
     mobile,
+    theme: startMap.theme,
   });
   sim.cameraRig = renderer.cameraRig;
   sim.cameraRig.update(sim.player, 0);

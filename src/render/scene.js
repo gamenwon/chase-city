@@ -12,11 +12,15 @@ import { BonnetCamera } from "./pip.js";
 import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
 import { PickupRenderer } from "./pickups.js";
+import { MAPS, DEFAULT_MAP } from "../world/maps.js";
 const palette = [0xf34b32, 0xffbf22, 0x087cba, 0x13a783, 0xf38617, 0x2364ce];
 export class CityRenderer {
   constructor(canvas, layout, options = {}) {
     // V1.9: phones get a lighter start (resolution, shadow map).
     const mobile = !!options.mobile;
+    // V2.0: colours come from the map (downtown: the same colours as before).
+    const theme = options.theme || MAPS[DEFAULT_MAP].theme;
+    this.theme = theme;
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -25,9 +29,9 @@ export class CityRenderer {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.7));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.setClearColor(0x83c8d3);
+    this.renderer.setClearColor(theme.sky);
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0x83c8d3, 105, 240);
+    this.scene.fog = new THREE.Fog(theme.sky, theme.fogNear, theme.fogFar);
     this.cameraRig = new ChaseCamera(innerWidth, innerHeight);
     this.camera = this.cameraRig.camera;
     this.scene.add(new THREE.HemisphereLight(0xe9f9ff, 0x35513c, 2.2));
@@ -46,15 +50,15 @@ export class CityRenderer {
     this.scene.add(sun);
     this.sun = sun;
     this.materials = new Map();
-    this.box(0, -0.7, 0, 225, 1, 225, 0x116748);
-    this.box(0, -0.12, 0, 216, 0.3, 216, 0x38535a);
+    this.box(0, -0.7, 0, 225, 1, 225, theme.grass);
+    this.box(0, -0.12, 0, 216, 0.3, 216, theme.pavement);
     for (let n = -90; n <= 90; n += 30) {
-      this.box(n, 0.06, 0, 11, 0.08, 216, 0x23373e);
-      this.box(0, 0.07, n, 216, 0.08, 11, 0x23373e);
+      this.box(n, 0.06, 0, 11, 0.08, 216, theme.road);
+      this.box(0, 0.07, n, 216, 0.08, 11, theme.road);
       for (let k = -104; k < 108; k += 6) {
         if (Math.abs(k % 30) < 7 || Math.abs(k % 30) > 23) continue;
-        this.box(n, 0.13, k, 0.16, 0.025, 2.4, 0xf8eab6);
-        this.box(k, 0.14, n, 2.4, 0.025, 0.16, 0xf8eab6);
+        this.box(n, 0.13, k, 0.16, 0.025, 2.4, theme.marking);
+        this.box(k, 0.14, n, 2.4, 0.025, 0.16, theme.marking);
       }
       for (let m = -90; m <= 90; m += 30) {
         for (let side of [-1, 1])
