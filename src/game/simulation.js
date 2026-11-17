@@ -6,7 +6,9 @@ import { inspectEnclosure } from "./arrest.js";
 import { addWreck, updateWrecks } from "./wrecks.js";
 import { chooseExit, constrainToWorld } from "./escape.js";
 import { updateBarricades } from "./barricades.js";
-import { createMission, updateMission } from "./missions.js";
+import { createMission, updateMission, getMission } from "./missions.js";
+import { getVehicle } from "./vehicles.js";
+import { createTally, recordCityEvent } from "./tally.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget } from "./city.js";
@@ -34,6 +36,12 @@ export class Simulation {
     this.cityBudget = options.cityBudget || cityBudget(options.cityProfile);
     this.lastExitId = null;
     this.runNumber = 0;
+    // V2.0: which mission and car this simulation runs (reset() keeps them
+    // unless told otherwise).
+    this.missionId = options.mission || "survival60";
+    this.vehicleId = options.vehicle;
+    // Destruction for the result screen, counted as city events happen.
+    this.onCityEvent = (e) => recordCityEvent(this.tally, e);
     this.reset();
   }
   refreshNavigation() {
@@ -60,8 +68,17 @@ export class Simulation {
     this.refreshNavigation();
     this.navigation.addExit(this.escape.exit);
   }
-  reset(missionId = "survival60") {
+  reset(missionId = this.missionId, vehicleId = this.vehicleId) {
     this.runNumber++;
+    this.missionId = missionId;
+    this.vehicleId = vehicleId;
+    const missionRules = getMission(missionId).rules;
+    // Police (chase, cordon, roadblocks, barricades, reinforcements) only in
+    // missions that use them.
+    this.policeEnabled = missionRules.police !== false;
+    this.vehicle = getVehicle(vehicleId);
+    this.tally = createTally();
+    this.pickups = [];
     this.cameraRig.reset();
     this.cameraRig.update({ x: 0, z: 8 }, 0);
     this.spawnEvents = [];
@@ -108,8 +125,8 @@ export class Simulation {
       z: 8,
       angle: 0,
       vx: 0,
-      vz: -CONFIG.playerSpeed,
-      speed: CONFIG.playerSpeed,
+      vz: -this.vehicle.stats.topSpeed,
+      speed: this.vehicle.stats.topSpeed,
       turn: 0,
       steering: 0,
       slip: 0,
@@ -143,9 +160,10 @@ export class Simulation {
       lethalPairCollisions: 0,
     };
 
-    this.police = Array.from({ length: CONFIG.policeCount }, (_, i) =>
-      makePolice(i),
-    );
+    this.police = this.policeEnabled
+      ? Array.from({ length: CONFIG.policeCount }, (_, i) => makePolice(i))
+      : [];
+    this.mission.definition.setup?.(this);
   }
   start() {
     if (!this.result) {
@@ -183,7 +201,9 @@ export class Simulation {
   }
   damage(amount) {
     if (this.hitCooldown <= 0) {
-      this.health = Math.max(0, this.health - amount);
+      // V2.0: a tougher car takes proportionally less (starter car: x1).
+      const scale = 100 / this.vehicle.stats.durability;
+      this.health = Math.max(0, this.health - amount * scale);
       this.hitCooldown = 1.0;
       this.collisions++;
     }
@@ -381,6 +401,56 @@ export class Simulation {
     }
     this.refreshNavigation();
   }
+  // V2.0 continue (after a rewarded ad): undo a failure once per run and
+  // play on from where it happened. Returns false if not allowed.
+  revive() {
+    const m = this.mission,
+      kind = this.result;
+    if (!kind || kind === "success" || m.continued) return false;
+    if (!m.definition.continueOn.includes(kind)) return false;
+    m.continued = true;
+    if (kind === "destroyed") {
+      this.health = 60;
+      this.hitCooldown = 2;
+    }
+    if (kind === "arrested") {
+      // The police pull back: every car near the player drives off (is
+      // re-placed off screen like a reinforcement), officers get back in,
+      // and no cordon or roadblock may form again for a few seconds.
+      for (let i = 0; i < this.police.length; i++) {
+        const c = this.police[i];
+        if (Math.hypot(c.x - this.player.x, c.z - this.player.z) > 30) continue;
+        const spawn = this.navigation.spawn(
+          this.player,
+          this.police,
+          c.id,
+          c.generation + 1,
+          this.cameraRig.camera,
+        );
+        if (spawn)
+          this.police[i] = Object.assign(
+            makePolice(c.id, c.generation + 1),
+            spawn,
+            { spawnedAt: this.elapsed },
+          );
+        else this.police[i].stunTimer = 6;
+      }
+      this.cordon = null;
+      this.roadblock = null;
+      this.officers = [];
+      this.cordonCooldownUntil = this.elapsed + 6;
+      this.roadblockCooldownUntil = this.elapsed + 6;
+      this.arrest = 0;
+      this.enclosure = { trapped: false, exits: 1, nearby: 0 };
+      this.cordonSamples = [];
+      this.captureOpenTime = 0;
+    }
+    if (kind === "timeout") m.extraTime += 20;
+    this.result = null;
+    m.status = "active";
+    m.revivedAt = this.elapsed;
+    return true;
+  }
   update(dt, input = {}) {
     if (!this.started || this.result || dt <= 0) return;
     dt = Math.min(dt, 0.05);
@@ -389,7 +459,11 @@ export class Simulation {
     const p = this.player;
     updateWrecks(this);
     this.previousPlayer = { x: p.x, z: p.z };
-    if (this.escape.phase === "locked" && this.barricadesEnabled)
+    if (
+      this.escape.phase === "locked" &&
+      this.barricadesEnabled &&
+      this.policeEnabled
+    )
       updateBarricades(this);
     const previous = new Map(
       [p, ...this.police].map((c) => [c, { x: c.x, z: c.z }]),
@@ -398,10 +472,11 @@ export class Simulation {
     p.steering =
       (p.steering || 0) +
       (steering - (p.steering || 0)) * (1 - Math.exp(-dt * 7));
-    p.turn = p.steering * CONFIG.turnRate;
+    const car = this.vehicle.stats;
+    p.turn = p.steering * car.turnRate;
     p.angle += p.turn * dt;
-    p.speed += (CONFIG.playerSpeed - p.speed) * (1 - Math.exp(-2 * dt));
-    const grip = 1 - Math.exp(-10 * dt);
+    p.speed += (car.topSpeed - p.speed) * (1 - Math.exp(-2 * dt));
+    const grip = 1 - Math.exp(-car.grip * dt);
     p.vx += (-Math.sin(p.angle) * p.speed - p.vx) * grip;
     p.vz += (-Math.cos(p.angle) * p.speed - p.vz) * grip;
     if (this.move(p, dt)) {
@@ -483,6 +558,7 @@ export class Simulation {
     );
     while (
       this.reinforcementsEnabled &&
+      this.policeEnabled &&
       this.police.length < desiredFleet &&
       this.elapsed >= this.spawnRetryAt
     ) {
@@ -514,8 +590,10 @@ export class Simulation {
       this.police.push(c);
       previous.set(c, { x: c.x, z: c.z });
     }
-    updateRoadblock(this, dt);
-    updateCordon(this, dt);
+    if (this.policeEnabled) {
+      updateRoadblock(this, dt);
+      updateCordon(this, dt);
+    }
     p.cordonActive = !!this.cordon;
     for (let i = 0; i < this.police.length; i++) {
       const c = this.police[i];

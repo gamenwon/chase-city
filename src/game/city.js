@@ -191,8 +191,13 @@ function boxesNear(city, x, z) {
 }
 
 function event(city, sim, e) {
-  city.events.push({ id: ++city.eventId, time: sim.elapsed, ...e });
+  const ev = { id: ++city.eventId, time: sim.elapsed, ...e };
+  city.events.push(ev);
   if (city.events.length > 64) city.events.shift();
+  // V2.0: every event also goes straight to the simulation (mission
+  // results count what was destroyed from these, never from the trimmed
+  // list above).
+  sim.onCityEvent?.(ev);
 }
 
 // ---------------------------------------------------------------- props --
@@ -287,6 +292,7 @@ function breakProp(sim, city, prop, car, impact) {
     type: "prop",
     action: "break",
     kind: prop.kind,
+    targetId: prop.id,
     x: prop.x,
     z: prop.z,
     strength: impact,
@@ -1010,7 +1016,8 @@ function bump(a, ra, ma, b, rb, mb) {
   return closing;
 }
 
-function damageTraffic(sim, city, t, closing) {
+// byPlayer: the player hit this car, or shoved a car into it moments ago.
+function damageTraffic(sim, city, t, closing, byPlayer = false) {
   if (t.state === "wreck") return;
   t.health -= closing * 4.5;
   if (t.health <= 0) {
@@ -1021,9 +1028,11 @@ function damageTraffic(sim, city, t, closing) {
     event(city, sim, {
       type: "traffic",
       action: "wreck",
+      targetId: t.id,
       x: t.x,
       z: t.z,
       strength: closing,
+      byPlayer,
     });
   }
 }
@@ -1081,7 +1090,8 @@ function updateTraffic(sim, city, dt) {
       if (closing > 6) sim.damage(5);
       if (closing > 3) {
         city.stats.trafficCollisions++;
-        damageTraffic(sim, city, t, closing);
+        t.playerHitAt = sim.elapsed;
+        damageTraffic(sim, city, t, closing, true);
         if (t.state === "drive") {
           t.state = "yield";
           t.timer = 2.5;
@@ -1140,8 +1150,11 @@ function updateTraffic(sim, city, dt) {
         b.parked ? 1.6 : 1,
       );
       if (closing > 4) {
-        damageTraffic(sim, city, a, closing);
-        damageTraffic(sim, city, b, closing);
+        const shoved = [a, b].some(
+          (c) => sim.elapsed - (c.playerHitAt ?? -Infinity) < 2,
+        );
+        damageTraffic(sim, city, a, closing, shoved);
+        damageTraffic(sim, city, b, closing, shoved);
       }
     }
   // Keep traffic out of buildings.
