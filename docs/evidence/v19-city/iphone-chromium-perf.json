@@ -1,0 +1,50 @@
+{
+ "viewport": {
+  "w": 390,
+  "h": 664
+ },
+ "fps": 6.1,
+ "p95ms": 266.6,
+ "perf": {
+  "profile": "mobile",
+  "level": 0.4,
+  "frameMs": 97.45829370863774,
+  "slowFor": 7.049700000000002,
+  "fastFor": 0,
+  "pixelRatio": 1,
+  "changes": [
+   {
+    "at": 4866,
+    "level": 0.8,
+    "fps": 15
+   },
+   {
+    "at": 6878,
+    "level": 0.6000000000000001,
+    "fps": 12
+   },
+   {
+    "at": 8171,
+    "level": 0.4000000000000001,
+    "fps": 12
+   },
+   {
+    "at": 9749,
+    "level": 0.4,
+    "fps": 12
+   }
+  ]
+ },
+ "actors": {
+  "peds": 4,
+  "traffic": 2
+ },
+ "budget": {
+  "profile": "mobile",
+  "level": 0.4,
+  "peds": 4,
+  "traffic": 2,
+  "parked": 4,
+  "range": 55
+ }
+}

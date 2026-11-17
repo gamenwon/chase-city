@@ -1,0 +1,58 @@
+[
+ {
+  "device": "phone",
+  "city": false,
+  "gameSeconds": 7,
+  "fps": 5.4,
+  "simMsPerStep": 0.466,
+  "renderMsPerFrame": 12.46,
+  "drawCallsPerFrame": 96,
+  "actors": null,
+  "pixelRatio": 1.5,
+  "profile": "mobile"
+ },
+ {
+  "device": "phone",
+  "city": true,
+  "gameSeconds": 7,
+  "fps": 5,
+  "simMsPerStep": 0.717,
+  "renderMsPerFrame": 13.88,
+  "drawCallsPerFrame": 116.5,
+  "actors": {
+   "peds": 10,
+   "traffic": 6,
+   "props": 608
+  },
+  "pixelRatio": 1.5,
+  "profile": "mobile"
+ },
+ {
+  "device": "pc",
+  "city": false,
+  "gameSeconds": 3.8,
+  "fps": 2.9,
+  "simMsPerStep": 0.534,
+  "renderMsPerFrame": 31.88,
+  "drawCallsPerFrame": 38.7,
+  "actors": null,
+  "pixelRatio": 1,
+  "profile": "desktop"
+ },
+ {
+  "device": "pc",
+  "city": true,
+  "gameSeconds": 3.8,
+  "fps": 2.7,
+  "simMsPerStep": 0.922,
+  "renderMsPerFrame": 39.42,
+  "drawCallsPerFrame": 55,
+  "actors": {
+   "peds": 18,
+   "traffic": 10,
+   "props": 608
+  },
+  "pixelRatio": 1,
+  "profile": "desktop"
+ }
+]

@@ -1,0 +1,4207 @@
+{
+ "result": null,
+ "elapsed": 5.166666666666654,
+ "setup": {
+  "focus": {
+   "x": 2.75,
+   "z": 15
+  },
+  "view": [
+   -9,
+   10,
+   9
+  ],
+  "people": [
+   1,
+   2,
+   3
+  ]
+ },
+ "perf": {
+  "profile": "mobile",
+  "level": 0.4,
+  "frameMs": 78.123945939827,
+  "slowFor": 6.683099999999998,
+  "fastFor": 0,
+  "pixelRatio": 1,
+  "changes": [
+   {
+    "at": 4770,
+    "level": 0.8,
+    "fps": 16
+   },
+   {
+    "at": 6600,
+    "level": 0.6000000000000001,
+    "fps": 14
+   },
+   {
+    "at": 7995,
+    "level": 0.4000000000000001,
+    "fps": 15
+   },
+   {
+    "at": 9499,
+    "level": 0.4,
+    "fps": 14
+   }
+  ]
+ },
+ "frames": [
+  {
+   "t": 0,
+   "player": {
+    "x": 0,
+    "z": 8,
+    "speed": 0
+   },
+   "health": 100,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 0,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [],
+   "traffic": [],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.2,
+   "player": {
+    "x": -0.21,
+    "z": 36.2,
+    "speed": 19.69
+   },
+   "health": 100,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 0.78,
+     "z": 14.91
+    },
+    {
+     "id": 2,
+     "state": "alert",
+     "x": 2.1,
+     "z": 14.3
+    },
+    {
+     "id": 3,
+     "state": "alert",
+     "x": 3.57,
+     "z": 13.6
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 75.38
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 11.54
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 43.65
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 78.38
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 37.81
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.06,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.17
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 42.97,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -21.29,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": -0.12,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -17.74,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -46.81,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 47.38,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.317,
+   "player": {
+    "x": -0.45,
+    "z": 34.01,
+    "speed": 17.09
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 1.45,
+     "z": 14.71
+    },
+    {
+     "id": 2,
+     "state": "alert",
+     "x": 2.1,
+     "z": 14.3
+    },
+    {
+     "id": 3,
+     "state": "alert",
+     "x": 3.57,
+     "z": 13.6
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 75.51
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 11.39
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 43.77
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 78.5
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 37.64
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.18,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.29
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 44.13,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -22.37,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": 0.96,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -16.43,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -45.86,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 46.16,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.417,
+   "player": {
+    "x": 0.67,
+    "z": 33.22,
+    "speed": 13.71
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 2.01,
+     "z": 14.53
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": 1.85,
+     "z": 14.01
+    },
+    {
+     "id": 3,
+     "state": "alert",
+     "x": 3.57,
+     "z": 13.6
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 75.63
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 11.27
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 43.88
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 78.6
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 37.49
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.29,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.4
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 45.12,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -23.29,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": 1.89,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -15.31,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -45.05,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 45.11,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.533,
+   "player": {
+    "x": 1.6,
+    "z": 31.51,
+    "speed": 17.06
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 2.68,
+     "z": 14.33
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": 1.41,
+     "z": 13.49
+    },
+    {
+     "id": 3,
+     "state": "alert",
+     "x": 3.57,
+     "z": 13.6
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 75.76
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 11.13
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 78.72
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 37.32
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.41,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.52
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 46.28,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -24.37,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": 2.97,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -14,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -44.1,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 43.88,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.633,
+   "player": {
+    "x": 2.28,
+    "z": 29.84,
+    "speed": 19.95
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 3.24,
+     "z": 14.15
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": 1.04,
+     "z": 13.05
+    },
+    {
+     "id": 3,
+     "state": "alert",
+     "x": 3.57,
+     "z": 13.6
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 75.87
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 11.01
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.1
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 78.83
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 37.17
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.51,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.63
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.37,
+     "x": 47.25,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -25.29,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": 3.9,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -12.88,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -43.29,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 42.83,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.733,
+   "player": {
+    "x": 2.9,
+    "z": 28,
+    "speed": 17.05
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 3.81,
+     "z": 13.97
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": 0.66,
+     "z": 12.61
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 3.82,
+     "z": 13.64
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 75.98
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.88
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.21
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 78.93
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 37.03
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.61,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.73
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.67,
+     "x": 48.14,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -26.21,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": 4.83,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -11.75,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -42.48,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 41.78,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.833,
+   "player": {
+    "x": 3.14,
+    "z": 26.59,
+    "speed": 13.32
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 4.38,
+     "z": 13.8
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": 0.29,
+     "z": 12.16
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 4.33,
+     "z": 13.73
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 76.1
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.76
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.31
+    },
+    {
+     "id": 10,
+     "state": "walk",
+     "x": 6.2,
+     "z": 79.03
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 36.88
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.72,
+     "z": 6.2
+    },
+    {
+     "id": 16,
+     "state": "walk",
+     "x": -6.2,
+     "z": 77.84
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.97,
+     "x": 49.02,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -27.13,
+     "health": 100
+    },
+    {
+     "id": 13,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 57.25,
+     "z": 5.75,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -10.63,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -41.67,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 40.73,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 0.933,
+   "player": {
+    "x": 3.23,
+    "z": 25.27,
+    "speed": 13.49
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 4.95,
+     "z": 13.62
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -0.08,
+     "z": 11.72
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 4.84,
+     "z": 13.82
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 76.21
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.64
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.42
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 36.73
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.82,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.27,
+     "x": 49.94,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -28.05,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -9.51,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -40.86,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 39.67,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.033,
+   "player": {
+    "x": 3.26,
+    "z": 23.85,
+    "speed": 14.75
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 5.52,
+     "z": 13.45
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -0.46,
+     "z": 11.28
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 5.35,
+     "z": 13.91
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 76.32
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.52
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.52
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 36.59
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 43.92,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.57,
+     "x": 50.88,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.75,
+     "z": -28.98,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -8.39,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -40.05,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 38.62,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.15,
+   "player": {
+    "x": 3.28,
+    "z": 22.01,
+    "speed": 16.43
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 6.18,
+     "z": 13.24
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -0.89,
+     "z": 10.76
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 5.94,
+     "z": 14.01
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 76.45
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.37
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.64
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.8,
+     "z": 36.41
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.04,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 52.02,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 2.9,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -7.08,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -39.1,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 37.4,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.333,
+   "player": {
+    "x": 3.28,
+    "z": 18.77,
+    "speed": 18.67
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 3,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "flee",
+     "x": 6.55,
+     "z": 12.92
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -1.58,
+     "z": 9.95
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 6.84,
+     "z": 14.24
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 76.66
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.15
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.83
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.75,
+     "z": 36.2
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.23,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 53.84,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 4.59,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -5.02,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -37.61,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 35.47,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.45,
+   "player": {
+    "x": 3.28,
+    "z": 16.52,
+    "speed": 19.77
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 4,
+    "pedestrianDives": 0,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "alert",
+     "x": 6.55,
+     "z": 12.86
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -2.02,
+     "z": 9.44
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 7.43,
+     "z": 14.35
+    },
+    {
+     "id": 4,
+     "state": "walk",
+     "x": -6.2,
+     "z": 76.79
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 10.01
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 44.95
+    },
+    {
+     "id": 12,
+     "state": "walk",
+     "x": 53.57,
+     "z": 36.2
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.35,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 9,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.92,
+     "x": 55,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 5.67,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -3.71,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -36.66,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 34.24,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.633,
+   "player": {
+    "x": 3.28,
+    "z": 12.76,
+    "speed": 21.06
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 1,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "dive",
+     "x": 6.55,
+     "z": 13
+    },
+    {
+     "id": 2,
+     "state": "alert",
+     "x": -2.33,
+     "z": 9.07
+    },
+    {
+     "id": 3,
+     "state": "flee",
+     "x": 8.37,
+     "z": 14.51
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 9.78
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 45.14
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.54,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 7.36,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -1.65,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -35.18,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 32.32,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.75,
+   "player": {
+    "x": 3.28,
+    "z": 10.26,
+    "speed": 21.67
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 1,
+    "nearMisses": 0,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "dive",
+     "x": 6.55,
+     "z": 13.1
+    },
+    {
+     "id": 2,
+     "state": "alert",
+     "x": -2.33,
+     "z": 9.07
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 8.65,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 9.64
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 45.26
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.66,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 8.44,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 27.25,
+     "z": -0.35,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -34.23,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 31.09,
+     "z": 57.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 1.95,
+   "player": {
+    "x": 3.28,
+    "z": 5.83,
+    "speed": 22.44
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 1,
+    "nearMisses": 1,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "recover",
+     "x": 6.55,
+     "z": 13.28
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -2.72,
+     "z": 9.08
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 8.43,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 9.39
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 45.47
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.87,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 10.28,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 29.31,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -32.61,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 27.25,
+     "z": 58.48,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.067,
+   "player": {
+    "x": 3.28,
+    "z": 3.19,
+    "speed": 22.76
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 1,
+    "nearMisses": 1,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "recover",
+     "x": 6.42,
+     "z": 13.28
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -3.39,
+     "z": 9.11
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 8.3,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 9.25
+    },
+    {
+     "id": 8,
+     "state": "walk",
+     "x": -23.8,
+     "z": 45.59
+    },
+    {
+     "id": 14,
+     "state": "walk",
+     "x": 44.99,
+     "z": 6.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 11.36,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 30.62,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -31.66,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 21,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.51,
+     "x": 27.25,
+     "z": 59.7,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.183,
+   "player": {
+    "x": 3.28,
+    "z": 0.52,
+    "speed": 23.02
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 1,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "dive",
+     "x": 6.52,
+     "z": 13.28
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -4.07,
+     "z": 9.13
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 8.17,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 9.11
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 12.43,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 31.93,
+     "z": 2.75,
+     "health": 100
+    },
+    {
+     "id": 18,
+     "state": "drive",
+     "parked": false,
+     "speed": 8.11,
+     "x": -30.71,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.383,
+   "player": {
+    "x": 3.28,
+    "z": -4.12,
+    "speed": 23.34
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 1,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "dive",
+     "x": 6.55,
+     "z": 13.19
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -5.22,
+     "z": 9.18
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 7.94,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 8.86
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 14.27,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 34.17,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.5,
+   "player": {
+    "x": 3.28,
+    "z": -6.85,
+    "speed": 23.48
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 1,
+    "pedestrianHits": 0,
+    "trafficBrakes": 0,
+    "honks": 0,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "dive",
+     "x": 6.55,
+     "z": 13.15
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -5.9,
+     "z": 9.2
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 7.81,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 8.72
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "drive",
+     "parked": false,
+     "speed": 9.22,
+     "x": 15.35,
+     "z": -27.25,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 35.48,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.7,
+   "player": {
+    "x": 3.28,
+    "z": -11.57,
+    "speed": 23.65
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 2,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "recover",
+     "x": 6.44,
+     "z": 13.1
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -6.55,
+     "z": 9.24
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 7.59,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 8.47
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 8.32,
+     "x": 17.14,
+     "z": -27.05,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 37.72,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.817,
+   "player": {
+    "x": 3.28,
+    "z": -14.33,
+    "speed": 23.72
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 2,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.14
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -6.55,
+     "z": 9.27
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 7.46,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 8.33
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 7.27,
+     "x": 18.04,
+     "z": -26.82,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 39.03,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 2.95,
+   "player": {
+    "x": 3.28,
+    "z": -17.5,
+    "speed": 23.79
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 2,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.25
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -6.55,
+     "z": 9.3
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 7.31,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 8.17
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 6.07,
+     "x": 18.92,
+     "z": -26.55,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 40.53,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 3.15,
+   "player": {
+    "x": 3.28,
+    "z": -22.27,
+    "speed": 23.86
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 2,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.41
+    },
+    {
+     "id": 2,
+     "state": "flee",
+     "x": -6.55,
+     "z": 9.34
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 7.08,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 7.92
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 4.27,
+     "x": 19.94,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 42.77,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 3.267,
+   "player": {
+    "x": 3.28,
+    "z": -25.05,
+    "speed": 23.89
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 0,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.5
+    },
+    {
+     "id": 2,
+     "state": "recover",
+     "x": -6.55,
+     "z": 9.36
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 6.95,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 7.78
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 3.22,
+     "x": 20.37,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 44.08,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 3.383,
+   "player": {
+    "x": 3.28,
+    "z": -27.84,
+    "speed": 23.91
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 284,
+     "kind": "tree",
+     "state": "stand",
+     "x": 6.2,
+     "z": -12.5
+    }
+   ],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.6
+    },
+    {
+     "id": 2,
+     "state": "recover",
+     "x": -6.42,
+     "z": 9.36
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 6.82,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 7.64
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 2.17,
+     "x": 20.67,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 45.39,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 3.567,
+   "player": {
+    "x": 3.28,
+    "z": -32.23,
+    "speed": 23.94
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.74
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 9.26
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 6.62,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 7.41
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0.52,
+     "x": 20.91,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 47.45,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 3.7,
+   "player": {
+    "x": 3.28,
+    "z": -35.42,
+    "speed": 23.95
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 13.85
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 9.15
+    },
+    {
+     "id": 3,
+     "state": "recover",
+     "x": 6.47,
+     "z": 14.57
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 7.25
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 48.95,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 3.9,
+   "player": {
+    "x": 3.28,
+    "z": -40.21,
+    "speed": 23.97
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.01
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.99
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.66
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 7
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 51.19,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.017,
+   "player": {
+    "x": 3.28,
+    "z": -43.01,
+    "speed": 23.97
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.1
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.9
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.76
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 6.86
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 52.5,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.117,
+   "player": {
+    "x": 3.28,
+    "z": -45.41,
+    "speed": 23.98
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.18
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.82
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.84
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 6.74
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 53.62,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.233,
+   "player": {
+    "x": 3.28,
+    "z": -48.21,
+    "speed": 23.98
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.28
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.72
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.93
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 6.6
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 54.93,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.333,
+   "player": {
+    "x": 3.28,
+    "z": -50.61,
+    "speed": 23.99
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 1,
+    "propsBroken": 0,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.36
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.64
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 15.01
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 6.47
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 56.05,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.433,
+   "player": {
+    "x": 3.28,
+    "z": -53,
+    "speed": 23.99
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 2,
+    "propsBroken": 1,
+    "treesDown": 0,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "falling",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.44
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.56
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 15.09
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 6.35
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 15,
+     "state": "drive",
+     "parked": false,
+     "speed": 11.22,
+     "x": 57.18,
+     "z": 2.75,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.55,
+   "player": {
+    "x": 3.28,
+    "z": -55.8,
+    "speed": 23.99
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 3,
+    "propsBroken": 2,
+    "treesDown": 1,
+    "trashKnocked": 0,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "falling",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "falling",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.53
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.47
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 15.18
+    },
+    {
+     "id": 6,
+     "state": "walk",
+     "x": 36.2,
+     "z": 6.21
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 45.74,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.65,
+   "player": {
+    "x": 3.28,
+    "z": -58.2,
+    "speed": 23.99
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 4,
+    "propsBroken": 3,
+    "treesDown": 1,
+    "trashKnocked": 1,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 266,
+     "kind": "trash",
+     "state": "tumble",
+     "x": 6.22,
+     "z": -46.75
+    },
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "falling",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "falling",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 1,
+     "state": "walk",
+     "x": 6.2,
+     "z": 14.61
+    },
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.39
+    },
+    {
+     "id": 3,
+     "state": "walk",
+     "x": 6.2,
+     "z": 15.26
+    },
+    {
+     "id": 6,
+     "state": "cross",
+     "x": 36.24,
+     "z": 6.1
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 46.83,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.75,
+   "player": {
+    "x": 3.28,
+    "z": -60.6,
+    "speed": 23.99
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 4,
+    "propsBroken": 3,
+    "treesDown": 1,
+    "trashKnocked": 1,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 266,
+     "kind": "trash",
+     "state": "tumble",
+     "x": 6.27,
+     "z": -49.01
+    },
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "falling",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "down",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.31
+    },
+    {
+     "id": 6,
+     "state": "cross",
+     "x": 36.25,
+     "z": 5.95
+    },
+    {
+     "id": 23,
+     "state": "walk",
+     "x": -10.65,
+     "z": -36.2
+    },
+    {
+     "id": 24,
+     "state": "walk",
+     "x": -36.2,
+     "z": -75.08
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 47.92,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.85,
+   "player": {
+    "x": 3.28,
+    "z": -63,
+    "speed": 24
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 5,
+    "propsBroken": 4,
+    "treesDown": 1,
+    "trashKnocked": 1,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 264,
+     "kind": "lamp",
+     "state": "falling",
+     "x": 6.2,
+     "z": -50
+    },
+    {
+     "id": 266,
+     "kind": "trash",
+     "state": "tumble",
+     "x": 6.32,
+     "z": -51.27
+    },
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "falling",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "down",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.23
+    },
+    {
+     "id": 23,
+     "state": "walk",
+     "x": -10.53,
+     "z": -36.2
+    },
+    {
+     "id": 24,
+     "state": "walk",
+     "x": -36.2,
+     "z": -74.93
+    },
+    {
+     "id": 25,
+     "state": "walk",
+     "x": 23.8,
+     "z": -73.92
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 49.01,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 4.95,
+   "player": {
+    "x": 3.28,
+    "z": -65.4,
+    "speed": 24
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 5,
+    "propsBroken": 4,
+    "treesDown": 1,
+    "trashKnocked": 1,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 264,
+     "kind": "lamp",
+     "state": "falling",
+     "x": 6.2,
+     "z": -50
+    },
+    {
+     "id": 266,
+     "kind": "trash",
+     "state": "tumble",
+     "x": 6.38,
+     "z": -53.52
+    },
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "falling",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "down",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 2,
+     "state": "walk",
+     "x": -6.2,
+     "z": 8.15
+    },
+    {
+     "id": 23,
+     "state": "walk",
+     "x": -10.4,
+     "z": -36.2
+    },
+    {
+     "id": 24,
+     "state": "walk",
+     "x": -36.2,
+     "z": -74.78
+    },
+    {
+     "id": 25,
+     "state": "walk",
+     "x": 23.8,
+     "z": -73.76
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 50.1,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 5.067,
+   "player": {
+    "x": 3.28,
+    "z": -68.2,
+    "speed": 24
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 5,
+    "propsBroken": 4,
+    "treesDown": 1,
+    "trashKnocked": 1,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 0,
+   "props": [
+    {
+     "id": 264,
+     "kind": "lamp",
+     "state": "falling",
+     "x": 6.2,
+     "z": -50
+    },
+    {
+     "id": 266,
+     "kind": "trash",
+     "state": "tumble",
+     "x": 6.44,
+     "z": -56.16
+    },
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "falling",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "down",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 23,
+     "state": "walk",
+     "x": -10.25,
+     "z": -36.2
+    },
+    {
+     "id": 24,
+     "state": "walk",
+     "x": -36.2,
+     "z": -74.61
+    },
+    {
+     "id": 25,
+     "state": "walk",
+     "x": 23.8,
+     "z": -73.59
+    },
+    {
+     "id": 26,
+     "state": "walk",
+     "x": 36.2,
+     "z": -47.35
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 51.37,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  },
+  {
+   "t": 5.167,
+   "player": {
+    "x": 3.28,
+    "z": -70.6,
+    "speed": 24
+   },
+   "health": 95,
+   "stats": {
+    "propHits": 5,
+    "propsBroken": 4,
+    "treesDown": 1,
+    "trashKnocked": 1,
+    "pedestrianScares": 5,
+    "pedestrianDives": 2,
+    "nearMisses": 3,
+    "pedestrianHits": 0,
+    "trafficBrakes": 1,
+    "honks": 1,
+    "trafficCollisions": 0,
+    "trafficWrecks": 0,
+    "cityExplosions": 0
+   },
+   "solids": 1,
+   "props": [
+    {
+     "id": 264,
+     "kind": "lamp",
+     "state": "falling",
+     "x": 6.2,
+     "z": -50
+    },
+    {
+     "id": 266,
+     "kind": "trash",
+     "state": "tumble",
+     "x": 6.49,
+     "z": -58.42
+    },
+    {
+     "id": 268,
+     "kind": "tree",
+     "state": "down",
+     "x": 6.2,
+     "z": -42.5
+    },
+    {
+     "id": 270,
+     "kind": "sign",
+     "state": "down",
+     "x": 6.2,
+     "z": -39
+    }
+   ],
+   "peds": [
+    {
+     "id": 23,
+     "state": "walk",
+     "x": -10.12,
+     "z": -36.2
+    },
+    {
+     "id": 24,
+     "state": "walk",
+     "x": -36.2,
+     "z": -74.46
+    },
+    {
+     "id": 25,
+     "state": "walk",
+     "x": 23.8,
+     "z": -73.44
+    },
+    {
+     "id": 26,
+     "state": "walk",
+     "x": 36.2,
+     "z": -47.2
+    }
+   ],
+   "traffic": [
+    {
+     "id": 11,
+     "state": "yield",
+     "parked": false,
+     "speed": 0,
+     "x": 20.92,
+     "z": -26.45,
+     "health": 100
+    },
+    {
+     "id": 22,
+     "state": "drive",
+     "parked": false,
+     "speed": 10.9,
+     "x": 52.46,
+     "z": -27.25,
+     "health": 100
+    }
+   ],
+   "explosions": 0,
+   "explosionCauses": []
+  }
+ ],
+ "events": [
+  {
+   "id": 1,
+   "time": 2.6166666666666623,
+   "type": "traffic",
+   "action": "honk",
+   "x": 16.272586784418703,
+   "z": -27.25,
+   "strength": 1
+  },
+  {
+   "id": 2,
+   "time": 3.299999999999993,
+   "type": "prop",
+   "action": "hit",
+   "kind": "tree",
+   "x": 6.2,
+   "z": -12.5,
+   "strength": 3.7075138049333467,
+   "byPlayer": false
+  },
+  {
+   "id": 3,
+   "time": 4.3666666666666565,
+   "type": "prop",
+   "action": "break",
+   "kind": "sign",
+   "x": 6.2,
+   "z": -39,
+   "strength": 28.02771939506682,
+   "byPlayer": false
+  },
+  {
+   "id": 4,
+   "time": 4.483333333333323,
+   "type": "prop",
+   "action": "break",
+   "kind": "tree",
+   "x": 6.2,
+   "z": -42.5,
+   "strength": 27.304154537391025,
+   "byPlayer": false
+  },
+  {
+   "id": 5,
+   "time": 4.633333333333322,
+   "type": "prop",
+   "action": "break",
+   "kind": "trash",
+   "x": 6.2,
+   "z": -46,
+   "strength": 25.135182765664137,
+   "byPlayer": false
+  },
+  {
+   "id": 6,
+   "time": 4.7499999999999885,
+   "type": "prop",
+   "action": "land",
+   "kind": "sign",
+   "x": 6.210885815510307,
+   "z": -40.99997037453575,
+   "strength": 6
+  },
+  {
+   "id": 7,
+   "time": 4.799999999999988,
+   "type": "prop",
+   "action": "break",
+   "kind": "lamp",
+   "x": 6.2,
+   "z": -50,
+   "strength": 26.472639764568697,
+   "byPlayer": false
+  },
+  {
+   "id": 8,
+   "time": 5.099999999999987,
+   "type": "prop",
+   "action": "land",
+   "kind": "tree",
+   "x": 6.146457198752004,
+   "z": -44.49928316364504,
+   "strength": 10
+  }
+ ]
+}

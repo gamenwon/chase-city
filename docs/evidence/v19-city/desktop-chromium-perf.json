@@ -1,0 +1,50 @@
+{
+ "viewport": {
+  "w": 1100,
+  "h": 740
+ },
+ "fps": 2.5,
+ "p95ms": 716.7,
+ "perf": {
+  "profile": "desktop",
+  "level": 0.4,
+  "frameMs": 93.86175531063955,
+  "slowFor": 5.8498,
+  "fastFor": 0,
+  "pixelRatio": 1,
+  "changes": [
+   {
+    "at": 6481,
+    "level": 0.8,
+    "fps": 17
+   },
+   {
+    "at": 8010,
+    "level": 0.6000000000000001,
+    "fps": 15
+   },
+   {
+    "at": 9593,
+    "level": 0.4000000000000001,
+    "fps": 13
+   },
+   {
+    "at": 11711,
+    "level": 0.4,
+    "fps": 12
+   }
+  ]
+ },
+ "actors": {
+  "peds": 7,
+  "traffic": 4
+ },
+ "budget": {
+  "profile": "desktop",
+  "level": 0.4,
+  "peds": 7,
+  "traffic": 4,
+  "parked": 6,
+  "range": 70
+ }
+}
