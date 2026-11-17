@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>CHASE CITY 아트 디렉션</title>
+    <style>
+      :root {
+        font-family: "Noto Sans KR", system-ui, sans-serif;
+        color: #3b3350;
+        background: #cde0ff;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #cde0ff;
+      }
+      #view {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        display: block;
+      }
+      .card {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        left: 12px;
+        max-width: 300px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: #ffffffe8;
+        box-shadow: 0 6px 20px #3b335022;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .card h1 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        letter-spacing: -0.3px;
+      }
+      .card p {
+        margin: 0;
+      }
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .swatches i {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        box-shadow: inset 0 0 0 1px #0000001a;
+      }
+      .bar {
+        position: fixed;
+        left: 50%;
+        bottom: max(14px, env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        width: max-content;
+        max-width: calc(100vw - 24px);
+        padding: 6px;
+        border-radius: 22px;
+        background: #ffffffeb;
+        box-shadow: 0 6px 20px #3b335026;
+      }
+      .bar button {
+        border: 0;
+        border-radius: 999px;
+        min-height: 40px;
+        padding: 8px 13px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+        background: transparent;
+        color: #3b3350;
+        cursor: pointer;
+      }
+      .bar button[aria-pressed="true"] {
+        background: #f7894a;
+        color: #fff;
+      }
+      .bar #replay {
+        background: #de7170;
+        color: #fff;
+      }
+      .legend {
+        position: fixed;
+        right: 12px;
+        top: max(12px, env(safe-area-inset-top));
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: #ffffffe0;
+        font-size: 11px;
+        line-height: 1.6;
+        max-width: 210px;
+      }
+      @media (max-width: 640px) {
+        .card {
+          right: 12px;
+          max-width: none;
+          padding: 10px 12px;
+        }
+        .card .long,
+        .legend {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view" aria-label="CHASE CITY 아트 디렉션 3D 미리보기"></canvas>
+    <div class="card">
+      <h1>CHASE CITY 아트 디렉션 시안</h1>
+      <p>
+        파스텔 미니어처 장난감 도시 · 둥근 로우폴리 · 부드러운 빛과 그림자.
+        <span class="long"
+          >드래그로 회전, 두 손가락(휠)로 확대합니다. 게임 화면은 바뀌지
+          않았습니다.</span
+        >
+      </p>
+      <div class="swatches" aria-label="팔레트">
+        <i style="background: #f7894a" title="플레이어 차량"></i>
+        <i style="background: #3d383a" title="경찰차"></i>
+        <i style="background: #8f7a91" title="도로"></i>
+        <i style="background: #e6bcb2" title="보도"></i>
+        <i style="background: #a9b65e" title="잔디"></i>
+        <i style="background: #7fa543" title="나무"></i>
+        <i style="background: #f3ecdf" title="크림"></i>
+        <i style="background: #e6aab6" title="핑크"></i>
+        <i style="background: #b8665a" title="벽돌"></i>
+        <i style="background: #de7170" title="코랄 지붕"></i>
+        <i style="background: #4fa9a4" title="틸"></i>
+        <i style="background: #fac27a" title="노랑"></i>
+        <i style="background: #8ec2c2" title="물"></i>
+      </div>
+    </div>
+    <div class="legend">
+      <b>파괴 전·후</b> (뒤: BEFORE, 앞: AFTER)<br />
+      가로수 · 가로등 · 쓰레기통 · 울타리 · 소화전 · 바리케이드 · 경찰차 ·
+      플레이어 차량(손상)
+    </div>
+    <div class="bar" role="group" aria-label="보기">
+      <button data-view="all" aria-pressed="true">전체</button>
+      <button data-view="cars" aria-pressed="false">차량</button>
+      <button data-view="city" aria-pressed="false">도시</button>
+      <button data-view="wreck" aria-pressed="false">파괴 전·후</button>
+      <button id="replay">파괴 재생</button>
+      <button id="spin" aria-pressed="false">회전</button>
+    </div>
+    <script type="module" src="/src/art/direction.js"></script>
+  </body>
+</html>
