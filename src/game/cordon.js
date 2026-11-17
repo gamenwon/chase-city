@@ -223,6 +223,22 @@ function slotAt(
               c.state === "active" &&
               c.blockState === "hold" &&
               Math.hypot(c.x - slot.x, c.z - slot.z) < 3.2,
+          ) ||
+          // V1.9: nor where a parked/stopped civilian car (or wreck) stands:
+          // a police car could never park there.
+          (sim.city?.traffic || []).some(
+            (t) =>
+              Math.hypot(t.vx || 0, t.vz || 0) < 1 &&
+              Math.hypot(t.x - slot.x, t.z - slot.z) < 3,
+          ) ||
+          // ...nor on a standing tree, lamp post or sign it cannot get past.
+          (sim.city?.props || []).some(
+            (q) =>
+              q.state === "stand" &&
+              q.kind !== "trash" &&
+              Math.abs(q.x - slot.x) < 2.4 &&
+              Math.abs(q.z - slot.z) < 2.4 &&
+              Math.hypot(q.x - slot.x, q.z - slot.z) < 2.2,
           );
         if (!inWall && (!accept || accept(slot))) return slot;
       }

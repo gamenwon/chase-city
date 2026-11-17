@@ -522,6 +522,30 @@ export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
       break;
     }
   }
+  // V1.9: likewise round a standing tree, lamp post or sign close ahead
+  // (navigation.cityProps is set by the simulation when the city is on).
+  if (!c.sidestep)
+    for (const q of navigation.cityProps || []) {
+      if (q.state !== "stand" || q.kind === "trash") continue;
+      const ox = q.x - c.x,
+        oz = q.z - c.z;
+      if (Math.abs(ox) > 4.5 || Math.abs(oz) > 4.5) continue;
+      const od = Math.hypot(ox, oz);
+      if (
+        od > 0 &&
+        od < 4.5 &&
+        od < d &&
+        (ox * wx + oz * wz) / (od * wd) > 0.6
+      ) {
+        const side = wx * oz - wz * ox > 0 ? -1 : 1,
+          turn = 0.9 * side,
+          cs = Math.cos(turn),
+          sn = Math.sin(turn);
+        [wx, wz] = [wx * cs - wz * sn, wx * sn + wz * cs];
+        c.sidestep = true;
+        break;
+      }
+    }
   const desired = Math.atan2(-wx, -wz),
     error = angleDelta(desired, c.angle);
   const delta = clamp(error, -3.8 * dt, 3.8 * dt);

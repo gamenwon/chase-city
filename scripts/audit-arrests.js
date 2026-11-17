@@ -36,6 +36,8 @@ function copy(layout, s, width, height) {
     reinforcements: false,
     barricades: false,
     random: () => 0.5,
+    city: !!s.city,
+    cityBudget: s.cityBudget,
   });
   t.start();
   // Every plain piece of game state (player, police, cordon, roadblock,
@@ -49,9 +51,35 @@ function copy(layout, s, width, height) {
       // functions and class instances stay as the fresh copy made them
     }
   }
+  // V1.9 city: copy its plain state (props, traffic, pedestrians, fallen
+  // trees...) into the copy's own city, which keeps its grids/helpers.
+  if (s.city) {
+    const plain = structuredClone({
+      props: s.city.props,
+      traffic: s.city.traffic,
+      parking: s.city.parking,
+      pedestrians: s.city.pedestrians.map((q) => ({ ...q, threat: null })),
+      litter: s.city.litter,
+      solids: s.city.solids,
+      stats: s.city.stats,
+      nextId: s.city.nextId,
+      eventId: s.city.eventId,
+    });
+    Object.assign(t.city, plain, { budget: s.city.budget, events: [] });
+    t.city.grid = new Map();
+    for (const q of t.city.props) {
+      const k = t.city.key(q.x, q.z);
+      if (!t.city.grid.has(k)) t.city.grid.set(k, []);
+      t.city.grid.get(k).push(q);
+    }
+    t.city.moving = new Set(
+      t.city.props.filter((q) => q.state === "falling" || q.state === "tumble"),
+    );
+  }
   t.reinforcementsEnabled = false;
   t.barricadesEnabled = false;
   t.refreshNavigation();
+  t.navigation.cityProps = t.city?.props || null;
   return t;
 }
 
@@ -101,6 +129,9 @@ if (
           width,
           height,
           random: random(seed + 40000),
+          // CITY=1: audit with the V1.9 city on (phone budget at phone width).
+          city: process.env.CITY === "1",
+          cityProfile: width === 390 ? "mobile" : "desktop",
         });
         let drive = stageDriver(seed, mode),
           restarts = 0;

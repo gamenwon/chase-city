@@ -890,10 +890,17 @@ function driveTraffic(sim, city, t, dt) {
   ahead(sim.player, 0.3);
   for (const q of city.pedestrians) ahead(q, -0.6);
   // A chase coming through: honk, pull over to the kerb and stop.
-  const p = sim.player,
-    chase =
-      sirenNear(sim, t, 26) ||
-      (Math.hypot(p.x - t.x, p.z - t.z) < 18 && Math.hypot(p.vx, p.vz) > 12);
+  const p = sim.player;
+  // Caught inside a police cordon round the player: get out of the way
+  // (drive off) rather than sit in the gap the police need to close.
+  if (sim.cordon && Math.hypot(p.x - t.x, p.z - t.z) < 10) t.leaving = true;
+  else if (t.leaving && Math.hypot(p.x - t.x, p.z - t.z) > 25)
+    t.leaving = false;
+  const chase =
+    !t.leaving &&
+    (sirenNear(sim, t, 26) ||
+      (Math.hypot(p.x - t.x, p.z - t.z) < 18 && Math.hypot(p.vx, p.vz) > 12));
+  if (t.leaving && t.state === "yield") t.state = "drive";
   if (t.state === "drive" && chase) {
     t.state = "yield";
     t.timer = 2.2 + city.random() * 1.2;
