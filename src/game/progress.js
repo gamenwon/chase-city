@@ -83,13 +83,15 @@ export class Progress {
     this.save();
     return amount;
   }
-  recordRun(missionId, { success, time }) {
+  // `repeat`: the same run ending again after a continue (counts the
+  // clear, not another play).
+  recordRun(missionId, { success, time, repeat = false }) {
     const r = (this.data.missions[missionId] ||= {
       plays: 0,
       clears: 0,
       bestTime: null,
     });
-    r.plays++;
+    if (!repeat) r.plays++;
     if (success) {
       r.clears++;
       if (r.bestTime === null || time < r.bestTime) r.bestTime = time;

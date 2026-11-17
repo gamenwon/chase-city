@@ -1,8 +1,13 @@
 import "./style.css";
 import { SoundSystem } from "./audio/sound.js";
 const audio = new SoundSystem();
-import { createLayout } from "./world/layout.js";
 import { Simulation } from "./game/simulation.js";
+import { getMission } from "./game/missions.js";
+import { missionOrder, nextMission } from "./game/catalog.js";
+import { getVehicle } from "./game/vehicles.js";
+import { Progress } from "./game/progress.js";
+import { getMap, mapLayout } from "./world/maps.js";
+import { installAdBridge, PLACEMENTS } from "./platform/ads.js";
 import { Input } from "./game/input.js";
 import { CityRenderer } from "./render/scene.js";
 import { Interface } from "./ui/interface.js";
@@ -13,11 +18,32 @@ const mobile =
   matchMedia("(pointer: coarse)").matches ||
   Math.min(innerWidth, innerHeight) < 600;
 const profile = mobile ? "mobile" : "desktop";
+// V2.0: missions, saved credits/records, and the rewarded-ad connection.
+const progress = new Progress();
+const ads = installAdBridge(window);
+const order = missionOrder();
+const firstMission = order.includes(progress.data.lastMission)
+  ? progress.data.lastMission
+  : order[0];
+// Every map built so far is downtown; a mission on another map would need
+// its own renderer (see world/maps.js).
+const startMap = getMap(getMission(firstMission).mapId);
 const ui = new Interface(),
-  sim = new Simulation(createLayout(), {
-    city: true,
+  sim = new Simulation(mapLayout(startMap.id), {
+    city: startMap.city,
     cityProfile: profile,
+    mission: firstMission,
+    vehicle: progress.selectedVehicle,
   });
+// Development builds (or ?adtest) show the ad buttons disabled as "not
+// connected" so the layout can be checked; production hides them until the
+// host registers its ad provider.
+const showAdPlaceholders =
+  import.meta.env.DEV || new URLSearchParams(location.search).has("adtest");
+const session = Math.random().toString(36).slice(2, 8);
+const runKey = () => `${session}:${sim.runNumber}`;
+let result = null; // { earned, base, doubled } for the run on screen
+let recordedRun = null;
 let renderer,
   state = "ready";
 function pause() {
@@ -46,6 +72,32 @@ try {
   ui.start.disabled = true;
   console.error(error);
 }
+function missionNumber(id = sim.missionId) {
+  return order.indexOf(id) + 1 || 1;
+}
+function briefing() {
+  ui.setMissionHud(sim, missionNumber());
+  ui.setWallet(progress.credits);
+  ui.showMission(sim, {
+    vehicle: getVehicle(progress.selectedVehicle),
+    number: missionNumber(),
+  });
+}
+// Switch to (or restart) a mission and show its briefing. Never while a run
+// is being played.
+function chooseMission(id) {
+  if (!renderer || state === "running") return;
+  document.body.classList.remove("busted");
+  sim.reset(id, progress.selectedVehicle);
+  renderer.reset();
+  audio.reset();
+  state = "ready";
+  result = null;
+  input.clear();
+  progress.setLastMission(id);
+  ui.hideSelect();
+  briefing();
+}
 ui.start.addEventListener("click", () => {
   if (!renderer) return;
   document.body.classList.remove("busted");
@@ -54,7 +106,9 @@ ui.start.addEventListener("click", () => {
     renderer.reset();
     audio.reset();
     state = "ready";
+    result = null;
     input.clear();
+    ui.setMissionHud(sim, missionNumber());
   }
   audio.unlock();
   if (state === "ready") {
@@ -66,6 +120,105 @@ ui.start.addEventListener("click", () => {
   input.clear();
   ui.hide();
 });
+document.querySelector("#next-mission").addEventListener("click", () => {
+  const next = nextMission(sim.missionId, order);
+  if (next) chooseMission(next);
+});
+document.querySelector("#open-select").addEventListener("click", () => {
+  if (state === "running") return;
+  ui.showSelect(
+    order.map((id, i) => ({
+      id,
+      number: i + 1,
+      record: progress.missionRecord(id),
+    })),
+    sim.missionId,
+    (id) => {
+      // The same mission while its briefing is up: just close the list.
+      if (id === sim.missionId && state === "ready") ui.hideSelect();
+      else chooseMission(id);
+    },
+  );
+});
+document.querySelector("#close-select").addEventListener("click", () => {
+  ui.hideSelect();
+  ui.start.focus({ preventScroll: true });
+});
+// ---- rewarded ads (only through the host's ad system) ----
+function adState(placement, allowed) {
+  if (!allowed) return "hidden";
+  const status = ads.status(placement);
+  if (status === "unavailable") return showAdPlaceholders ? "disabled" : "hidden";
+  return status === "ready" ? "ready" : "disabled";
+}
+function refreshAds() {
+  if (state !== "over" || !result) return;
+  const failed = sim.result && sim.result !== "success";
+  const canContinue =
+    failed &&
+    !sim.mission.continued &&
+    sim.mission.definition.continueOn.includes(sim.result);
+  const canDouble = sim.result === "success" && result.base > 0;
+  const cont = sim.mission.continued && failed ? "used" : adState(PLACEMENTS.continue, canContinue);
+  const dbl = result.doubled ? "used" : adState(PLACEMENTS.doubleReward, canDouble);
+  ui.setAds({
+    continue: cont,
+    double: dbl,
+    note:
+      ads.status(PLACEMENTS.continue) === "unavailable" &&
+      (cont === "disabled" || dbl === "disabled")
+        ? "개발용 표시: 광고 시스템 연결 전에는 동작하지 않습니다."
+        : "",
+  });
+}
+ads.onChange(refreshAds);
+document.querySelector("#ad-continue").addEventListener("click", async () => {
+  if (state !== "over") return;
+  const run = sim.runNumber;
+  const { rewarded } = await ads.showRewarded(PLACEMENTS.continue);
+  if (!rewarded || run !== sim.runNumber || state !== "over") return refreshAds();
+  if (!sim.revive()) return refreshAds();
+  document.body.classList.remove("busted");
+  state = "running";
+  result = null;
+  input.clear();
+  audio.unlock();
+  audio.setRunning(true);
+  ui.hide();
+});
+document.querySelector("#ad-double").addEventListener("click", async () => {
+  if (state !== "over" || !result || result.doubled) return;
+  const shown = result;
+  const { rewarded } = await ads.showRewarded(PLACEMENTS.doubleReward);
+  if (!rewarded || shown !== result) return refreshAds();
+  const extra = progress.pay(runKey(), "ad-double", shown.base);
+  shown.doubled = true;
+  shown.earned += extra;
+  ui.setWallet(progress.credits);
+  ui.showResultDetails(sim, resultInfo());
+});
+function resultInfo() {
+  return {
+    earned: result.earned,
+    hasNext: !!nextMission(sim.missionId, order),
+  };
+}
+// A run just ended: pay the reward once, record it, show the result.
+function finishRun() {
+  const success = sim.result === "success";
+  const base = success ? sim.credits : 0;
+  const earned = progress.pay(runKey(), "base", base);
+  progress.recordRun(sim.missionId, {
+    success,
+    time: sim.elapsed,
+    repeat: recordedRun === runKey(),
+  });
+  recordedRun = runKey();
+  result = { base, earned, doubled: false };
+  ui.setWallet(progress.credits);
+  ui.gameover(sim, resultInfo());
+  refreshAds();
+}
 document.querySelector("#pause").addEventListener("click", pause);
 const mute = document.querySelector("#mute");
 mute.addEventListener("click", () => {
@@ -166,9 +319,10 @@ function frame(ms) {
           const run = sim.runNumber;
           document.body.classList.add("busted");
           setTimeout(() => {
-            if (state === "over" && sim.runNumber === run) ui.gameover(sim);
+            if (state === "over" && sim.runNumber === run && sim.result)
+              finishRun();
           }, 900);
-        } else ui.gameover(sim);
+        } else finishRun();
         break;
       }
     }
@@ -181,14 +335,19 @@ function frame(ms) {
       audio.voice("tone", 1, 1046, 0.15);
     }
   }
-  ui.update(sim, renderer?.roadEvents.view);
+  if (state === "running") {
+    const taken = sim.pickups.filter((q) => q.taken).length;
+    if (taken > (frame.taken || 0)) audio.voice("tone", 1, 988);
+    frame.taken = taken;
+  } else frame.taken = 0;
+  ui.update(sim, renderer?.guidanceView);
   renderer?.render(
     sim,
     state === "running" || state === "ready" ? dt : 0,
     state === "running",
   );
 }
-if (renderer) ui.showMission(sim);
+if (renderer) briefing();
 requestAnimationFrame(frame);
 // Opt-in diagnostics for automated local tests; never enabled by normal play.
 if (import.meta.env.DEV && new URLSearchParams(location.search).has("debug"))
@@ -198,6 +357,10 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("debug"))
     renderer,
     audio,
     perf,
+    progress,
+    ads,
+    ui,
+    chooseMission,
     get state() {
       return state;
     },

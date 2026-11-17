@@ -11,6 +11,7 @@ import { ExplosionEffects } from "./explosions.js";
 import { BonnetCamera } from "./pip.js";
 import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
+import { PickupRenderer } from "./pickups.js";
 const palette = [0xf34b32, 0xffbf22, 0x087cba, 0x13a783, 0xf38617, 0x2364ce];
 export class CityRenderer {
   constructor(canvas, layout, options = {}) {
@@ -170,6 +171,7 @@ export class CityRenderer {
     this.roadEvents = new RoadEventsRenderer(this.scene);
     this.officers = new OfficerRenderer(this.scene);
     this.cityLife = new CityLifeRenderer(this.scene);
+    this.pickups = new PickupRenderer(this.scene);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -306,6 +308,7 @@ export class CityRenderer {
     this.camera.updateMatrixWorld(true);
     this.player.updateMatrixWorld(true);
     this.roadEvents.update(sim, this.camera);
+    this.pickups.update(sim, this.camera);
     const spawnCameraView = spawnView(this.camera);
     for (const c of sim.police)
       if (c.spawnProof && c.state === "active") {
@@ -346,6 +349,10 @@ export class CityRenderer {
     );
     this.lastMainCalls = this.renderer.info.render.calls;
     this.renderPip(p);
+  }
+  // V2.0: the on-screen arrow (escape gate, or the mission's next item).
+  get guidanceView() {
+    return this.roadEvents.view || this.pickups.view;
   }
   setPip(enabled) {
     this.pipEnabled = enabled;
@@ -416,6 +423,7 @@ export class CityRenderer {
     this.wreckRenderer.reset();
     this.officers.reset();
     this.cityLife.reset();
+    this.pickups.reset();
     this.cameraRig.reset();
     this.trails.reset();
     this.resetMetrics();
