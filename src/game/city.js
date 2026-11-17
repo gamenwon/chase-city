@@ -596,7 +596,10 @@ function updatePedestrians(sim, city, dt) {
     }
     if (q.state === "alert") {
       q.timer -= dt;
-      if (q.timer <= 0) {
+      if (q.timer <= 0 && !q.threat) {
+        // The car that startled them is gone: nothing to run from.
+        q.state = "recover";
+      } else if (q.timer <= 0) {
         // Run off sideways, away from the car's path.
         const c = q.threat,
           s = Math.hypot(c.vx, c.vz) || 1;
@@ -1099,7 +1102,16 @@ function updateTraffic(sim, city, dt) {
     }
     for (const c of sim.police) {
       if (c.state !== "active") continue;
-      closing = bump(c, CONFIG.policeRadius, 1.4, t, 1.1, m);
+      // A police car parked in a cordon or roadblock is braced: a civilian
+      // car bumping it moves itself, not the police car.
+      closing = bump(
+        c,
+        CONFIG.policeRadius,
+        c.blockState === "hold" ? 1e6 : 1.4,
+        t,
+        1.1,
+        m,
+      );
       if (closing > 3) {
         city.stats.trafficCollisions++;
         damageTraffic(sim, city, t, closing);
