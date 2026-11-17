@@ -264,3 +264,43 @@ test("boxed in by walls on every side, police touching through a thin wall: stuc
   assert.equal(s.pin.lastProbe?.obstacle, true);
   assert.equal(s.pin.events.some((e) => e.type === "pinned"), false);
 });
+
+test("wrecks and debris alone never arrest: the same boxed-in spot with every police car wrecked", () => {
+  const { s } = load("pinned-390-evasive-5");
+  // Every police car round the player crashes and explodes where it stands:
+  // the wrecks stay as obstacles, but no police car is holding the player.
+  for (const c of s.police) {
+    if (c.state !== "active") continue;
+    c.health = 0;
+    s.explodePolice(c);
+  }
+  let maxArrest = 0;
+  for (let f = 0; f < 10 * 60 && !s.result; f++) {
+    s.update(1 / 60, {});
+    maxArrest = Math.max(maxArrest, s.arrest);
+  }
+  assert.notEqual(s.result, "arrested");
+  assert.equal(maxArrest, 0);
+  assert.equal(s.pin.events.some((e) => e.type === "pinned"), false);
+});
+
+test("police ramming a car that keeps driving (crashes, contact) never starts a countdown", () => {
+  const s = new Simulation(layout, { reinforcements: false, barricades: false });
+  s.start();
+  // Two police cars glued to the player's sides while it drives down a
+  // long straight road: contact every frame, but the car really moves.
+  Object.assign(s.player, { x: 0, z: 80, angle: 0, vx: 0, vz: -20, speed: 20 });
+  s.previousPlayer = { x: 0, z: 80 };
+  s.police = [makePolice(0), makePolice(1)];
+  let maxArrest = 0;
+  for (let f = 0; f < 4 * 60 && !s.result; f++) {
+    const p = s.player;
+    Object.assign(s.police[0], { x: p.x - 2.0, z: p.z, angle: p.angle, vx: p.vx, vz: p.vz, stunTimer: 1e9 });
+    Object.assign(s.police[1], { x: p.x + 2.0, z: p.z, angle: p.angle, vx: p.vx, vz: p.vz, stunTimer: 1e9 });
+    s.update(1 / 60, {});
+    maxArrest = Math.max(maxArrest, s.arrest);
+  }
+  assert.ok(Math.hypot(s.player.x, s.player.z - 80) > 30, "the car kept going");
+  assert.equal(maxArrest, 0);
+  assert.equal(s.pin.trapped, false);
+});

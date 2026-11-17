@@ -94,6 +94,10 @@ export function copy(layout, s, width, height) {
   // (braced) cars during the attempt.
   t.cordon = null;
   t.cordonCooldownUntil = Infinity;
+  // The arrest timer is held at zero on the copy, so the pin check (and its
+  // escape probes) has nothing to decide there.
+  t.pin.disabled = true;
+  t.pin.trapped = false;
   t.roadblock = null;
   t.roadblockCooldownUntil = Infinity;
   t.refreshNavigation();

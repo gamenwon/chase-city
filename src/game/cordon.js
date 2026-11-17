@@ -485,7 +485,15 @@ function sealedBy(sim, cars) {
 export function cordonSealed(sim) {
   // V2.0: a car shut in by walls/obstacles alone is not held by the police
   // (no arrest for being stuck on an ordinary obstacle with police nearby).
-  if (floodEscape(sim, sim.player, []) === null) return false;
+  // Cached while the car and the obstacles stay the same.
+  const p = sim.player;
+  const key = `${Math.round(p.x * 4)},${Math.round(p.z * 4)}`;
+  if (sim.wallsOnlyFor !== sim.solids || sim.wallsOnlyKey !== key) {
+    sim.wallsOnlyFor = sim.solids;
+    sim.wallsOnlyKey = key;
+    sim.wallsOnlyClosed = floodEscape(sim, p, []) === null;
+  }
+  if (sim.wallsOnlyClosed) return false;
   return sealedBy(
     sim,
     sim.police.filter(

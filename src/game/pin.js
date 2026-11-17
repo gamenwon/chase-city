@@ -28,13 +28,15 @@ import { bump } from "./city.js";
 export const PIN = Object.freeze({
   STILL_SECONDS: 2, // no real movement for this long...
   STILL_DISTANCE: 1, // ...means moving less than this (m)
-  CONFIRM_SECONDS: 0.5, // pinned this long before the countdown starts
+  CONFIRM_SECONDS: 0.3, // pinned this long before the probe confirms it
   NEAR: 5, // police car centres within this distance hold the car
   MIN_NEAR: 2,
   TOUCH_SECONDS: 1, // touched a police car this recently...
   HOLD_GAP: 1, // ...or one stands this close to the car body (m)
   ESCAPE_DISTANCE: 2.5, // moved this far from the pin point = got away
-  PROBE_EVERY: 0.5,
+  PROBE_EVERY: 0.5, // at most one probe started per this many seconds
+  RECHECK_EVERY: 2, // a countdown re-checks at least this often
+  RECONFIRM_EVERY: 1.5, // after a "way out" answer, ask again no sooner
   PROBE_SECONDS: 4,
   PROBE_CLEAR: 7, // a probe that gets this far away found a way out
 });
@@ -53,6 +55,9 @@ const POLICIES = [
   (e) => ({ left: Math.floor(e * 3) % 2 === 0 }),
 ];
 
+// Cost counters (diagnostics; cheap). steps = physics steps run on copies.
+export const PIN_STATS = { probes: 0, policies: 0, steps: 0, worlds: 0 };
+
 export function createPin() {
   return {
     samples: [],
@@ -62,6 +67,7 @@ export function createPin() {
     probeAt: -Infinity,
     probe: null,
     probeKey: "",
+    settledKey: "",
     lastProbe: null,
     reason: "free",
     events: [],
@@ -74,6 +80,7 @@ export function createPin() {
 // trash cans and signs give way and are left out). Built once per probe.
 const POST_KINDS = new Set(["lamp", "tree", "bigTree"]);
 function probeWorld(sim) {
+  PIN_STATS.worlds++;
   const w = Object.create(sim);
   const p = sim.player;
   const posts = (sim.city?.props || [])
@@ -96,11 +103,12 @@ function probeWorld(sim) {
 }
 
 // Run the real player physics on a copy for one escape steering (police
-// frozen where they are, or left out). Returns how far the car got.
-function tryPolicy(world, sim, steer, withPolice, seconds, clear) {
-  const start = { x: sim.player.x, z: sim.player.z };
-  let best = 0;
+// frozen where they are, or left out). A run can be advanced a few steps at
+// a time; `best` is how far the car got.
+function newRun(world, sim, steer, withPolice) {
+  PIN_STATS.policies++;
   const t = Object.create(world);
+  const start = { x: sim.player.x, z: sim.player.z };
   t.player = { ...sim.player };
   t.previousPlayer = { ...start };
   t.police = withPolice
@@ -112,24 +120,37 @@ function tryPolicy(world, sim, steer, withPolice, seconds, clear) {
   t.stats = { ...sim.stats };
   t.hitCooldown = Infinity; // no damage on the copy
   t.collisions = 0;
-  const traffic = world.probeTraffic.map((c) => ({ ...c, vx: 0, vz: 0 }));
-  const steps = Math.round(seconds * 60);
-  for (let f = 0; f < steps; f++) {
+  return {
+    t,
+    steer,
+    start,
+    f: 0,
+    best: 0,
+    traffic: world.probeTraffic.map((c) => ({ ...c, vx: 0, vz: 0 })),
+  };
+}
+// Advance a run by up to `budget` steps. Returns true when it is finished
+// (got clear, or used up its time).
+function advance(run, budget, seconds = PIN.PROBE_SECONDS, clear = PIN.PROBE_CLEAR) {
+  const t = run.t,
+    steps = Math.round(seconds * 60);
+  for (let n = 0; n < budget && run.f < steps; n++, run.f++) {
+    PIN_STATS.steps++;
     const back = { x: t.player.x, z: t.player.z };
-    t.drivePlayer(1 / 60, steer(f / 60));
+    t.drivePlayer(1 / 60, run.steer(run.f / 60));
     t.resolvePlayerPolice();
     t.constrain(t.player, CONFIG.radius, back);
     t.wedgePlayer(back);
-    for (const c of traffic) {
+    for (const c of run.traffic) {
       const m = c.parked || c.state === "wreck" ? 1.6 : 1;
       const closing = bump(t.player, CONFIG.radius, 1.3, c, 1.1, m);
       if (closing > 0) t.player.speed = Math.max(0, t.player.speed - closing * 0.4);
     }
-    const d = Math.hypot(t.player.x - start.x, t.player.z - start.z);
-    if (d > best) best = d;
-    if (best >= clear) return best;
+    const d = Math.hypot(t.player.x - run.start.x, t.player.z - run.start.z);
+    if (d > run.best) run.best = d;
+    if (run.best >= clear) return true;
   }
-  return best;
+  return run.f >= steps;
 }
 
 // All escape steerings at once (tests and tools). Returns { escaped, best }.
@@ -140,57 +161,66 @@ export function probeEscape(
   const world = probeWorld(sim);
   let best = 0;
   for (const steer of POLICIES) {
-    best = Math.max(best, tryPolicy(world, sim, steer, withPolice, seconds, clear));
+    const run = newRun(world, sim, steer, withPolice);
+    advance(run, Infinity, seconds, clear);
+    best = Math.max(best, run.best);
     if (best >= clear) return { escaped: true, best };
   }
   return { escaped: false, best };
 }
 
-// The game spreads a probe over several steps (one steering per step) so a
-// phone never stalls a frame on it. A "confirm" probe first drives without
-// the police: if the car cannot get out even then, it is stuck on walls or
-// obstacles alone and this is not an arrest. Returns the result when done.
-// The probe world is kept outside the pin state (which stays plain data, so
-// a copied game state carries no stale copy of it).
-const worlds = new WeakMap();
+// In the game a probe is spread over several steps, at most STEP_BUDGET
+// copied physics steps per game step, so a phone never stalls a frame on
+// it. A "confirm" probe first drives without the police: if the car cannot
+// get out even then, it is stuck on walls or obstacles alone and this is
+// not an arrest. Returns the result when done, else null.
+// The probe world and the running copy are kept outside the pin state
+// (which stays plain data, so a copied game state carries no stale copy).
+const STEP_BUDGET = 80;
+const running = new WeakMap();
 function stepProbe(sim) {
   const pin = sim.pin,
     pr = pin.probe,
     p = sim.player;
-  let world = worlds.get(pr);
-  if (!world) worlds.set(pr, (world = probeWorld(sim)));
   // The car moved meanwhile: the question has changed, start again.
   if (Math.hypot(p.x - pr.x, p.z - pr.z) > PIN.STILL_DISTANCE) {
     pin.probe = null;
     return null;
   }
-  const got = tryPolicy(
-    world,
-    sim,
-    POLICIES[pr.next++],
-    pr.phase === "police",
-    PIN.PROBE_SECONDS,
-    PIN.PROBE_CLEAR,
-  );
-  if (pr.phase === "no-police") {
-    if (got >= PIN.PROBE_CLEAR) {
-      pr.phase = "police";
-      pr.next = 0;
-      return null;
+  let job = running.get(pr);
+  if (!job) running.set(pr, (job = { world: probeWorld(sim), run: null }));
+  let budget = STEP_BUDGET;
+  while (budget > 0) {
+    if (!job.run)
+      job.run = newRun(job.world, sim, POLICIES[pr.next++], pr.phase === "police");
+    const before = job.run.f;
+    const finished = advance(job.run, budget);
+    budget -= job.run.f - before + (finished ? 1 : 0);
+    if (!finished) return null;
+    const got = job.run.best;
+    job.run = null;
+    if (pr.phase === "no-police") {
+      if (got >= PIN.PROBE_CLEAR) {
+        pr.phase = "police";
+        pr.next = 0;
+        continue;
+      }
+      if (pr.next < POLICIES.length) continue;
+      pin.probe = null;
+      pin.lastProbe = { obstacle: true, escaped: false, best: 0, purpose: pr.purpose };
+      return pin.lastProbe;
     }
-    if (pr.next < POLICIES.length) return null;
+    pr.best = Math.max(pr.best, got);
+    const escaped = pr.best >= PIN.PROBE_CLEAR;
+    if (!escaped && pr.next < POLICIES.length) continue;
     pin.probe = null;
-    pin.lastProbe = { obstacle: true, escaped: false, best: 0, purpose: pr.purpose };
+    pin.lastProbe = { escaped, best: pr.best, purpose: pr.purpose };
     return pin.lastProbe;
   }
-  pr.best = Math.max(pr.best, got);
-  const escaped = pr.best >= PIN.PROBE_CLEAR;
-  if (!escaped && pr.next < POLICIES.length) return null;
-  pin.probe = null;
-  pin.lastProbe = { escaped, best: pr.best, purpose: pr.purpose };
-  return pin.lastProbe;
+  return null;
 }
 function startProbe(sim, purpose) {
+  PIN_STATS.probes++;
   sim.pin.probeAt = sim.elapsed;
   sim.pin.probe = {
     purpose,
@@ -244,6 +274,21 @@ function log(sim, type, extra = {}) {
   if (pin.events.length > 32) pin.events.shift();
 }
 
+// What a probe's answer depends on: where the car is and which way it
+// points, where the police cars round it stand, the obstacles. While this
+// stays the same the last answer stands (no probe is run again).
+function situation(sim) {
+  const p = sim.player,
+    q = (v, step) => Math.round(v / step);
+  const cars = nearPolice(sim, PIN.NEAR + 3)
+    .map(
+      (c) =>
+        `${c.id}:${c.generation}:${q(c.x, 0.5)}:${q(c.z, 0.5)}:${q(c.angle, 0.26)}`,
+    )
+    .join(",");
+  return `${q(p.x, 0.5)},${q(p.z, 0.5)},${q(p.angle, 0.26)}|${cars}|${sim.solids.length}`;
+}
+
 // Called every step (after physics, before the arrest timer).
 export function updatePin(sim, dt) {
   const pin = sim.pin,
@@ -254,7 +299,7 @@ export function updatePin(sim, dt) {
     sim.elapsed - pin.samples[1].time >= PIN.STILL_SECONDS
   )
     pin.samples.shift();
-  if (!sim.policeEnabled) return;
+  if (!sim.policeEnabled || pin.disabled) return;
 
   if (pin.trapped) {
     // Got away: cancel.
@@ -269,13 +314,14 @@ export function updatePin(sim, dt) {
       release(sim, "no-police");
       return;
     }
-    // Re-check for a way out regularly, and at once when the police round
-    // the player change (a car wrecked, exploded or drove off).
-    const key = near.map((c) => `${c.id}:${c.generation}`).join(",");
+    // Re-check for a way out at once when the situation changes (a police
+    // car wrecked, exploded, moved or drove off; the car turned), and now
+    // and then anyway; not while nothing has changed.
+    const key = situation(sim);
     if (key !== pin.probeKey) {
       pin.probeKey = key;
       startProbe(sim, "recheck");
-    } else if (!pin.probe && sim.elapsed - pin.probeAt >= PIN.PROBE_EVERY)
+    } else if (!pin.probe && sim.elapsed - pin.probeAt >= PIN.RECHECK_EVERY)
       startProbe(sim, "recheck");
     if (pin.probe) {
       const done = stepProbe(sim);
@@ -301,25 +347,28 @@ export function updatePin(sim, dt) {
   pin.candidateFor += dt;
   if (pin.candidateFor < PIN.CONFIRM_SECONDS) return;
   if (!pin.probe) {
-    if (sim.elapsed - pin.probeAt < PIN.PROBE_EVERY) return;
+    // Same situation as the last "not trapped" answer: it still holds.
+    const key = situation(sim);
+    if (key === pin.settledKey) return;
+    // After a "not trapped" answer, wait a little before asking again even
+    // if the car turned on the spot (a bot or a player wiggling in place).
+    const wait = pin.settledKey ? PIN.RECONFIRM_EVERY : PIN.PROBE_EVERY;
+    if (sim.elapsed - pin.probeAt < wait) return;
     startProbe(sim, "confirm");
+    pin.probe.key = key;
   }
+  const key = pin.probe.key;
   const done = stepProbe(sim);
   if (!done) return;
-  if (done.obstacle) {
-    pin.reason = "stuck-on-obstacle";
-    return;
-  }
-  if (done.escaped) {
-    pin.reason = "way-out";
+  if (done.obstacle || done.escaped) {
+    pin.settledKey = key;
+    pin.reason = done.obstacle ? "stuck-on-obstacle" : "way-out";
     return;
   }
   pin.trapped = true;
   pin.reason = "pinned";
   pin.anchor = { x: p.x, z: p.z };
-  pin.probeKey = nearPolice(sim, PIN.NEAR + 3)
-    .map((c) => `${c.id}:${c.generation}`)
-    .join(",");
+  pin.probeKey = situation(sim);
   log(sim, "pinned", {
     police: near.map((c) => c.id),
     probeBest: +pin.lastProbe.best.toFixed(2),

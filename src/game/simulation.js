@@ -495,6 +495,9 @@ export class Simulation {
             (_, i) => p.angle + (i / 16) * Math.PI * 2,
           ),
         ];
+        // Only boxes within reach of the 4 m slide test can block it (same
+        // answer as testing every solid, far cheaper).
+        const slideSolids = this.nearSolids(p.x, p.z, 4 + CONFIG.radius);
         const free = directions.filter((a) => {
           for (let step = 1; step <= 8; step++) {
             const pose = {
@@ -503,7 +506,7 @@ export class Simulation {
             };
             if (
               !this.navigation.allowed(pose) ||
-              this.solids.some((b) =>
+              slideSolids.some((b) =>
                 resolveBuilding({ ...pose }, b, CONFIG.radius - 0.01),
               )
             )
