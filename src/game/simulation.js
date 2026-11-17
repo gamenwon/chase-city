@@ -9,6 +9,7 @@ import { updateBarricades } from "./barricades.js";
 import { createMission, updateMission, getMission } from "./missions.js";
 import { getVehicle } from "./vehicles.js";
 import { createTally, recordCityEvent } from "./tally.js";
+import { createPin, updatePin } from "./pin.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget } from "./city.js";
@@ -78,6 +79,7 @@ export class Simulation {
     this.policeEnabled = missionRules.police !== false;
     this.vehicle = getVehicle(vehicleId);
     this.tally = createTally();
+    this.pin = createPin();
     this.pickups = [];
     this.cameraRig.reset();
     this.cameraRig.update({ x: 0, z: 8 }, 0);
@@ -446,28 +448,17 @@ export class Simulation {
       this.captureOpenTime = 0;
     }
     if (kind === "timeout") m.extraTime += 20;
+    this.pin = createPin();
     this.result = null;
     m.status = "active";
     m.revivedAt = this.elapsed;
     return true;
   }
-  update(dt, input = {}) {
-    if (!this.started || this.result || dt <= 0) return;
-    dt = Math.min(dt, 0.05);
-    this.elapsed += dt;
-    this.hitCooldown -= dt;
+  // Player driving for one step: steering, speed, grip, moving with wall
+  // contacts and the wall-slide recovery. (Also used by the pin-arrest
+  // escape probe, on a copy.)
+  drivePlayer(dt, input) {
     const p = this.player;
-    updateWrecks(this);
-    this.previousPlayer = { x: p.x, z: p.z };
-    if (
-      this.escape.phase === "locked" &&
-      this.barricadesEnabled &&
-      this.policeEnabled
-    )
-      updateBarricades(this);
-    const previous = new Map(
-      [p, ...this.police].map((c) => [c, { x: c.x, z: c.z }]),
-    );
     const steering = (input.left ? 1 : 0) - (input.right ? 1 : 0);
     p.steering =
       (p.steering || 0) +
@@ -532,6 +523,96 @@ export class Simulation {
         } else p.angle += clamp(angleDelta(desired, p.angle), -3 * dt, 3 * dt);
       }
     }
+  }
+  // Push the player out of police cars it touches (and damage it on a real hit).
+  resolvePlayerPolice() {
+    const p = this.player;
+    for (const c of this.police) {
+      if (c.state !== "active") continue;
+      const contact = policeContact(p, c);
+      if (contact) {
+        // V2.0 pin arrest: when the player last touched a police car.
+        p.policeContactAt = this.elapsed;
+        const { x: nx, z: nz, depth } = contact;
+        // A car holding a roadblock is braced across the road: the player
+        // cannot shove it aside, only bounce off it.
+        const share = c.blockState === "hold" ? 0 : 0.2;
+        p.x -= nx * (depth * (1 - share) + 0.001);
+        p.z -= nz * (depth * (1 - share) + 0.001);
+        c.x += nx * depth * share;
+        c.z += nz * depth * share;
+        const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
+        p.vx -= nx * closing * 0.9;
+        p.vz -= nz * closing * 0.9;
+        if (share) {
+          c.vx += nx * closing * 0.1;
+          c.vz += nz * closing * 0.1;
+        }
+        // Only a real hit hurts: a car pressed nose-first against a parked
+        // police car (throttle on, not actually moving) takes no damage, the
+        // same as pressing against a building.
+        if (closing > 3 && (p.groundSpeed ?? closing) > 3) {
+          if (this.hitCooldown <= 0)
+            this.recordImpact(p, closing, "player-police");
+          this.damage(5);
+        }
+        p.speed = Math.max(0, p.speed - closing * 0.25);
+      }
+    }
+  }
+  // A braced police car and a wall never both give way (see update).
+  wedgePlayer(back) {
+    const p = this.player;
+    // A parked (braced) police car and a wall must not both give way: after
+    // the wall pushed the player back, push it out of any parked police car
+    // again; if it is still wedged between the two, it stays where it was
+    // this step (it cannot scrape through a gap narrower than the car).
+    for (let pass = 0; pass < 2; pass++) {
+      let moved = false;
+      for (const c of this.police) {
+        if (c.state !== "active" || c.blockState !== "hold") continue;
+        const contact = policeContact(p, c);
+        if (!contact) continue;
+        p.x -= contact.x * (contact.depth + 0.001);
+        p.z -= contact.z * (contact.depth + 0.001);
+        moved = true;
+      }
+      if (!moved) break;
+      // Held by a police car (pin arrest bookkeeping only).
+      p.policeContactAt = this.elapsed;
+      this.constrain(p, CONFIG.radius, back);
+    }
+    if (
+      this.police.some(
+        (c) =>
+          c.state === "active" &&
+          c.blockState === "hold" &&
+          policeContact(p, c)?.depth > 0.05,
+      )
+    ) {
+      p.x = back.x;
+      p.z = back.z;
+      p.policeContactAt = this.elapsed;
+    }
+  }
+  update(dt, input = {}) {
+    if (!this.started || this.result || dt <= 0) return;
+    dt = Math.min(dt, 0.05);
+    this.elapsed += dt;
+    this.hitCooldown -= dt;
+    const p = this.player;
+    updateWrecks(this);
+    this.previousPlayer = { x: p.x, z: p.z };
+    if (
+      this.escape.phase === "locked" &&
+      this.barricadesEnabled &&
+      this.policeEnabled
+    )
+      updateBarricades(this);
+    const previous = new Map(
+      [p, ...this.police].map((c) => [c, { x: c.x, z: c.z }]),
+    );
+    this.drivePlayer(dt, input);
     p.slip = Math.abs(p.vx * Math.cos(p.angle) - p.vz * Math.sin(p.angle));
     this.motionSamples.push({ x: p.x, z: p.z, time: this.elapsed });
     while (
@@ -681,36 +762,7 @@ export class Simulation {
       }
     for (const c of this.police)
       if (c.state === "active" && c.health <= 0) this.explodePolice(c);
-    for (const c of this.police) {
-      if (c.state !== "active") continue;
-      const contact = policeContact(p, c);
-      if (contact) {
-        const { x: nx, z: nz, depth } = contact;
-        // A car holding a roadblock is braced across the road: the player
-        // cannot shove it aside, only bounce off it.
-        const share = c.blockState === "hold" ? 0 : 0.2;
-        p.x -= nx * (depth * (1 - share) + 0.001);
-        p.z -= nz * (depth * (1 - share) + 0.001);
-        c.x += nx * depth * share;
-        c.z += nz * depth * share;
-        const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
-        p.vx -= nx * closing * 0.9;
-        p.vz -= nz * closing * 0.9;
-        if (share) {
-          c.vx += nx * closing * 0.1;
-          c.vz += nz * closing * 0.1;
-        }
-        // Only a real hit hurts: a car pressed nose-first against a parked
-        // police car (throttle on, not actually moving) takes no damage, the
-        // same as pressing against a building.
-        if (closing > 3 && (p.groundSpeed ?? closing) > 3) {
-          if (this.hitCooldown <= 0)
-            this.recordImpact(p, closing, "player-police");
-          this.damage(5);
-        }
-        p.speed = Math.max(0, p.speed - closing * 0.25);
-      }
-    }
+    this.resolvePlayerPolice();
     for (const c of [p, ...this.police.filter((c) => c.state === "active")]) {
       const before = { x: c.x, z: c.z };
       const hit = this.constrain(
@@ -729,35 +781,7 @@ export class Simulation {
           );
       }
     }
-    // A parked (braced) police car and a wall must not both give way: after
-    // the wall pushed the player back, push it out of any parked police car
-    // again; if it is still wedged between the two, it stays where it was
-    // this step (it cannot scrape through a gap narrower than the car).
-    for (let pass = 0; pass < 2; pass++) {
-      let moved = false;
-      for (const c of this.police) {
-        if (c.state !== "active" || c.blockState !== "hold") continue;
-        const contact = policeContact(p, c);
-        if (!contact) continue;
-        p.x -= contact.x * (contact.depth + 0.001);
-        p.z -= contact.z * (contact.depth + 0.001);
-        moved = true;
-      }
-      if (!moved) break;
-      this.constrain(p, CONFIG.radius, previous.get(p));
-    }
-    if (
-      this.police.some(
-        (c) =>
-          c.state === "active" &&
-          c.blockState === "hold" &&
-          policeContact(p, c)?.depth > 0.05,
-      )
-    ) {
-      const back = previous.get(p);
-      p.x = back.x;
-      p.z = back.z;
-    }
+    this.wedgePlayer(previous.get(p));
     // V1.9: street props, pedestrians and traffic react to where the cars
     // ended up this step (props/traffic can still nudge them).
     if (this.city) updateCity(this, dt);
@@ -819,7 +843,11 @@ export class Simulation {
         };
       this.enclosureTimer = 0.15;
     }
-    const sealed = this.enclosure.trapped && near.length >= 2;
+    // V2.0: also arrested when police cars hold the car physically stuck
+    // with no way out (pin.js), not only inside a complete parked cordon.
+    updatePin(this, dt);
+    const sealed =
+      (this.enclosure.trapped && near.length >= 2) || this.pin.trapped;
     this.captureOpenTime = sealed ? 0 : this.captureOpenTime + dt;
     const holding =
       sealed ||

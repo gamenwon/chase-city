@@ -483,6 +483,9 @@ function sealedBy(sim, cars) {
 // count: they are braced and cannot be shoved aside, whereas a police car
 // merely standing there can be pushed out of the way.
 export function cordonSealed(sim) {
+  // V2.0: a car shut in by walls/obstacles alone is not held by the police
+  // (no arrest for being stuck on an ordinary obstacle with police nearby).
+  if (floodEscape(sim, sim.player, []) === null) return false;
   return sealedBy(
     sim,
     sim.police.filter(

@@ -73,6 +73,21 @@ export class Interface {
         : 0,
     );
     e["mission-progress"].textContent = sim.mission.definition.hud(sim);
+    // Arrest countdown: shown the moment the arrest timer runs (cordon
+    // closed, or police cars holding the car stuck), whole seconds left.
+    const counting = sim.started && !sim.result && sim.arrest > 0;
+    const box = document.getElementById("arrest-countdown");
+    if (box.hidden === counting) box.hidden = !counting;
+    if (counting) {
+      const left = Math.max(1, Math.ceil(CONFIG.arrestSeconds - sim.arrest - 1e-9));
+      const count = document.getElementById("arrest-count");
+      if (count.textContent !== String(left)) count.textContent = left;
+      document.getElementById("arrest-why").textContent = sim.pin?.trapped
+        ? "경찰차에 막혔습니다 · 빠져나가세요"
+        : "포위됐습니다 · 열린 쪽으로 빠져나가세요";
+      document.getElementById("arrest-count-bar").style.width =
+        `${(1 - sim.arrest / CONFIG.arrestSeconds) * 100}%`;
+    }
     const notice = document.querySelector("#notice");
     if (sim.escape.phase === "open" && sim.elapsed - sim.escape.openedAt < 4)
       notice.textContent = "ESCAPE ROUTE OPEN!";
@@ -173,7 +188,9 @@ export class Interface {
       };
       const [eyebrow, title] = titles[sim.result] || ["FAILED", "미션 실패"];
       const why = {
-        arrested: "포위에서 빠져나오지 못했습니다.",
+        arrested: sim.pin?.trapped
+          ? "경찰차에 막혀 빠져나오지 못했습니다."
+          : "포위에서 빠져나오지 못했습니다.",
         destroyed: "차량 내구도가 모두 소진됐습니다.",
         timeout: "제한 시간 안에 목표를 채우지 못했습니다.",
       }[sim.result];

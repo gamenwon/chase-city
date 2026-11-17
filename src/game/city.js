@@ -1020,7 +1020,7 @@ function driveTraffic(sim, city, t, dt) {
 
 // Two round bodies bump: they separate by mass and swap momentum along the
 // contact normal, with a little bounce.
-function bump(a, ra, ma, b, rb, mb) {
+export function bump(a, ra, ma, b, rb, mb) {
   const dx = b.x - a.x,
     dz = b.z - a.z,
     d = Math.hypot(dx, dz);
