@@ -99,8 +99,6 @@ export class Simulation {
       ...this.solids,
       ...(this.city?.navObstacles || []),
     ]);
-    // Street props the cordon/block cars steer round (V1.9).
-    this.navigation.cityProps = this.city?.props || null;
     const exit = chooseExit(this.staticSolids, this.random, this.lastExitId);
     this.lastExitId = exit.id;
     this.escape = { phase: "locked", exit, openedAt: null };

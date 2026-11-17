@@ -79,7 +79,6 @@ function copy(layout, s, width, height) {
   t.reinforcementsEnabled = false;
   t.barricadesEnabled = false;
   t.refreshNavigation();
-  t.navigation.cityProps = t.city?.props || null;
   return t;
 }
 

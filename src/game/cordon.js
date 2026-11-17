@@ -15,6 +15,7 @@ const PLAYER_HALF_WIDTH = 1.05;
 // are not a way out.
 const WALL_RADIUS = CONFIG.radius;
 const CAR_HALF = { w: 1.05, l: 1.8 };
+const PROP_CLEARANCE = 0.5; // a post's radius plus a little room
 
 // Circle-vs-box tests for the escape rays.
 function hitsBox(q, r, b) {
@@ -231,14 +232,14 @@ function slotAt(
               Math.hypot(t.vx || 0, t.vz || 0) < 1 &&
               Math.hypot(t.x - slot.x, t.z - slot.z) < 3,
           ) ||
-          // ...nor on a standing tree, lamp post or sign it cannot get past.
+          // ...nor where its body would stand on a tree, lamp post or sign.
           (sim.city?.props || []).some(
             (q) =>
               q.state === "stand" &&
               q.kind !== "trash" &&
-              Math.abs(q.x - slot.x) < 2.4 &&
-              Math.abs(q.z - slot.z) < 2.4 &&
-              Math.hypot(q.x - slot.x, q.z - slot.z) < 2.2,
+              Math.abs(q.x - slot.x) < 2.6 &&
+              Math.abs(q.z - slot.z) < 2.6 &&
+              hitsCar(q, PROP_CLEARANCE, slot),
           );
         if (!inWall && (!accept || accept(slot))) return slot;
       }

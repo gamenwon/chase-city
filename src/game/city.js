@@ -294,7 +294,7 @@ function breakProp(sim, city, prop, car, impact) {
   });
 }
 
-function hitProps(sim, city, car, radius, isPlayer) {
+function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
   for (const prop of nearbyProps(city, car.x, car.z)) {
     const spec = PROPS[prop.kind];
     if (prop.state !== "stand" && prop.state !== "down") continue;
@@ -323,7 +323,7 @@ function hitProps(sim, city, car, radius, isPlayer) {
       nz = dz / d;
     const impact = Math.max(0, car.vx * nx + car.vz * nz);
     city.stats.propHits++;
-    if (impact >= spec.breakAt) {
+    if (impact >= spec.breakAt * ram) {
       breakProp(sim, city, prop, car, impact);
       // Knocking it over costs some speed: more for heavier props.
       const keep =
@@ -1156,7 +1156,9 @@ export function updateCity(sim, dt) {
       c.state === "active" &&
       Math.hypot(c.x - p.x, c.z - p.z) < city.budget.range
     )
-      hitProps(sim, city, c, CONFIG.policeRadius, false);
+      // Police cars ram through street furniture: posts and street trees
+      // go down at half the speed a normal car needs.
+      hitProps(sim, city, c, CONFIG.policeRadius, false, 0.5);
   for (const t of city.traffic)
     if (!t.parked && t.state !== "wreck") hitProps(sim, city, t, 1.3, false);
   updateProps(sim, city, dt);
