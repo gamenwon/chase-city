@@ -90,6 +90,12 @@ export function copy(layout, s, width, height) {
     c.vx = 0;
     c.vz = 0;
   }
+  // ...and the cordon/roadblock as they stood: no re-tasking of parked
+  // (braced) cars during the attempt.
+  t.cordon = null;
+  t.cordonCooldownUntil = Infinity;
+  t.roadblock = null;
+  t.roadblockCooldownUntil = Infinity;
   t.refreshNavigation();
   return t;
 }

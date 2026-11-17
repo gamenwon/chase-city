@@ -285,7 +285,14 @@ test.describe("V1.8 police AI fix scenarios", () => {
     await page.screenshot({ path: `${OUT}/${info.project.name}-A-final.png` });
     expect(r.result).toBe("arrested");
     expect(r.busted).toBe(true);
-    expect(r.stats.explosions).toBe(0);
+    // No explosion during the 3-second count, and never a chain blast.
+    // (V1.9: with the city on the car can scrape off before the cordon
+    // closes on it again; police cars converging meanwhile may crash into
+    // each other - real crashes, before the capture.)
+    const blasts = r.events.filter((e) => e.kind === "explosion");
+    expect(blasts.every((e) => e.cause !== "blast")).toBe(true);
+    const countFrom = r.frames.find((f) => f.arrest > 0).t;
+    expect(blasts.every((e) => e.time < countFrom)).toBe(true);
     // Officers got out before the arrest and aimed at the car.
     const withOfficers = r.frames.filter((f) => f.officers.length >= 2);
     expect(withOfficers.length).toBeGreaterThan(5);
