@@ -490,14 +490,29 @@ export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
     return;
   }
   let waypoint = slot;
-  if (d > 6 && !navigation.clear(c, slot)) {
+  // A cordon car that already got stuck once on the way (parked police cars
+  // in its straight line, which the route map does not know about) goes
+  // round instead: the route keeps away from the player's position, where
+  // the wall of parked cars is, and is followed as planned.
+  const detour = c.blockKind === "cordon" && (c.blockReroutes || 0) > 0;
+  if (d > 6 && (detour || !navigation.clear(c, slot))) {
     if (c.routeTimer <= 0 || !c.route?.length) {
-      c.route = navigation.findPath(c, slot);
-      c.routeTimer = 0.6 + (index % 3) * 0.08;
+      c.route = navigation.findPath(
+        c,
+        slot,
+        undefined,
+        detour
+          ? { x: player.x, z: player.z, radius: 3, penalty: 400, segment: true }
+          : null,
+      );
+      c.routeTimer = detour ? 3 : 0.6 + (index % 3) * 0.08;
     }
-    while (c.route.length > 1 && navigation.clear(c, c.route[1]))
+    while (!detour && c.route.length > 1 && navigation.clear(c, c.route[1]))
       c.route.shift();
-    if (c.route[0] && Math.hypot(c.x - c.route[0].x, c.z - c.route[0].z) < 1.5)
+    if (
+      c.route[0] &&
+      Math.hypot(c.x - c.route[0].x, c.z - c.route[0].z) < (detour ? 4 : 1.5)
+    )
       c.route.shift();
     waypoint = c.route[0] || slot;
   }

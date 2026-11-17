@@ -651,6 +651,35 @@ export class Simulation {
           );
       }
     }
+    // A parked (braced) police car and a wall must not both give way: after
+    // the wall pushed the player back, push it out of any parked police car
+    // again; if it is still wedged between the two, it stays where it was
+    // this step (it cannot scrape through a gap narrower than the car).
+    for (let pass = 0; pass < 2; pass++) {
+      let moved = false;
+      for (const c of this.police) {
+        if (c.state !== "active" || c.blockState !== "hold") continue;
+        const contact = policeContact(p, c);
+        if (!contact) continue;
+        p.x -= contact.x * (contact.depth + 0.001);
+        p.z -= contact.z * (contact.depth + 0.001);
+        moved = true;
+      }
+      if (!moved) break;
+      this.constrain(p, CONFIG.radius, previous.get(p));
+    }
+    if (
+      this.police.some(
+        (c) =>
+          c.state === "active" &&
+          c.blockState === "hold" &&
+          policeContact(p, c)?.depth > 0.05,
+      )
+    ) {
+      const back = previous.get(p);
+      p.x = back.x;
+      p.z = back.z;
+    }
     // V1.9: street props, pedestrians and traffic react to where the cars
     // ended up this step (props/traffic can still nudge them).
     if (this.city) updateCity(this, dt);

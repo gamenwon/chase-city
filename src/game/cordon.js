@@ -61,9 +61,11 @@ export function freeDistance(sim, from, angle, cars, reach = RAY_REACH + 1) {
 // half-width, from where it stands to OUT metres away. Walls, buildings, the
 // map edge and the given (parked) cars block. Returns the direction (radians)
 // the way out leaves in, or null when there is none.
-const FLOOD_CELL = 0.2;
+const FLOOD_CELL = 0.15;
 const FLOOD_OUT = 7.5;
-const FLOOD_RADIUS = PLAYER_HALF_WIDTH - 0.04; // grid slack, not a smaller car
+// Grid slack: a corridor the car just fits through (a few cm to spare) must
+// still contain grid points, so the test disc is a little narrower.
+const FLOOD_RADIUS = PLAYER_HALF_WIDTH - 0.1;
 // With `atRadius`, the direction returned is where that way out crosses the
 // circle of that radius (where a cordon car would have to stand to close it).
 export function floodEscape(sim, from, cars, atRadius = null) {
@@ -597,7 +599,10 @@ export function updateCordon(sim, dt) {
       (p.netSpeed ?? 0) <= CONFIG.cordonStartSpeed &&
       // ...and not one moving fast right now (the averaged speed lags a
       // second behind a car that has just broken out).
-      (p.groundSpeed ?? 0) <= 16
+      (p.groundSpeed ?? 0) <= 16 &&
+      // A player that was sealed in moments ago is shuffling inside the
+      // cordon: the parked cars stay put.
+      sim.elapsed - (cordon.lastSealedAt ?? -Infinity) > 1.5
     ) {
       const center = aim;
       cordon.x = center.x;
@@ -626,6 +631,7 @@ export function updateCordon(sim, dt) {
       !sim.enclosure.trapped &&
       (p.groundSpeed ?? 0) < 1 &&
       sim.elapsed - (cordon.plannedAt ?? cordon.born) > 1.2 &&
+      sim.elapsed - (cordon.lastSealedAt ?? -Infinity) > 1.5 &&
       (cordon.reshapes || 0) < 2
     ) {
       cordon.plannedAt = sim.elapsed;
@@ -644,6 +650,7 @@ export function updateCordon(sim, dt) {
     if (allHeld && cordon.heldAt === null) cordon.heldAt = sim.elapsed;
     const sealed = sim.enclosure.trapped;
     if (sealed && cordon.sealedAt === null) cordon.sealedAt = sim.elapsed;
+    if (sealed) cordon.lastSealedAt = sim.elapsed;
     if (!sealed) cordon.sealedAt = null;
     // Sealed and the player has stopped: officers get out.
     if (
@@ -757,18 +764,29 @@ export function updateCordon(sim, dt) {
         }
         if (slot) break;
       }
-      // Last resort, for a crooked gap with no car left to send: move one of
-      // this cordon's parked cars, but only to a spot where the whole
-      // cordon then really seals the player in (checked in full, at most
-      // every 2 s since it is the costly check).
+      // Last resort, with a gap left and no car that can get to it (none
+      // free, or the only one just gave up): move one of this cordon's
+      // parked cars, but only to a spot where the whole cordon then really
+      // seals the player in (checked in full, at most every 2 s since it is
+      // the costly check).
+      const target =
+        crooked ?? [...open].sort((a, b) => facing(b) - facing(a))[0];
       if (
         !spare &&
-        crooked !== null &&
+        target !== undefined &&
         sim.elapsed - (cordon.shuffledAt ?? -Infinity) > 2
       ) {
         cordon.shuffledAt = sim.elapsed;
-        const movable = members
-          .filter((c) => c.blockState === "hold")
+        // (Parked roadblock cars right by the player count too.)
+        const movable = sim.police
+          .filter(
+            (c) =>
+              c.state === "active" &&
+              c.blockState === "hold" &&
+              (c.blockId === cordon.id ||
+                (c.blockKind === "roadblock" &&
+                  Math.hypot(c.x - p.x, c.z - p.z) < 9)),
+          )
           .sort(
             (a, b) =>
               Math.hypot(a.x - p.x, a.z - p.z) -
@@ -776,7 +794,7 @@ export function updateCordon(sim, dt) {
           );
         for (const car of movable) {
           const others = blockers.filter((b) => b.id !== car.id);
-          slot = slotAt(sim, p, crooked, 0, [RING, RING + 0.6], (q) =>
+          slot = slotAt(sim, p, target, 0, [RING, RING + 0.6], (q) =>
             sealedBy(sim, [...others, q]),
           );
           if (slot) {

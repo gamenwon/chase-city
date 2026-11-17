@@ -3,7 +3,8 @@
 // escape (straight, hard/soft left or right, and switches between them) for
 // 5 seconds with the arrest timer held at zero. If any attempt gets the car
 // 9 m clear of where it was caught, a real way out was still open and the
-// arrest was false. Usage: node scripts/audit-arrests.js [seeds] [out.json]
+// arrest was false. The police are frozen where they stood at the arrest,
+// and the world is not allowed to change (no 60-second escape opening). Usage: node scripts/audit-arrests.js [seeds] [out.json]
 import { Simulation } from "../src/game/simulation.js";
 import { createLayout } from "../src/world/layout.js";
 import { CONFIG } from "../src/game/config.js";
@@ -29,7 +30,7 @@ const POLICIES = [
   ["pulse", (e) => ({ left: Math.floor(e * 3) % 2 === 0 })],
 ];
 
-function copy(layout, s, width, height) {
+export function copy(layout, s, width, height) {
   const t = new Simulation(layout, {
     width,
     height,
@@ -78,6 +79,17 @@ function copy(layout, s, width, height) {
   }
   t.reinforcementsEnabled = false;
   t.barricadesEnabled = false;
+  // The world as it is at the arrest: the 60-second mission must not open
+  // the escape route (and lift the barricades) during the attempt.
+  t.openEscape = () => {};
+  // The police as they stood at the arrest: frozen (no steering), so the
+  // attempt answers "was there a way out at that moment" and not "could a
+  // way out open later while the arrest is held back".
+  for (const c of t.police) {
+    c.stunTimer = 1e9;
+    c.vx = 0;
+    c.vz = 0;
+  }
   t.refreshNavigation();
   return t;
 }

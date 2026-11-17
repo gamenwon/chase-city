@@ -2,6 +2,16 @@ import { spawnView, inspectSpawn } from "./spawning.js";
 import { CONFIG } from "./config.js";
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 // Swept circle uses conservative expanded AABBs; no route can cut a building.
+function segmentDistance(a, b, p) {
+  const vx = b.x - a.x,
+    vz = b.z - a.z,
+    len2 = vx * vx + vz * vz || 1;
+  const t = Math.max(
+    0,
+    Math.min(1, ((p.x - a.x) * vx + (p.z - a.z) * vz) / len2),
+  );
+  return Math.hypot(a.x + vx * t - p.x, a.z + vz * t - p.z);
+}
 export function clearSegment(
   a,
   b,
@@ -185,12 +195,17 @@ export class RoadNavigation {
       for (const next of this.nodes[id].neighbors) {
         if (!this.clear(this.nodes[id], this.nodes[next])) continue;
         const node = this.nodes[next];
+        // avoid.segment: penalise a road stretch that passes the avoid point
+        // (not just nodes near it) - nodes are far apart on a long block.
+        const near = !avoid
+          ? false
+          : avoid.segment
+            ? segmentDistance(this.nodes[id], node, avoid) < avoid.radius
+            : next !== to.id && distance(node, avoid) < avoid.radius;
         const cost =
           g.get(id) +
           distance(this.nodes[id], node) +
-          (avoid && next !== to.id && distance(node, avoid) < avoid.radius
-            ? avoid.penalty
-            : 0);
+          (near ? avoid.penalty : 0);
         if (cost < (g.get(next) ?? Infinity)) {
           came.set(next, id);
           g.set(next, cost);

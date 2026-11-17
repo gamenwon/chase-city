@@ -11,6 +11,7 @@ import {
   playerRoad,
 } from "../src/game/roadblock.js";
 import { BonnetCamera, BONNET } from "../src/render/pip.js";
+import { escapeAttempts } from "../scripts/audit-arrests.js";
 
 // Player fleeing east along the z = 0 road; three officers tailing it and
 // three on the x = -30 cross street ahead, where a front blocker would come
@@ -123,12 +124,23 @@ test("a roadblock is planned on the predicted road, cars stop across it and hold
     return last && Math.abs(Math.sin(last.angle)) < 0.05;
   });
   assert.ok(across.length >= 2, "parked across the road");
-  // The player is stopped by the block and arrested by the 3-second rule.
-  assert.equal(s.result, "arrested");
+  // The player is stopped by the block.
   assert.ok(Math.abs(s.player.x - plan.x) < 6);
   assert.equal(s.stats.explosions, 0);
-  const lastZero = frames.findLastIndex((f) => f.arrest === 0);
-  assert.ok(s.elapsed - frames[lastZero].t >= CONFIG.arrestSeconds - 0.02);
+  // V1.9: BUSTED by the 3-second rule once the cordon really seals the
+  // player in. With six cars and no reinforcements (this fixture) the spot
+  // where the player now stops (it can no longer squeeze between a parked
+  // car and the wall) can stay open; then a real way out must exist - no
+  // arrest without one.
+  if (s.result === "arrested") {
+    const lastZero = frames.findLastIndex((f) => f.arrest === 0);
+    assert.ok(s.elapsed - frames[lastZero].t >= CONFIG.arrestSeconds - 0.02);
+  } else {
+    const best = Math.max(
+      ...escapeAttempts(s.layout, s, 1100, 740).map((a) => a.best),
+    );
+    assert.ok(best > 9, "not arrested only while a real way out remains");
+  }
 });
 
 test("a held block stays put when the player pins itself against it and scrapes along", () => {
