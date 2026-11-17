@@ -197,6 +197,7 @@ document.querySelector("#ad-double").addEventListener("click", async () => {
   shown.earned += extra;
   ui.setWallet(progress.credits);
   ui.showResultDetails(sim, resultInfo());
+  refreshAds();
 });
 function resultInfo() {
   return {

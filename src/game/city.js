@@ -377,9 +377,35 @@ function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
   }
 }
 
+// V2.0 fix: a tree that comes down on top of a car must not become a wall
+// around it (the car was locked inside the new obstacle for good). Its
+// obstacle waits until no car overlaps the trunk.
+function carsOverlap(sim, city, b) {
+  const hit = (c, r) =>
+    Math.abs(c.x - b.x) < b.w / 2 + r && Math.abs(c.z - b.z) < b.d / 2 + r;
+  return (
+    hit(sim.player, CONFIG.radius) ||
+    sim.police.some((c) => c.state === "active" && hit(c, CONFIG.policeRadius)) ||
+    city.traffic.some((c) => hit(c, 0.95))
+  );
+}
+function addTreeSolid(city, prop, solid) {
+  city.solids.push(solid);
+  prop.solidId = city.solids.length - 1;
+  prop.solidPending = null;
+}
+
 function updateProps(sim, city, dt) {
   let solidsChanged = false;
   for (const prop of city.moving) {
+    if (prop.solidPending) {
+      if (!carsOverlap(sim, city, prop.solidPending)) {
+        addTreeSolid(city, prop, prop.solidPending);
+        solidsChanged = true;
+        city.moving.delete(prop);
+      }
+      continue;
+    }
     if (
       prop.state !== "falling" &&
       prop.state !== "tumble" &&
@@ -402,9 +428,11 @@ function updateProps(sim, city, dt) {
         prop.state = "down";
         if (prop.kind === "tree") {
           const solid = fallenTreeSolid(prop);
-          city.solids.push(solid);
-          prop.solidId = city.solids.length - 1;
-          solidsChanged = true;
+          if (carsOverlap(sim, city, solid)) prop.solidPending = solid;
+          else {
+            addTreeSolid(city, prop, solid);
+            solidsChanged = true;
+          }
         }
         event(city, sim, {
           type: "prop",

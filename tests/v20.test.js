@@ -377,3 +377,45 @@ test("continue on timeout adds 20 seconds; success can never be continued", () =
   w.result = "success";
   assert.equal(w.revive(), false);
 });
+
+test("fix: a tree falling onto a car does not lock the car inside its obstacle", () => {
+  const s = new Simulation(layout, {
+    city: true,
+    mission: "parcels",
+    cityBudget: { profile: "test", level: 1, peds: 0, traffic: 0, parked: 0, range: 70 },
+  });
+  s.start();
+  const prop = s.city.props.find(
+    (p) => p.kind === "tree" && p.angle === Math.PI / 2 && Math.abs(p.x) < 70 && Math.abs(p.z) < 70,
+  );
+  const road = Math.round(prop.z / 30) * 30;
+  const side = Math.sign(prop.z - road);
+  Object.assign(s.player, {
+    x: prop.x,
+    z: prop.z - side * (CONFIG.radius + PROPS.tree.r + 0.25),
+    angle: side > 0 ? Math.PI : 0,
+    vx: 0,
+    vz: side * 20,
+    speed: 20,
+  });
+  s.previousPlayer = { x: s.player.x, z: s.player.z };
+  for (let i = 0; i < 20 && prop.state === "stand"; i++) s.update(1 / 60);
+  assert.equal(prop.state, "falling");
+  // Park the car right where the trunk will land, and hold it there.
+  const tip = { x: prop.x + Math.sin(prop.fallDir) * 2.2, z: prop.z + Math.cos(prop.fallDir) * 2.2 };
+  for (let i = 0; i < 60; i++) {
+    Object.assign(s.player, { x: tip.x, z: tip.z, vx: 0, vz: 0, speed: 0 });
+    s.previousPlayer = { x: tip.x, z: tip.z };
+    s.update(1 / 60);
+  }
+  assert.equal(prop.state, "down");
+  assert.ok(prop.solidPending, "obstacle waits while the car is on the trunk");
+  assert.equal(s.solids.some((b) => b.propId === prop.id), false);
+  // The car drives off; then the trunk becomes an obstacle.
+  Object.assign(s.player, { x: tip.x + side * 0, z: tip.z - side * 8, vx: 0, vz: 0, speed: 0 });
+  s.previousPlayer = { x: s.player.x, z: s.player.z };
+  s.update(1 / 60);
+  s.update(1 / 60);
+  assert.equal(prop.solidPending, null);
+  assert.ok(s.solids.some((b) => b.propId === prop.id));
+});

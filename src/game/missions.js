@@ -80,7 +80,7 @@ export const MISSIONS = Object.freeze({
     continueOn: Object.freeze(["destroyed", "timeout"]),
     progressLabel: "수거",
     unit: "개",
-    pickupRadius: 3.2,
+    pickupRadius: 4.5,
     progress: (sim) => sim.pickups.filter((p) => p.taken).length,
     setup(sim) {
       sim.pickups = placePickups(sim, this.target);
