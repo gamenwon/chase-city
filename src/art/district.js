@@ -11,47 +11,56 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 // ------------------------------------------------------------- palette --
-// From references 4 and 5 (see docs/art-direction-v3.md).
+// Vivid, near-primary city colours (references 4, 5, 7, 8): rich reds,
+// yellows, blues, greens and oranges on buildings and vehicles; neutral
+// stone/cream trims; dark asphalt for contrast; natural glass, rubber and
+// metal. One accent per object so they do not all compete.
 export const C = {
-  sky: 0xbfd3e6,
-  asphalt: 0x4d4447,
-  asphaltDark: 0x41393c,
-  lineWhite: 0xfbf8f4,
-  lineYellow: 0xf2c14e,
-  walk: 0xd7cbbc,
-  walkJoint: 0xc4b6a6,
-  curb: 0xf4eade,
-  concrete: 0xc9c2b8,
-  grass: 0x4fae5f,
-  grassDark: 0x3e9452,
-  path: 0xe2c79f,
-  leaf: [0x2f9a63, 0x3fae74, 0x58b85a],
-  trunk: 0x8b5a3c,
-  red: 0xd8443f,
-  redDark: 0xa83236,
-  blue: 0x3f5fbf,
-  blueDark: 0x2f4594,
-  cream: 0xf3deb5,
-  creamLight: 0xfbf3e2,
-  orange: 0xf39b6b,
-  orangeDark: 0xe0703e,
-  mint: 0xaac7b8,
-  green: 0x6b8c6e,
-  teal: 0x44655a,
-  peach: 0xe8cba3,
-  yellow: 0xf2c14e,
-  glass: 0x9fd3d8,
-  glassDark: 0x3e4a63,
-  white: 0xfbf8f4,
-  metal: 0x5b5560,
-  dark: 0x2e2a30,
-  court: 0x5d555f,
-  ball: 0xe8823c,
-  water: 0x63c6e0,
+  sky: 0xa9c0d6,
+  asphalt: 0x37363b,
+  asphaltDark: 0x2e2d32,
+  lineWhite: 0xf4f4f0,
+  lineYellow: 0xf2b705,
+  walk: 0xbdbab3,
+  walkJoint: 0xa8a49c,
+  curb: 0xd9d6cf,
+  concrete: 0xb5b2ab,
+  grass: 0x43a047,
+  grassDark: 0x2f8a3a,
+  path: 0xd8b47a,
+  leaf: [0x2e8b3e, 0x3da04a, 0x5cb23a],
+  trunk: 0x7a4a2a,
+  red: 0xd62f2a,
+  redDark: 0x9e2420,
+  blue: 0x2457c5,
+  blueDark: 0x1a3f94,
+  cream: 0xefe3c8, // stone / trim neutral
+  creamLight: 0xf6efe1,
+  orange: 0xf0781e,
+  orangeDark: 0xc95a12,
+  mint: 0x2fa36b, // green shopfront
+  green: 0x2f7d4f,
+  teal: 0x1f6e6a,
+  peach: 0xe8a33a, // amber
+  yellow: 0xf5c01a,
+  glass: 0x8fd0e8,
+  glassDark: 0x22303f,
+  white: 0xf4f4f0,
+  metal: 0x55535c,
+  chrome: 0xc9ccd3,
+  rubber: 0x1f1e22,
+  dark: 0x232227,
+  court: 0x3a6ea5,
+  ball: 0xf07a1e,
+  water: 0x2fa4e0,
+  brick: 0xb84a2e,
+  stone: 0xe6dccb,
+  storeGreen: 0x2c5a3a,
   player: 0xe0367a, // hot magenta getaway car: unique in the palette
-  fire: [0xffd64a, 0xff9a2e, 0xff5a2a],
-  smoke: 0x5b5560,
-  scorch: 0x2b2427,
+  // Outer red-orange flame, orange body, yellow-hot core.
+  fire: [0xe8401c, 0xff8a1a, 0xffe14a],
+  smoke: 0x2c2a2e,
+  scorch: 0x1f1c1e,
 };
 
 // ------------------------------------------------------------- helpers --
@@ -187,103 +196,209 @@ function bake(root) {
 }
 
 // --------------------------------------------------------- vehicles --
-// Angular boxy cars (references 4/5): flat panels, tapered glass cabin,
-// square lights, separate bumpers, chunky wheels. About 3.6 x 1.9 m:
-// within the game's 2.1 x 3.6 m car box.
-function wheels(p, track, base, r = 0.4) {
-  for (const x of [-track, track])
-    for (const z of [-base, base]) {
-      const w = add(p, new THREE.CylinderGeometry(r, r, 0.34, 10), C.dark, x, r, z);
-      w.rotation.z = Math.PI / 2;
-      const h = add(p, new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.36, 6), 0xbfbac4, x, r, z);
-      h.rotation.z = Math.PI / 2;
-    }
+// Angular low-poly vehicles built like real ones (reference 7): body with
+// wheel arches (dark wells and fender lips), tyres with rims and hubs, a
+// cabin of A/B/C pillars, roof and separate glass panes, windscreen frame,
+// door seams and handles, side mirrors, front and rear bumpers, grille,
+// head- and tail-lights, number plates, and per-type equipment. Front is
+// -z. A sedan is about 4.3 x 1.9 m.
+const V = { well: 0x161519, seam: 0x1b1a1e, trim: 0x2a292e };
+// A box between two points in the y-z plane (pillars, glass, struts).
+function slant(p, x, a, b, w, t, c, o) {
+  const dy = b.y - a.y,
+    dz = b.z - a.z,
+    len = Math.hypot(dy, dz);
+  const m = add(p, new THREE.BoxGeometry(w, t, len), c, x, (a.y + b.y) / 2, (a.z + b.z) / 2, o);
+  // Rx(θ) maps +z to (0, -sin θ, cos θ): point it along (dy, dz).
+  m.rotation.x = Math.atan2(-dy, dz);
+  return m;
 }
-function carLights(p, front, back, y, w = 0.55) {
-  for (const x of [-w, w]) {
-    B(p, 0.42, 0.18, 0.08, 0xfff4c8, x, y, front, 0, { emissive: 0xffe8a0, emissiveIntensity: 0.4 });
-    B(p, 0.42, 0.16, 0.08, 0xe0303a, x, y, back, 0, { emissive: 0xb01020, emissiveIntensity: 0.3 });
+function wheel(p, x, z, r, rim = C.chrome) {
+  const s = Math.sign(x) || 1;
+  const t = add(p, new THREE.CylinderGeometry(r, r, 0.3, 12), C.rubber, x, r, z);
+  t.rotation.z = Math.PI / 2;
+  const m = add(p, new THREE.CylinderGeometry(r * 0.6, r * 0.6, 0.06, 8), rim, x + s * 0.13, r, z);
+  m.rotation.z = Math.PI / 2;
+  const h = add(p, new THREE.CylinderGeometry(r * 0.2, r * 0.2, 0.08, 6), V.trim, x + s * 0.16, r, z);
+  h.rotation.z = Math.PI / 2;
+}
+// Lower body with wheel wells, fender lips, rocker panels and the wheels.
+function chassis(g, o) {
+  const { L, W, clear, h, color, r, axles, rim = C.chrome, track = W / 2 - 0.16 } = o;
+  B(g, W, h, L, color, 0, clear, 0);
+  for (const z of axles) {
+    // Dark wheel well slightly proud of the body side, lip above it.
+    B(g, W + 0.02, r * 1.35, r * 2.5, V.well, 0, 0.12, z);
+    B(g, W + 0.08, 0.08, r * 2.6, color, 0, 0.12 + r * 1.35, z);
+    for (const s of [-1, 1]) wheel(g, s * track, z, r, rim);
+  }
+  // Rocker panels between the wheels.
+  const gap = axles[axles.length - 1] - axles[0] - r * 2.6;
+  if (gap > 0.2)
+    B(g, W + 0.03, 0.12, gap, V.trim, 0, clear, (axles[0] + axles[axles.length - 1]) / 2);
+}
+// Cabin: A-pillars from the windscreen base to the roof, B and C pillars,
+// roof, windscreen, rear and side glass, all separate pieces.
+function cabin(g, o) {
+  const { W, belt, roof, zf, zt1, zt2, zb, color, glass = C.glassDark, frame = color, inset = 0.14 } = o;
+  const xw = W / 2 - inset;
+  const fA = { y: belt, z: zf },
+    fB = { y: roof, z: zt1 },
+    rA = { y: roof, z: zt2 },
+    rB = { y: belt, z: zb };
+  B(g, W - 2 * inset + 0.1, 0.09, zt2 - zt1 + 0.06, frame, 0, roof - 0.02, (zt1 + zt2) / 2);
+  for (const s of [-1, 1]) {
+    slant(g, s * xw, fA, fB, 0.11, 0.11, frame); // A-pillar
+    slant(g, s * xw, rA, rB, 0.16, 0.16, frame); // C-pillar
+    B(g, 0.1, roof - belt, 0.12, frame, s * xw, belt, (zt1 + zt2) / 2); // B-pillar
+    // Side glass: front and rear door windows between the pillars.
+    B(g, 0.03, roof - belt - 0.08, (zt2 - zt1) / 2 - 0.1, glass, s * (xw - 0.02), belt + 0.02, zt1 + (zt2 - zt1) / 4 - 0.02, 0, { roughness: 0.2 });
+    B(g, 0.03, roof - belt - 0.08, (zt2 - zt1) / 2 - 0.1, glass, s * (xw - 0.02), belt + 0.02, zt1 + (3 * (zt2 - zt1)) / 4 + 0.02, 0, { roughness: 0.2 });
+  }
+  // Windscreen with a thin frame along its top; rear window.
+  slant(g, 0, { y: fA.y + 0.03, z: fA.z + 0.02 }, { y: fB.y - 0.04, z: fB.z - 0.01 }, 2 * xw - 0.1, 0.03, glass, { roughness: 0.2 });
+  slant(g, 0, { y: rA.y - 0.04, z: rA.z + 0.01 }, { y: rB.y + 0.03, z: rB.z - 0.02 }, 2 * xw - 0.16, 0.03, glass, { roughness: 0.2 });
+  B(g, 2 * xw, 0.06, 0.1, V.trim, 0, belt - 0.03, zf + 0.04); // wiper/cowl line
+}
+function doorsAndMirrors(g, o) {
+  const { W, clear, belt, seams, handles, mirrorZ, color } = o;
+  for (const s of [-1, 1]) {
+    for (const z of seams) B(g, 0.02, belt - clear - 0.12, 0.03, V.seam, s * (W / 2 + 0.02), clear + 0.1, z);
+    for (const z of handles) B(g, 0.04, 0.05, 0.22, V.trim, s * (W / 2 + 0.02), belt - 0.2, z);
+    // Mirror: arm and housing at the A-pillar base.
+    B(g, 0.22, 0.05, 0.06, V.trim, s * (W / 2 + 0.08), belt + 0.02, mirrorZ);
+    B(g, 0.12, 0.16, 0.2, color, s * (W / 2 + 0.22), belt - 0.02, mirrorZ);
   }
 }
-function sedan(color, { stripe = null, taxi = false } = {}) {
+function ends(g, o) {
+  const { W, L, clear, h, bumper = V.trim, grille = V.trim, rear = true, lightW = 0.36 } = o;
+  const zf = -L / 2,
+    zr = L / 2;
+  // Bumpers wrap a little round the corners.
+  B(g, W + 0.08, 0.24, 0.22, bumper, 0, clear - 0.08, zf - 0.04);
+  B(g, W + 0.08, 0.24, 0.22, bumper, 0, clear - 0.08, zr + 0.04);
+  // Grille with slats, headlights with a lens and a housing.
+  B(g, W * 0.46, h * 0.42, 0.05, grille, 0, clear + h * 0.28, zf - 0.02);
+  for (let i = 0; i < 3; i++) B(g, W * 0.42, 0.03, 0.06, C.chrome, 0, clear + h * 0.33 + i * 0.07, zf - 0.03);
+  for (const s of [-1, 1]) {
+    B(g, lightW + 0.06, 0.2, 0.05, V.trim, s * (W / 2 - lightW / 2 - 0.1), clear + h * 0.48, zf - 0.02);
+    B(g, lightW, 0.14, 0.06, 0xfff6d2, s * (W / 2 - lightW / 2 - 0.1), clear + h * 0.48 + 0.03, zf - 0.03, 0, { emissive: 0xffe9a8, emissiveIntensity: 0.5 });
+    B(g, 0.12, 0.08, 0.06, 0xffa02a, s * (W / 2 - 0.08), clear + h * 0.3, zf - 0.02);
+    if (rear) B(g, lightW, 0.18, 0.06, 0xd8202c, s * (W / 2 - lightW / 2 - 0.08), clear + h * 0.55, zr + 0.02, 0, { emissive: 0xa0101c, emissiveIntensity: 0.4 });
+  }
+  B(g, 0.46, 0.15, 0.03, C.white, 0, clear + 0.0, zf - 0.16);
+  if (rear) B(g, 0.46, 0.15, 0.03, C.white, 0, clear + 0.0, zr + 0.16);
+}
+// A four-door sedan; variants by colour and equipment.
+function sedanShell(color, opt = {}) {
   const g = new THREE.Group();
-  B(g, 1.9, 0.62, 3.8, color, 0, 0.34, 0);
-  frustum(g, 1.7, 2.0, 0.7, 0.78, C.glassDark, 0, 0.96, 0.15);
-  B(g, 1.36, 0.08, 1.5, color, 0, 1.66, 0.15);
-  B(g, 1.96, 0.2, 0.25, 0x3a353b, 0, 0.3, -1.9);
-  B(g, 1.96, 0.2, 0.25, 0x3a353b, 0, 0.3, 1.9);
-  carLights(g, -1.91, 1.91, 0.66);
-  if (stripe)
-    for (const x of [-0.25, 0.25]) {
-      B(g, 0.22, 0.02, 3.81, stripe, x, 0.96, 0);
-      B(g, 0.22, 0.02, 1.5, stripe, x, 1.74, 0.15);
-    }
-  if (taxi) B(g, 0.6, 0.25, 0.3, 0x2e2a30, 0, 1.74, 0.15);
-  wheels(g, 0.92, 1.2);
-  return g;
+  const W = 1.9, L = 4.3, clear = 0.32, h = 0.58, belt = clear + h, roof = 1.5, r = 0.36;
+  chassis(g, { L, W, clear, h, color, r, axles: [-1.35, 1.35], rim: opt.rim });
+  // Bonnet and boot slope a touch: a raised bonnet panel.
+  B(g, W - 0.3, 0.05, 1.0, color, 0, belt, -1.55);
+  cabin(g, { W, belt, roof, zf: -0.75, zt1: -0.15, zt2: 0.78, zb: 1.25, color: opt.cabin || color, frame: opt.frame || opt.cabin || color });
+  doorsAndMirrors(g, { W, clear, belt, seams: [-0.75, 0.2, 1.1], handles: [-0.05, 0.85], mirrorZ: -0.62, color: opt.mirror || color });
+  ends(g, { W, L, clear, h, bumper: opt.bumper || V.trim });
+  return { g, W, L, clear, h, belt, roof };
+}
+export function sedan(color, { taxi = false } = {}) {
+  const s = sedanShell(color, { rim: taxi ? 0x9da1a8 : C.chrome });
+  if (taxi) {
+    // Chequered belt line and a roof sign on two brackets.
+    for (let i = 0; i < 16; i++)
+      for (const side of [-1, 1])
+        B(s.g, 0.02, 0.08, 0.24, (i + (side > 0 ? 0 : 1)) % 2 ? V.trim : C.white, side * (s.W / 2 + 0.04), s.belt - 0.14, -1.85 + i * 0.25);
+    B(s.g, 0.8, 0.28, 0.32, C.white, 0, s.roof + 0.1, 0.2);
+    B(s.g, 0.82, 0.08, 0.34, V.trim, 0, s.roof + 0.06, 0.2);
+    for (const x of [-0.25, 0.25]) B(s.g, 0.06, 0.08, 0.06, V.trim, x, s.roof + 0.04, 0.2);
+  }
+  return s.g;
 }
 export function playerCar() {
-  // A low muscle coupe: long bonnet, short cabin set back, rear spoiler.
+  // Muscle coupe: long bonnet with a scoop, short cabin set back, wide
+  // rear arches, spoiler, side pipes, twin stripes. Hot magenta.
   const g = new THREE.Group();
-  B(g, 1.95, 0.58, 3.9, C.player, 0, 0.34, 0);
-  B(g, 1.7, 0.12, 1.4, C.player, 0, 0.92, -1.15); // raised bonnet
-  B(g, 0.5, 0.18, 0.7, C.dark, 0, 1.0, -1.2); // bonnet scoop
-  frustum(g, 1.7, 1.75, 0.62, 0.74, C.glassDark, 0, 0.92, 0.45);
-  B(g, 1.3, 0.07, 1.25, C.player, 0, 1.53, 0.45);
-  for (const x of [-0.28, 0.28]) {
-    B(g, 0.22, 0.02, 3.91, C.white, x, 0.92, 0);
-    B(g, 0.22, 0.02, 1.25, C.white, x, 1.6, 0.45);
+  const W = 1.96, L = 4.35, clear = 0.26, h = 0.56, belt = clear + h, roof = 1.3, r = 0.38;
+  chassis(g, { L, W, clear, h, color: C.player, r, axles: [-1.38, 1.4], rim: C.chrome });
+  B(g, W + 0.16, 0.1, r * 2.7, C.player, 0, 0.12 + r * 1.35 + 0.02, 1.4); // wide rear arches
+  B(g, W - 0.5, 0.12, 1.5, C.player, 0, belt, -1.25); // bonnet bulge
+  B(g, 0.56, 0.16, 0.6, V.trim, 0, belt + 0.12, -1.05); // scoop
+  B(g, 0.46, 0.08, 0.04, C.chrome, 0, belt + 0.18, -1.36);
+  cabin(g, { W, belt, roof, zf: -0.4, zt1: 0.1, zt2: 0.8, zb: 1.45, color: C.player });
+  doorsAndMirrors(g, { W, clear, belt, seams: [-0.38, 0.95], handles: [0.75], mirrorZ: -0.28, color: C.player });
+  ends(g, { W, L, clear, h, bumper: C.chrome, lightW: 0.3 });
+  // Spoiler on two posts; side exhaust pipes.
+  B(g, W - 0.1, 0.06, 0.34, V.trim, 0, belt + 0.36, 1.92);
+  for (const x of [-0.7, 0.7]) B(g, 0.08, 0.36, 0.12, V.trim, x, belt, 1.92);
+  for (const s of [-1, 1]) {
+    const e = add(g, new THREE.CylinderGeometry(0.07, 0.07, 1.1, 6), C.chrome, s * (W / 2 + 0.06), clear + 0.04, 0.3);
+    e.rotation.x = Math.PI / 2;
   }
-  B(g, 1.9, 0.08, 0.36, C.dark, 0, 1.24, 1.82); // spoiler
-  for (const x of [-0.75, 0.75]) B(g, 0.08, 0.3, 0.14, C.dark, x, 0.92, 1.82);
-  B(g, 2.0, 0.2, 0.25, C.dark, 0, 0.3, -1.98);
-  B(g, 2.0, 0.2, 0.25, C.dark, 0, 0.3, 1.98);
-  carLights(g, -1.96, 1.96, 0.66, 0.6);
-  for (const x of [-0.45, 0.45]) cyl(g, 0.08, 0.08, 0.2, 0x8a8590, x, 0.18, 2.05);
-  wheels(g, 0.93, 1.25, 0.44);
+  // Twin white stripes over bonnet, roof and boot (on top, not through).
+  for (const x of [-0.25, 0.25]) {
+    B(g, 0.2, 0.012, 1.45, C.white, x, belt + 0.12, -1.25);
+    B(g, 0.2, 0.012, 0.72, C.white, x, roof + 0.025, 0.45);
+    B(g, 0.2, 0.012, 0.8, C.white, x, belt, 1.75);
+  }
   return g;
 }
 export function policeCar() {
-  const g = new THREE.Group();
-  B(g, 1.98, 0.66, 3.95, C.dark, 0, 0.34, 0);
-  B(g, 2.0, 0.5, 1.6, C.white, 0, 0.42, 0.1); // white doors
-  frustum(g, 1.78, 2.0, 0.72, 0.78, C.glassDark, 0, 1.0, 0.15);
-  B(g, 1.4, 0.1, 1.55, C.white, 0, 1.72, 0.15);
-  B(g, 1.3, 0.12, 0.42, C.metal, 0, 1.82, 0.15);
-  B(g, 0.58, 0.2, 0.36, 0xff3a4c, -0.34, 1.94, 0.15, 0, { emissive: 0xff2040, emissiveIntensity: 0.8 });
-  B(g, 0.58, 0.2, 0.36, 0x3a7dff, 0.34, 1.94, 0.15, 0, { emissive: 0x2a60ff, emissiveIntensity: 0.8 });
-  B(g, 1.7, 0.42, 0.14, C.metal, 0, 0.22, -2.1); // push bar
-  for (const x of [-0.5, 0.5]) B(g, 0.12, 0.3, 0.3, C.metal, x, 0.3, -1.95);
-  B(g, 2.04, 0.2, 0.25, 0x3a353b, 0, 0.3, 1.98);
-  for (const x of [-1.01, 1.01]) {
-    const s = add(g, new THREE.CylinderGeometry(0.2, 0.2, 0.04, 5), C.yellow, x, 0.7, 0.1);
-    s.rotation.z = Math.PI / 2;
+  // Black-and-white interceptor: white doors and roof, light bar on a
+  // frame, push bar, spotlight, antenna, star badges.
+  const s = sedanShell(V.trim, { cabin: C.white, frame: V.trim, bumper: V.trim, mirror: V.trim, rim: 0x9da1a8 });
+  const g = s.g;
+  for (const side of [-1, 1]) {
+    B(g, 0.012, s.h - 0.06, 1.85, C.white, side * (s.W / 2 + 0.004), s.clear + 0.04, 0.17);
+    const star = add(g, new THREE.CylinderGeometry(0.17, 0.17, 0.02, 5), C.yellow, side * (s.W / 2 + 0.02), s.belt - 0.28, -0.3);
+    star.rotation.z = Math.PI / 2;
   }
-  carLights(g, -1.98, 1.98, 0.7);
-  wheels(g, 0.95, 1.25, 0.42);
+  // Light bar: base, two feet, red/blue lenses, white centre.
+  const lb = G(g, 0, s.roof + 0.04, 0.15);
+  for (const x of [-0.55, 0.55]) B(lb, 0.12, 0.06, 0.3, V.trim, x, 0, 0);
+  B(lb, 1.4, 0.08, 0.36, V.trim, 0, 0.06, 0);
+  B(lb, 0.56, 0.16, 0.32, 0xff2a3c, -0.4, 0.14, 0, 0, { emissive: 0xff2040, emissiveIntensity: 0.8 });
+  B(lb, 0.56, 0.16, 0.32, 0x2a6dff, 0.4, 0.14, 0, 0, { emissive: 0x2a60ff, emissiveIntensity: 0.8 });
+  B(lb, 0.22, 0.12, 0.3, C.white, 0, 0.14, 0, 0, { emissive: 0xffffff, emissiveIntensity: 0.3 });
+  // Push bar frame on the front bumper.
+  const zf = -s.L / 2 - 0.2;
+  for (const x of [-0.42, 0.42]) B(g, 0.08, 0.62, 0.08, V.trim, x, s.clear - 0.2, zf - 0.1);
+  for (const y of [0.18, 0.42]) B(g, 1.0, 0.07, 0.08, V.trim, 0, s.clear + y - 0.2, zf - 0.1);
+  // A-pillar spotlight and a roof antenna.
+  B(g, 0.14, 0.14, 0.2, C.chrome, -s.W / 2 - 0.05, s.belt + 0.1, -0.68);
+  add(g, new THREE.CylinderGeometry(0.01, 0.015, 0.8, 4), V.trim, 0.5, s.roof + 0.4, 0.7);
   return g;
 }
 function pickup(color) {
+  // Crew-cab pickup: tall bonnet, cab, open bed with walls and tailgate.
   const g = new THREE.Group();
-  B(g, 2.0, 0.7, 4.3, color, 0, 0.4, 0);
-  B(g, 1.9, 0.75, 1.5, color, 0, 1.1, -0.45);
-  B(g, 1.7, 0.5, 0.06, C.glassDark, 0, 1.25, -1.21);
-  for (const x of [-0.96, 0.96]) B(g, 0.06, 0.45, 1.1, C.glassDark, x, 1.25, -0.45);
-  B(g, 1.7, 0.08, 1.9, 0x8f7b62, 0, 1.0, 1.05);
-  B(g, 2.04, 0.22, 0.25, 0x6a6470, 0, 0.32, -2.15);
-  carLights(g, -2.16, 2.16, 0.78);
-  wheels(g, 0.98, 1.4, 0.48);
+  const W = 2.0, L = 4.9, clear = 0.42, h = 0.66, belt = clear + h, roof = 1.85, r = 0.46;
+  chassis(g, { L, W, clear, h, color, r, axles: [-1.55, 1.45], rim: 0x9da1a8 });
+  cabin(g, { W, belt, roof, zf: -0.85, zt1: -0.45, zt2: 0.25, zb: 0.45, color, inset: 0.12 });
+  doorsAndMirrors(g, { W, clear, belt, seams: [-0.85, -0.1], handles: [-0.3], mirrorZ: -0.75, color: V.trim });
+  ends(g, { W, L, clear, h, bumper: C.chrome, rear: true, lightW: 0.4 });
+  // Bed: floor, walls, tailgate, roll bar.
+  B(g, W - 0.24, 0.05, 1.85, 0x4a463f, 0, belt - 0.02, 1.48);
+  for (const s of [-1, 1]) B(g, 0.1, 0.42, 1.95, color, s * (W / 2 - 0.05), belt, 1.48);
+  B(g, W, 0.42, 0.1, color, 0, belt, 0.5);
+  B(g, W, 0.42, 0.1, color, 0, belt, L / 2 - 0.05);
+  B(g, W - 0.3, 0.06, 0.06, V.trim, 0, belt + 0.48, 0.58);
+  for (const x of [-0.8, 0.8]) B(g, 0.06, 0.48, 0.06, V.trim, x, belt, 0.58);
+  for (const x of [-0.5, 0, 0.5]) B(g, 0.2, 0.06, 0.08, 0xffa02a, x, roof + 0.05, -0.2, 0, { emissive: 0xff8a10, emissiveIntensity: 0.3 });
   return g;
 }
 function van(color) {
+  // Box delivery truck: short-nosed cab, tall cargo box with a stripe and
+  // a roll-up rear door.
   const g = new THREE.Group();
-  B(g, 2.0, 1.75, 4.4, color, 0, 0.35, 0.1);
-  frustum(g, 2.0, 0.9, 0.7, 0.86, color, 0, 0.35, -2.4);
-  B(g, 1.8, 0.6, 0.06, C.glassDark, 0, 1.3, -2.11);
-  for (const x of [-1.01, 1.01]) B(g, 0.04, 0.5, 2.4, C.glassDark, x, 1.4, -0.2);
-  B(g, 2.02, 0.12, 4.4, 0x4cc6b9, 0, 0.9, 0.1);
-  carLights(g, -2.86, 2.32, 0.6);
-  wheels(g, 0.96, 1.5, 0.42);
+  const W = 2.1, L = 5.4, clear = 0.42, h = 0.7, belt = clear + h, r = 0.45;
+  chassis(g, { L, W, clear, h, color: C.white, r, axles: [-1.75, 1.8], rim: 0x9da1a8 });
+  cabin(g, { W, belt, roof: 2.15, zf: -2.2, zt1: -1.75, zt2: -0.9, zb: -0.85, color: C.white, inset: 0.1 });
+  doorsAndMirrors(g, { W, clear, belt, seams: [-2.1, -1.0], handles: [-1.2], mirrorZ: -2.05, color: V.trim });
+  ends(g, { W, L, clear, h, bumper: V.trim, rear: false, lightW: 0.38 });
+  B(g, W + 0.06, 2.0, 3.3, C.white, 0, belt - 0.05, 0.95);
+  for (const s of [-1, 1]) B(g, 0.02, 0.3, 3.3, color, s * (W / 2 + 0.035), belt + 0.7, 0.95);
+  for (let i = 0; i < 8; i++) B(g, W - 0.3, 0.02, 0.03, 0xb9bcc2, 0, belt + 0.1 + i * 0.22, 2.62);
+  for (const s of [-1, 1]) B(g, 0.3, 0.16, 0.06, 0xd8202c, s * (W / 2 - 0.2), belt - 0.3, 2.62, 0, { emissive: 0xa0101c, emissiveIntensity: 0.4 });
   return g;
 }
 
@@ -386,11 +501,21 @@ function crate(p, x, y, z, c = 0xc9935a, s = 0.6) {
 // railings, cornice bands, parapets, rooftop units. All rectangular parts,
 // so a whole facade bakes into a few draw calls.
 function windowAt(p, x, y, z, w, h, frame, ry = 0, sill = true) {
+  // A recessed window: the frame stands 0.22 m proud of the wall, the glass
+  // sits at the back of it, with a mullion, a transom, a lintel and a sill.
+  // Nothing passes through anything else.
   const g = G(p, x, y, z, ry);
-  B(g, w + 0.24, h + 0.24, 0.12, frame, 0, -0.12, 0);
-  B(g, w, h, 0.14, C.glass, 0, 0, 0.02);
-  B(g, 0.06, h, 0.16, frame, 0, 0, 0.03);
-  if (sill) B(g, w + 0.4, 0.12, 0.3, frame, 0, -0.2, 0.1);
+  const fd = 0.22,
+    bar = 0.12;
+  B(g, w + 2 * bar, bar, fd, frame, 0, h / 2, fd / 2);
+  B(g, w + 2 * bar, bar, fd, frame, 0, -h / 2 - bar, fd / 2);
+  B(g, bar, h, fd, frame, -w / 2 - bar / 2, -h / 2, fd / 2);
+  B(g, bar, h, fd, frame, w / 2 + bar / 2, -h / 2, fd / 2);
+  B(g, w, h, 0.03, C.glass, 0, -h / 2, 0.015, 0, { roughness: 0.25 });
+  B(g, 0.05, h, 0.08, frame, 0, -h / 2, 0.07);
+  B(g, w, 0.05, 0.08, frame, 0, h * 0.18, 0.07);
+  B(g, w + 2 * bar + 0.2, 0.14, fd + 0.06, frame, 0, h / 2 + bar, (fd + 0.06) / 2);
+  if (sill) B(g, w + 2 * bar + 0.2, 0.1, fd + 0.14, frame, 0, -h / 2 - bar - 0.1, (fd + 0.14) / 2);
   return g;
 }
 // Windows on one face (local z = depth/2 facing +z) for `floors`.
@@ -403,10 +528,10 @@ function facade(p, width, depth, floors, floorH, opts) {
     for (let i = 0; i < n; i++) {
       windowAt(p, x0 + i * every, y, depth / 2 + 0.02, w, h, frame);
       if (balcony && (f + i) % balcony === 0) {
-        B(p, w + 0.9, 0.12, 0.9, frame, x0 + i * every, y - h / 2 - 0.3, depth / 2 + 0.45);
+        B(p, w + 0.9, 0.12, 0.9, frame, x0 + i * every, y - h / 2 - 0.42, depth / 2 + 0.45);
         for (let r = 0; r <= 6; r++)
-          B(p, 0.06, 0.7, 0.06, frame, x0 + i * every - (w + 0.8) / 2 + r * ((w + 0.8) / 6), y - h / 2 - 0.18, depth / 2 + 0.86);
-        B(p, w + 0.9, 0.08, 0.08, frame, x0 + i * every, y - h / 2 + 0.5, depth / 2 + 0.86);
+          B(p, 0.06, 0.7, 0.06, frame, x0 + i * every - (w + 0.8) / 2 + r * ((w + 0.8) / 6), y - h / 2 - 0.3, depth / 2 + 0.86);
+        B(p, w + 0.9, 0.08, 0.08, frame, x0 + i * every, y - h / 2 + 0.4, depth / 2 + 0.86);
       }
     }
   }
@@ -420,8 +545,8 @@ function rooftopKit(p, w, d, y, seed = 0) {
 function parapet(p, w, d, y, c, h = 0.6) {
   B(p, w + 0.2, h, 0.25, c, 0, y, d / 2);
   B(p, w + 0.2, h, 0.25, c, 0, y, -d / 2);
-  B(p, 0.25, h, d, c, w / 2, y, 0);
-  B(p, 0.25, h, d, c, -w / 2, y, 0);
+  B(p, 0.25, h, d - 0.25, c, w / 2 - 0.025, y, 0);
+  B(p, 0.25, h, d - 0.25, c, -w / 2 + 0.025, y, 0);
 }
 function awning(p, w, x, y, z, a, b, depth = 1.3, ry = 0) {
   const g = G(p, x, y, z, ry);
@@ -500,26 +625,252 @@ function blueResidential(p, x, z, ry = 0) {
   B(g, 1.0, 1.2, 1.0, C.blueDark, -3.5, F * FH + 0.5, -3.5);
   return g;
 }
-// 4. Cream corner café with a chamfered corner and striped awning (ref 4).
-function cornerCafe(p, x, z, ry = 0) {
+// 4. Landmark: a brick corner building with a wine shop (reference 8).
+// Green timber shopfront with pilasters, display windows and a sign band;
+// two brick upper floors with stone quoins and string courses; square
+// windows with blinds, an AC unit and a planter on the first floor, arched
+// windows on the second; a dentil cornice; rooftop HVAC, ducting and vents;
+// a downpipe; awning with a bar counter and stools; old street lamps.
+// Every piece is placed against, never through, its neighbour.
+const brickTex = (() => {
+  let tex = null;
+  return () => {
+    if (tex) return tex;
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const g = c.getContext("2d");
+    g.fillStyle = "#d9c6b3";
+    g.fillRect(0, 0, 256, 256);
+    const rows = 16,
+      bh = 256 / rows,
+      bw = 256 / 4;
+    for (let r = 0; r < rows; r++)
+      for (let i = -1; i < 5; i++) {
+        const x = i * bw + (r % 2 ? bw / 2 : 0);
+        const v = ((r * 7 + i * 13) % 5) - 2;
+        g.fillStyle = `rgb(${184 + v * 8},${74 + v * 5},${46 + v * 3})`;
+        g.fillRect(x + 2, r * bh + 2, bw - 4, bh - 4);
+      }
+    tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 4;
+    return tex;
+  };
+})();
+// A brick-faced box: texture tiled at about 1 m x 1 m per tile.
+function brickBox(p, w, h, d, x, y, z) {
+  const face = (u, v) => {
+    const t = brickTex().clone();
+    t.needsUpdate = true;
+    t.repeat.set(u, v);
+    return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });
+  };
+  const side = face(d / 1.0, h / 1.0),
+    front = face(w / 1.0, h / 1.0),
+    top = M(0x8f3b26);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [side, side, top, top, front, front]);
+  m.position.set(x, y + h / 2, z);
+  m.castShadow = m.receiveShadow = true;
+  m.userData.keep = true; // textured: not merged
+  p.add(m);
+  return m;
+}
+// Window with blinds half drawn (no mullion, so slats never cross it).
+function blindsWindow(p, x, y, z, w, h, frame) {
+  const g = G(p, x, y, z);
+  const fd = 0.22,
+    bar = 0.12;
+  B(g, w + 2 * bar, bar, fd, frame, 0, h / 2, fd / 2);
+  B(g, w + 2 * bar, bar, fd, frame, 0, -h / 2 - bar, fd / 2);
+  B(g, bar, h, fd, frame, -w / 2 - bar / 2, -h / 2, fd / 2);
+  B(g, bar, h, fd, frame, w / 2 + bar / 2, -h / 2, fd / 2);
+  B(g, w, h, 0.03, C.glass, 0, -h / 2, 0.015, 0, { roughness: 0.25 });
+  for (let i = 0; i < 9; i++) B(g, w - 0.04, 0.04, 0.02, C.white, 0, h / 2 - 0.08 - i * 0.09, 0.045);
+  B(g, w + 2 * bar + 0.2, 0.14, fd + 0.06, frame, 0, h / 2 + bar, (fd + 0.06) / 2);
+  B(g, w + 2 * bar + 0.2, 0.1, fd + 0.14, frame, 0, -h / 2 - bar - 0.1, (fd + 0.14) / 2);
+  return { g, sillTop: -h / 2 - bar, sillBottom: -h / 2 - bar - 0.1 };
+}
+// Round-headed window (angular arch: 6 segments) with a keystone.
+function archWindow(p, x, y, z, w, hs, frame) {
+  const g = G(p, x, y, z);
+  const rO = w / 2 + 0.14,
+    rI = w / 2;
+  const outer = new THREE.Shape();
+  outer.moveTo(-rO, 0);
+  outer.lineTo(rO, 0);
+  outer.lineTo(rO, hs);
+  outer.absarc(0, hs, rO, 0, Math.PI, false);
+  outer.lineTo(-rO, 0);
+  const hole = new THREE.Path();
+  hole.moveTo(-rI, 0.14);
+  hole.lineTo(rI, 0.14);
+  hole.lineTo(rI, hs);
+  hole.absarc(0, hs, rI, 0, Math.PI, false);
+  hole.lineTo(-rI, 0.14);
+  outer.holes.push(hole);
+  add(g, new THREE.ExtrudeGeometry(outer, { depth: 0.22, bevelEnabled: false, curveSegments: 3 }), frame, 0, 0, 0);
+  const glass = new THREE.Shape();
+  glass.moveTo(-rI, 0.14);
+  glass.lineTo(rI, 0.14);
+  glass.lineTo(rI, hs);
+  glass.absarc(0, hs, rI, 0, Math.PI, false);
+  glass.lineTo(-rI, 0.14);
+  add(g, new THREE.ExtrudeGeometry(glass, { depth: 0.03, bevelEnabled: false, curveSegments: 3 }), C.glass, 0, 0, 0, { roughness: 0.25 });
+  B(g, 0.05, hs + rI - 0.14, 0.06, frame, 0, 0.14, 0.05); // glazing bar
+  B(g, w, 0.05, 0.06, frame, 0, hs, 0.05);
+  B(g, 0.26, 0.34, 0.26, frame, 0, hs + rO - 0.2, 0.0); // keystone
+  B(g, w + 0.5, 0.1, 0.36, frame, 0, -0.1, 0.18); // sill
+  return g;
+}
+function oldLamp(p, x, z) {
+  const g = G(p, x, 0, z);
+  const bronze = 0xb8692f;
+  cyl(g, 0.2, 0.26, 0.4, bronze, 0, 0, 0, 6);
+  cyl(g, 0.07, 0.09, 3.2, bronze, 0, 0.4, 0, 6);
+  cyl(g, 0.16, 0.12, 0.16, bronze, 0, 3.6, 0, 6);
+  B(g, 0.36, 0.5, 0.36, 0xffd98a, 0, 3.76, 0, 0, { emissive: 0xffb84a, emissiveIntensity: 0.8 });
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) B(g, 0.05, 0.5, 0.05, bronze, sx * 0.2, 3.76, sz * 0.2);
+  add(g, new THREE.ConeGeometry(0.34, 0.34, 4), bronze, 0, 4.43, 0).rotation.y = Math.PI / 4;
+  return g;
+}
+function landmark(p, x, z, ry = 0) {
   const g = G(p, x, 0, z, ry);
-  const W = 10, D = 10, H = 7.4;
-  B(g, W, H, D, C.cream, 0, 0, 0);
-  const cut = B(g, 3.0, H + 0.01, 3.0, C.cream, W / 2 - 0.9, 0, D / 2 - 0.9, Math.PI / 4);
-  cut.scale.set(1, 1, 0.3);
-  B(g, W + 0.3, 0.3, D + 0.3, 0xe6cd9c, 0, H, 0);
-  parapet(g, W, D, H + 0.3, 0xe6cd9c, 0.5);
-  facade(g, W, D, 2, 3.4, { frame: C.white, every: 2.4, w: 1.0, h: 1.3, from: 1 });
-  const side = G(g, 0, 0, 0, Math.PI / 2);
-  facade(side, D, W, 2, 3.4, { frame: C.white, every: 2.4, w: 1.0, h: 1.3, from: 1 });
-  // Shopfront glazing on both street faces + door + awnings.
-  B(g, W - 3, 2.3, 0.2, C.glass, -1, 0.3, D / 2 + 0.02);
-  B(g, 0.2, 2.3, D - 3, C.glass, W / 2 + 0.02, 0.3, -1);
-  awning(g, W - 2.4, -1.2, 3.1, D / 2, C.red, C.white);
-  awning(g, D - 2.4, W / 2, 3.1, -1.2, C.red, C.white, 1.3, Math.PI / 2);
-  signBoard(g, "CAFE", 2.6, 0.7, -1, 3.65, D / 2 + 0.12, 0, "#3e3438", "#fbe8c4");
-  // Chimneys and a menu board.
-  for (const s of [-1, 1]) B(g, 0.7, 1.2, 0.7, 0xe6cd9c, 1.6 + s * 0.5, H + 0.3, -3);
+  const W = 9, D = 9, GF = 4.2, F1 = 3.3, F2 = 3.3;
+  const top = GF + F1 + F2; // 10.8
+  const green = C.storeGreen,
+    gold = 0xe2b84a,
+    stone = C.stone;
+  // Shop interior (seen through the glass): dark warm room with shelves.
+  B(g, W - 1.0, GF - 0.6, D - 1.0, 0x3a2a1e, 0, 0.3, 0);
+  // Upper floors in brick on a stone ledge; string course between them.
+  brickBox(g, W, F1 + F2, D, 0, GF, 0);
+  B(g, W + 0.6, 0.3, D + 0.6, stone, 0, GF - 0.05, 0);
+  B(g, W + 0.3, 0.25, D + 0.3, stone, 0, GF + F1, 0);
+  // Cornice: band, dentils, cap.
+  B(g, W + 0.5, 0.4, D + 0.5, stone, 0, top, 0);
+  B(g, W + 0.7, 0.2, D + 0.7, stone, 0, top + 0.4, 0);
+  for (let i = 0; i < 20; i++) {
+    const s = -W / 2 + 0.25 + i * ((W - 0.5) / 19);
+    B(g, 0.16, 0.16, 0.12, stone, s, top - 0.16, D / 2 + 0.06);
+    B(g, 0.12, 0.16, 0.16, stone, W / 2 + 0.06, top - 0.16, -s);
+  }
+  // Stone quoins on the three street-visible corners (wrap the corner;
+  // front pieces run to the corner, side pieces stop at it: no overlap).
+  for (let r = 0; r < Math.floor((F1 + F2 - 0.3) / 0.36); r++) {
+    const y = GF + 0.3 + r * 0.36,
+      long = r % 2 === 0;
+    const a = long ? 0.9 : 0.55,
+      b = long ? 0.55 : 0.9;
+    B(g, a + 0.1, 0.3, 0.1, stone, W / 2 - a / 2 + 0.05, y, D / 2 + 0.05);
+    B(g, 0.1, 0.3, b, stone, W / 2 + 0.05, y, D / 2 - b / 2);
+    B(g, a + 0.1, 0.3, 0.1, stone, -W / 2 + a / 2 - 0.05, y, D / 2 + 0.05);
+    B(g, 0.1, 0.3, b, stone, W / 2 + 0.05, y, -D / 2 + b / 2);
+  }
+  // The two street faces (local +z and +x) share one facade recipe.
+  const faces = [G(g, 0, 0, 0, 0), G(g, 0, 0, 0, Math.PI / 2)];
+  faces.forEach((f, k) => {
+    const half = (k === 0 ? D : W) / 2,
+      span = k === 0 ? W : D;
+    // Shopfront: plinth, pilasters, display glass with mullions, transom.
+    B(f, span, 0.5, 0.3, green, 0, 0, half + 0.15);
+    const bays = [-span / 2 + 0.25, -span / 6, span / 6, span / 2 - 0.25];
+    for (const bx of bays) B(f, 0.46, GF - 0.9, 0.36, green, bx, 0.5, half + 0.18);
+    for (let b = 0; b < 3; b++) {
+      const cx = (bays[b] + bays[b + 1]) / 2,
+        bw = bays[b + 1] - bays[b] - 0.46;
+      const isDoor = k === 0 && b === 1;
+      if (isDoor) {
+        B(f, bw, 2.6, 0.06, green, 0, 0.5, half + 0.03);
+        B(f, bw - 0.5, 2.0, 0.03, 0xf2c27a, cx, 0.75, half + 0.07, 0, { emissive: 0xc8781e, emissiveIntensity: 0.35 });
+        B(f, 0.06, 0.3, 0.08, gold, cx + bw / 2 - 0.4, 1.6, half + 0.1);
+      } else {
+        B(f, bw, 2.5, 0.03, 0xf2c27a, cx, 0.6, half + 0.015, 0, { transparent: true, opacity: 0.55, emissive: 0xc8781e, emissiveIntensity: 0.3 });
+        B(f, 0.06, 2.5, 0.08, green, cx, 0.6, half + 0.06);
+        B(f, bw, 0.06, 0.08, green, cx, 2.5, half + 0.06);
+      }
+      // Wine shelves behind the glass (inside the room, clear of it).
+      for (let s = 0; s < 3; s++) B(f, bw - 0.3, 0.05, 0.3, 0x8a5a32, cx, 0.9 + s * 0.6, half - 0.65);
+      for (let n = 0; n < 6; n++) B(f, 0.08, 0.26, 0.08, [0x6a1f2a, 0x2c5a3a, 0xc9a24a][n % 3], cx - bw / 2 + 0.4 + n * ((bw - 0.8) / 5), 0.95, half - 0.65);
+    }
+    B(f, span, 0.6, 0.2, green, 0, 3.0, half + 0.1); // transom panel
+    signBoard(f, k === 0 ? "CORNER WINES" : "WINE STORE", span * 0.62, 0.5, 0, 3.3, half + 0.28, 0, "#2c5a3a", "#e2b84a");
+    B(f, span + 0.1, 0.18, 0.5, stone, 0, GF - 0.48, half + 0.25); // shopfront cornice
+    for (const bx of [bays[0] + 0.6, bays[3] - 0.6]) {
+      // Wall lanterns on brackets.
+      B(f, 0.06, 0.06, 0.3, 0x3a2a1e, bx, 2.95, half + 0.5);
+      B(f, 0.22, 0.32, 0.22, 0xffd98a, bx, 2.75, half + 0.7, 0, { emissive: 0xffb84a, emissiveIntensity: 0.8 });
+    }
+    // First floor: two windows with blinds; an AC unit under one, a planter
+    // on the other's sill.
+    const y1 = GF + 1.7;
+    [-span / 4, span / 4].forEach((wx, i) => {
+      const win = blindsWindow(f, wx, y1, half + 0.02, 1.1, 1.5, stone);
+      if (i === (k === 0 ? 0 : 1)) {
+        const ac = G(f, wx, y1 + win.sillBottom - 0.02 - 0.5, half);
+        B(ac, 0.8, 0.5, 0.55, 0xe4e4e0, 0, 0, 0.3);
+        for (let s = 0; s < 4; s++) B(ac, 0.5, 0.03, 0.02, 0x8f8f94, -0.08, 0.1 + s * 0.09, 0.585);
+        const fan = add(ac, new THREE.CylinderGeometry(0.13, 0.13, 0.02, 8), 0x8f8f94, 0.26, 0.25, 0.585);
+        fan.rotation.x = Math.PI / 2;
+        B(ac, 0.08, 0.06, 0.6, C.metal, 0, -0.06, 0.3);
+      } else {
+        const pl = G(f, wx, y1 + win.sillTop, half + 0.02 + 0.26);
+        B(pl, 1.0, 0.24, 0.28, 0x8a5a32, 0, 0, 0.14);
+        for (const px of [-0.3, 0, 0.3]) add(pl, new THREE.IcosahedronGeometry(0.17, 0), C.leaf[2], px, 0.38, 0.14);
+      }
+    });
+    // Second floor: arched windows.
+    for (const wx of [-span / 4, span / 4]) archWindow(f, wx, GF + F1 + 0.55, half + 0.02, 1.0, 1.25, stone);
+  });
+  // Awning over the side shopfront with a bar counter and stools beneath.
+  awning(faces[1], 5.2, 0, GF - 1.05, W / 2 + 0.36, 0xd62f2a, 0xd62f2a, 1.5);
+  const bar = G(faces[1], 0, 0, W / 2 + 1.25);
+  B(bar, 4.0, 0.08, 0.5, 0x9a6a3a, 0, 1.05, 0);
+  for (const s of [-1.6, 1.6]) B(bar, 0.08, 1.05, 0.08, 0x3a2a1e, s, 0, 0);
+  for (const s of [-1.2, 0, 1.2]) {
+    cyl(bar, 0.2, 0.2, 0.06, 0xc9612a, s, 0.72, 0.6, 8);
+    for (const [dx, dz] of [[-0.12, -0.12], [0.12, -0.12], [-0.12, 0.12], [0.12, 0.12]]) B(bar, 0.04, 0.72, 0.04, 0xc9612a, s + dx, 0, 0.6 + dz);
+  }
+  // A-frame chalkboard and crates by the door.
+  const board = G(faces[0], 1.9, 0, D / 2 + 1.0);
+  const l1 = B(board, 0.7, 1.0, 0.05, 0x2a2a2a, 0, 0, 0.15);
+  l1.rotation.x = -0.25;
+  const l2 = B(board, 0.7, 1.0, 0.05, 0x2a2a2a, 0, 0, -0.15);
+  l2.rotation.x = 0.25;
+  const crates = G(faces[0], -1.1, 0, D / 2 + 0.75);
+  B(crates, 0.55, 0.4, 0.4, 0x2f5fbf, 0, 0, 0);
+  B(crates, 0.55, 0.4, 0.4, 0x2c5a3a, 0.6, 0, 0);
+  B(crates, 0.55, 0.4, 0.4, 0xd62f2a, 0.3, 0.4, 0);
+  // Roof: membrane, parapet, HVAC with fans, ducting with an elbow, vents,
+  // a chimney stack and a hatch.
+  const r0 = top + 0.6;
+  B(g, W + 0.3, 0.05, D + 0.3, 0x55525a, 0, r0, 0);
+  parapet(g, W + 0.5, D + 0.5, r0, stone, 0.45);
+  B(g, 2.0, 0.9, 1.2, 0xcfd0d4, -1.6, r0, -1.8);
+  for (const fx of [-2.1, -1.1]) {
+    cyl(g, 0.34, 0.34, 0.06, 0x6a6a70, fx, r0 + 0.9, -1.8, 8);
+    B(g, 0.6, 0.02, 0.06, 0x3a3a40, fx, r0 + 0.96, -1.8);
+  }
+  B(g, 3.2, 0.5, 0.5, 0xb9bcc2, 1.0, r0 + 0.35, -1.8);
+  B(g, 0.5, 0.85, 0.5, 0xb9bcc2, 2.85, r0, -1.8);
+  B(g, 0.6, 0.45, 0.6, 0xb9bcc2, -0.35, r0 + 0.2, -1.8);
+  for (const [vx, vz] of [[2.5, 2.0], [1.4, 2.6]]) {
+    cyl(g, 0.12, 0.12, 0.7, C.metal, vx, r0, vz, 6);
+    cyl(g, 0.22, 0.22, 0.08, C.metal, vx, r0 + 0.7, vz, 6);
+  }
+  brickBox(g, 0.9, 1.4, 0.9, -3.2, r0, 2.9);
+  B(g, 1.0, 0.12, 1.0, stone, -3.2, r0 + 1.4, 2.9);
+  B(g, 1.1, 0.25, 1.1, 0x6a6a70, 0.4, r0, 1.2);
+  // Downpipe on the side wall, clear of every projection, with brackets
+  // and a gutter outlet into the cornice.
+  const px = W / 2 + 0.5,
+    pz = -D / 2 + 1.3;
+  cyl(g, 0.08, 0.08, top + 0.2, 0x7a7d84, px, 0, pz, 6);
+  B(g, 0.45, 0.14, 0.14, 0x7a7d84, W / 2 + 0.36, top + 0.1, pz);
+  for (const by of [2.0, 6.0, 9.2]) B(g, 0.5, 0.06, 0.06, 0x55525a, W / 2 + 0.25, by, pz);
+  // Old street lamps on the corner pavement.
+  oldLamp(g, W / 2 + 1.6, D / 2 + 1.6);
+  oldLamp(g, -W / 2 + 0.6, D / 2 + 1.7);
   return g;
 }
 // 5. Narrow shops in a row: varied colours, roofs and signs.
@@ -962,7 +1313,7 @@ function district(root) {
     }
   });
   blueResidential(P(43, 15), 0, 0, Math.PI);
-  cornerCafe(P(13.5, 13.5), 0, 0, Math.PI);
+  landmark(P(13.5, 13.5), 0, 0, Math.PI);
   for (const [x, z] of [[23, 13], [33, 13]]) {
     const h = P(x, z, Math.PI);
     B(h, 7, 6, 7, x < 30 ? C.peach : C.mint, 0, 0, 0);
@@ -1026,6 +1377,11 @@ function district(root) {
   cop1.add(policeCar());
   const cop2 = G(g, 2.6, 0.1, -16, Math.PI);
   cop2.add(policeCar());
+  // Parked along the north kerb: the vehicle samples side by side.
+  G(g, -46, 0.1, -4.6, -Math.PI / 2).add(sedan(C.yellow, { taxi: true }));
+  G(g, -40.4, 0.1, -4.6, -Math.PI / 2).add(sedan(C.blue));
+  G(g, -34.2, 0.1, -4.6, -Math.PI / 2).add(pickup(C.red));
+  G(g, -27.2, 0.1, -4.6, -Math.PI / 2).add(van(C.orange));
   G(g, 14, 0.1, -3.0, Math.PI / 2).add(sedan(C.yellow, { taxi: true }));
   G(g, 30, 0.1, -3.0, Math.PI / 2).add(sedan(0x4cc6b9));
   G(g, 26, 0.1, AV - 1.3, -Math.PI / 2).add(van(C.white));
@@ -1064,7 +1420,7 @@ function flames(p, spots) {
 function smoke(p, spots) {
   for (const [x, y, z, s] of spots) {
     for (let i = 0; i < 4; i++) {
-      const shade = [0x4a4448, 0x6a6468, 0x8d878b, 0xb2adb0][i];
+      const shade = [0x141316, 0x232126, 0x37343a, 0x4f4c53][i];
       const m = add(p, new THREE.IcosahedronGeometry(s * (0.8 + i * 0.35), 1), shade, x + i * 0.5, y + i * 1.8, z - i * 0.3, { transparent: true, opacity: 0.75 - i * 0.12 });
       m.userData.fx = "smoke";
       m.userData.base = y + i * 1.8;
@@ -1080,13 +1436,13 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.0;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(C.sky);
 // Bright warm sun from the upper left, crisp readable shadows; a purple-
 // tinted ground light keeps shade colourful (references 4 and 5).
-scene.add(new THREE.HemisphereLight(0xfff6ee, 0x7a5c84, 1.5));
-const sun = new THREE.DirectionalLight(0xfff0dc, 3.0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x5f5a58, 1.35));
+const sun = new THREE.DirectionalLight(0xfff2e0, 3.3);
 sun.position.set(-40, 70, 30);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
@@ -1118,6 +1474,9 @@ const VIEWS = {
   park: { target: [-28, 1, 28], zoom: 2.3, az: -0.55 },
   street: { target: [-27, 3, -14], zoom: 2.3, az: -0.35 },
   chase: { target: [-12, 1, 1], zoom: 3.6, az: -0.95 },
+  cars: { target: [-35.5, 1, -3.2], zoom: 4.6, az: -0.45 },
+  hero: { target: [-17, 1, 3.2], zoom: 7.5, az: -0.75 },
+  landmark: { target: [13.5, 5, 13.5], zoom: 3.6, az: -2.35 },
 };
 let fly = null;
 const viewSize = 70;
@@ -1177,8 +1536,19 @@ function burst(x, z, kind) {
   // Fireball (faceted), shockwave ring, flying chunks; dust or water for
   // the others. Cartoon only.
   const n = big ? 10 : 7;
+  if (big) {
+    // Yellow-hot core first, then red-orange flame balls and black smoke.
+    const core = add(scene, new THREE.IcosahedronGeometry(3.0, 0), 0xfff2a0, x, 2, z, { transparent: true, opacity: 1, emissive: 0xffe060, emissiveIntensity: 1.4 });
+    core.castShadow = false;
+    effects.push({ m: core, vx: 0, vy: 2, vz: 0, life: 0, grow: 1.8, max: 0.5 });
+    for (let i = 0; i < 6; i++) {
+      const s = add(scene, new THREE.IcosahedronGeometry(2.0, 0), [0x141316, 0x232126][i % 2], x + (i - 3) * 0.8, 3, z, { transparent: true, opacity: 0.9 });
+      s.castShadow = false;
+      effects.push({ m: s, vx: (i - 3) * 0.6, vy: 4 + i * 0.5, vz: (i % 2) - 0.5, life: -0.25, grow: 1.2, max: 2.2, smoke: true });
+    }
+  }
   for (let i = 0; i < n; i++) {
-    const color = big ? C.fire[i % 3] : kind === "splash" ? 0xbff0ff : 0xf3e8da;
+    const color = big ? C.fire[i % 3] : kind === "splash" ? 0xbff0ff : 0xe6e1d8;
     const m = add(scene, new THREE.IcosahedronGeometry(big ? 2.2 : 1.0, 0), color, x, 1.5, z, {
       transparent: true,
       opacity: 0.95,
@@ -1298,7 +1668,12 @@ function frame(now) {
       e.m.scale.setScalar(1 + e.life * 14);
       e.m.material.opacity = Math.max(0, 0.9 - e.life * 1.2);
     } else {
-      e.vy -= 9 * dt;
+      if (e.life < 0) {
+        e.m.visible = false;
+        continue;
+      }
+      e.m.visible = true;
+      if (!e.smoke) e.vy -= 9 * dt;
       e.m.position.x += e.vx * dt;
       e.m.position.y = Math.max(0.5, e.m.position.y + e.vy * dt);
       e.m.position.z += e.vz * dt;
