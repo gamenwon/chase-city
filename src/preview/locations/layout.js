@@ -1,9 +1,10 @@
 // Preview-only city layout: the downtown layout with three blocks turned
 // into locations. The game's own layout (world/layout.js) is not changed.
 //
-//   gas station        block (15, -15)   east of the start road, ahead
-//   basketball court   block (-15, -15)  west of the start road, ahead
-//   fountain park      block (-45, -15)  the park west of the court
+// Spread over the city, each at least one block from the others:
+//   fountain park      block (15, -45)   north of the start (a park block)
+//   gas station        block (-45, -45)  north-west
+//   basketball court   block (45, 45)    south-east
 //
 // Solid boxes added here use the game's normal collision (axis-aligned
 // boxes). Breakable things (fence panels, hoops, benches, lamps, bins) are
@@ -11,9 +12,9 @@
 // closed by debris.
 import { createLayout } from "../../world/layout.js";
 
-export const GAS = { x: 15, z: -15 };
-export const COURT = { x: -15, z: -15 };
-export const PARK = { x: -45, z: -15 };
+export const GAS = { x: -45, z: -45 };
+export const COURT = { x: 45, z: 45 };
+export const PARK = { x: 15, z: -45 };
 
 // Gas station plan (block-local metres; x east, z south).
 export const GAS_PLAN = {
