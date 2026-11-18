@@ -8,6 +8,7 @@ export default defineConfig({
         art: "art-sample.html",
         direction: "art-direction.html",
         district: "art-district.html",
+        locations: "locations.html",
       },
       output: { manualChunks: { three: ["three"] } },
     },

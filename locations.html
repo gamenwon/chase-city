@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#102a32" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>CHASE CITY 장소 미리보기</title>
+  </head>
+  <body>
+    <canvas id="game" aria-label="3D 자동차 추격 게임"></canvas>
+    <div id="hud">
+      <a class="brand" href="./"
+        >CHASE<span>CITY</span><small>THE GETAWAY CLUB</small></a
+      >
+      <div class="stats">
+        <div><small id="time-label">도주 시간</small><strong id="time">00:00</strong></div>
+        <div>
+          <small>차량 내구도</small><strong id="health">100%</strong>
+          <div class="meter"><i id="health-bar"></i></div>
+        </div>
+        <button
+          id="pip-toggle"
+          aria-label="운전자 시점 보조 화면"
+          aria-pressed="false"
+          aria-controls="pip"
+        >
+          PIP
+        </button>
+        <button id="mute" aria-label="효과음 음소거" aria-pressed="false">
+          소리 ON
+        </button>
+        <button id="pause" aria-label="일시정지">Ⅱ</button>
+      </div>
+    </div>
+    <div id="pip" hidden aria-hidden="true">
+      <span>BONNET CAM · V</span>
+    </div>
+    <div class="district">
+      <span class="live"></span> <span id="district-name">DOWNTOWN / 01</span>
+      <small id="district-tagline">자유롭게 달려. 오래 버텨.</small>
+    </div>
+    <div id="heat">
+      <span>WANTED</span><b>★ ★ ★</b
+      ><small id="arrest">경찰을 따돌리세요</small>
+      <div class="meter"><i id="arrest-bar"></i></div>
+    </div>
+    <div id="mission-hud">
+      <span id="mission-number">MISSION / 01</span
+      ><strong id="mission-progress">생존 0 / 60초</strong>
+    </div>
+    <div
+      id="overlay"
+      class="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="title"
+      aria-describedby="message"
+    >
+      <section id="panel">
+        <div class="wallet" id="wallet" aria-label="보유 크레딧">
+          <span>보유</span> <b id="wallet-credits">0</b> 크레딧
+        </div>
+        <div class="eyebrow" id="eyebrow">MISSION BRIEFING</div>
+        <h1 id="title">도시 탈출</h1>
+        <p id="message">60초간 생존한 뒤 최종 탈출 게이트를 통과하세요.</p>
+        <dl id="mission-details">
+          <div>
+            <dt>목표</dt>
+            <dd id="mission-goal">차량을 지키며 60초 생존</dd>
+          </div>
+          <div>
+            <dt>제한 시간</dt>
+            <dd id="mission-limit">없음</dd>
+          </div>
+          <div>
+            <dt>성공 보상</dt>
+            <dd id="mission-reward">500 크레딧</dd>
+          </div>
+          <div>
+            <dt>차량</dt>
+            <dd id="mission-vehicle">스타터 쿠페</dd>
+          </div>
+        </dl>
+        <dl id="result-details" hidden>
+          <div>
+            <dt>플레이 시간</dt>
+            <dd id="result-time">00:00</dd>
+          </div>
+          <div class="destroyed">
+            <dt>파괴한 물체</dt>
+            <dd><ul id="result-destroyed"></ul></dd>
+          </div>
+          <div>
+            <dt>획득 크레딧</dt>
+            <dd id="result-earned">0</dd>
+          </div>
+        </dl>
+        <div id="ad-actions" hidden>
+          <button id="ad-continue" class="ad" hidden>
+            광고 보고 이어하기 <small>1회</small>
+          </button>
+          <button id="ad-double" class="ad" hidden>
+            광고 보고 보상 2배
+          </button>
+          <small id="ad-note"></small>
+        </div>
+        <button id="start" class="primary">START →</button>
+        <div class="secondary-actions">
+          <button id="next-mission" class="secondary" hidden>다음 미션 →</button>
+          <button id="open-select" class="secondary">미션 선택</button>
+        </div>
+        <div class="instructions">
+          <span><kbd>←</kbd><kbd>→</kbd> 조향</span
+          ><span><kbd>P</kbd> 일시정지</span
+          ><span><kbd>V</kbd> 운전자 시점</span>
+        </div>
+        <small class="mobile-hint"
+          >모바일: 좌우 버튼을 누르고 있으면 조향합니다</small
+        >
+      </section>
+    </div>
+    <div
+      id="mission-select"
+      class="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="select-title"
+      hidden
+    >
+      <section>
+        <div class="eyebrow">CHOOSE A MISSION</div>
+        <h1 id="select-title">미션 선택</h1>
+        <ul id="mission-list"></ul>
+        <button id="close-select" class="secondary">← 돌아가기</button>
+      </section>
+    </div>
+    <div id="touch">
+      <div class="steering">
+        <button data-control="left" aria-label="왼쪽 조향">←</button
+        ><button data-control="right" aria-label="오른쪽 조향">→</button>
+      </div>
+    </div>
+    <div id="speed"><strong>0</strong><span>KM/H</span></div>
+    <div id="escape-guidance" hidden>
+      <span id="escape-arrow" aria-label="탈출 방향">↑</span>
+      <div>
+        <small id="escape-name">EXIT</small
+        ><strong id="escape-distance">0 m</strong>
+      </div>
+    </div>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <div id="arrest-countdown" hidden role="alert">
+      <small>체포까지</small>
+      <strong id="arrest-count">3</strong>
+      <span id="arrest-why">포위됐습니다 · 열린 쪽으로 빠져나가세요</span>
+      <div class="meter"><i id="arrest-count-bar"></i></div>
+    </div>
+    <style>
+      #loc-badge{position:fixed;left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom));z-index:5;pointer-events:none;padding:6px 12px;border-radius:6px;background:#232227d9;color:#ffe14a;font:800 12px/1.4 'Noto Sans KR',system-ui,sans-serif;text-align:center;white-space:nowrap}
+      #loc-badge .short{display:none}
+      @media (max-width:640px){#loc-badge{bottom:auto;top:calc(max(10px,env(safe-area-inset-top)) + 200px);font-size:11px;padding:4px 8px}#loc-badge .long{display:none}#loc-badge .short{display:inline}}
+    </style>
+    <div id="loc-badge"><span class="long">장소 미리보기 · 출발 직후 오른쪽 주유소, 왼쪽 농구장, 그 서쪽 분수 공원</span><span class="short">장소 미리보기 · 오른쪽 주유소 · 왼쪽 농구장·공원</span></div>
+    <script type="module" src="/src/preview/locations-main.js"></script>
+  </body>
+</html>
