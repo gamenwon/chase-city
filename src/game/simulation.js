@@ -12,7 +12,7 @@ import { createTally, recordCityEvent } from "./tally.js";
 import { createPin, updatePin } from "./pin.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
-import { createCity, updateCity, cityBudget } from "./city.js";
+import { createCity, updateCity, cityBudget, standingPostsNear, PROPS } from "./city.js";
 import {
   makePolice,
   steerPolice,
@@ -457,6 +457,24 @@ export class Simulation {
   // Player driving for one step: steering, speed, grip, moving with wall
   // contacts and the wall-slide recovery. (Also used by the pin-arrest
   // escape probe, on a copy.)
+  // A big tree or post the car is pressed against and did not knock over
+  // (it touched it in the last moments, the prop still stands, the car is
+  // barely moving and points at it). side: +1 if it is on the car's right.
+  postAhead(p) {
+    const c = p.propContact;
+    if (!this.city || !c || this.elapsed - c.at > 0.15) return null;
+    if (Math.hypot(p.vx, p.vz) > 3) return null; // stopped by it first
+    const fx = -Math.sin(p.angle), fz = -Math.cos(p.angle);
+    // Any standing post touching the nose (a lamp beside a tree can be the
+    // last thing touched while the tree is what blocks the way).
+    for (const q of standingPostsNear(this.city, p.x, p.z, 3)) {
+      const dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz);
+      if (d > CONFIG.radius + PROPS[q.kind].r + 0.6 || d < 1e-6) continue;
+      if ((dx * fx + dz * fz) / d < 0.3) continue; // not in front
+      return { prop: q, side: Math.sign(dx * -fz + dz * fx) || 1 };
+    }
+    return null;
+  }
   drivePlayer(dt, input) {
     const p = this.player;
     const steering = (input.left ? 1 : 0) - (input.right ? 1 : 0);
@@ -470,22 +488,40 @@ export class Simulation {
     const grip = 1 - Math.exp(-car.grip * dt);
     p.vx += (-Math.sin(p.angle) * p.speed - p.vx) * grip;
     p.vz += (-Math.cos(p.angle) * p.speed - p.vz) * grip;
-    if (this.move(p, dt)) {
-      p.wallContacts++;
+    // Big trees and posts stop the car too (city.js); against one the car
+    // looks for a way to slide off exactly as it does at a wall, instead
+    // of bouncing on the spot into it for ever.
+    const post = this.postAhead(p);
+    const esc = p.postEscape;
+    if (!post && esc) {
+      if (this.elapsed > esc.until || Math.abs(steering) > 0 ||
+          Math.abs(angleDelta(esc.heading, p.angle)) < 0.08) p.postEscape = null;
+      else {
+        p.angle += clamp(angleDelta(esc.heading, p.angle), -5 * dt, 5 * dt);
+        p.vx = -Math.sin(esc.heading) * 7;
+        p.vz = -Math.cos(esc.heading) * 7;
+      }
+    }
+    const hitWall = this.move(p, dt);
+    if (hitWall || post) {
+      if (hitWall) p.wallContacts++;
       if (p.lastObstacleKind === "barricade") {
         p.speed = Math.min(p.speed, 12);
         p.vx *= 0.55;
         p.vz *= 0.55;
       }
-      if (this.elapsed - (p.lastWallSound || -1) > 0.5) {
+      if (hitWall && this.elapsed - (p.lastWallSound || -1) > 0.5) {
         this.recordImpact(p, p.lastImpact, "player-wall");
         p.lastWallSound = this.elapsed;
       }
       // Preserve tangential movement. When head-on, smoothly choose a wall
       // tangent so auto-forward driving never locks the car against a facade.
-      if (Math.hypot(p.vx, p.vz) < 5) {
-        const desired =
-          p.escapeAngle ?? p.angle + ((p.steering < 0 ? -1 : 1) * Math.PI) / 2;
+      if (Math.hypot(p.vx, p.vz) < 5 || post) {
+        // Against a post: turn away from the side it is on (unless the
+        // player is steering).
+        const desired = post && !p.steering
+          ? p.angle + (post.side > 0 ? 1 : -1) * (Math.PI / 2)
+          : p.escapeAngle ?? p.angle + ((p.steering < 0 ? -1 : 1) * Math.PI) / 2;
         // At concave contacts, a single wall tangent can point into the next
         // facade. Find a genuinely clear short slide instead of oscillating.
         const directions = [
@@ -498,6 +534,12 @@ export class Simulation {
         // Only boxes within reach of the 4 m slide test can block it (same
         // answer as testing every solid, far cheaper).
         const slideSolids = this.nearSolids(p.x, p.z, 4 + CONFIG.radius);
+        const posts = this.city ? standingPostsNear(this.city, p.x, p.z, 4 + CONFIG.radius) : [];
+        // Police cars in the way block a slide too (one braced in a
+        // roadblock does not give way).
+        const cops = this.police.filter(
+          (c) => c.state === "active" && Math.hypot(c.x - p.x, c.z - p.z) < 4 + CONFIG.radius + CONFIG.policeRadius,
+        );
         const free = directions.filter((a) => {
           for (let step = 1; step <= 8; step++) {
             const pose = {
@@ -508,6 +550,16 @@ export class Simulation {
               !this.navigation.allowed(pose) ||
               slideSolids.some((b) =>
                 resolveBuilding({ ...pose }, b, CONFIG.radius - 0.01),
+              ) ||
+              posts.some(
+                (q) =>
+                  Math.hypot(q.x - pose.x, q.z - pose.z) <
+                  CONFIG.radius + PROPS[q.kind].r - 0.01,
+              ) ||
+              cops.some(
+                (c) =>
+                  Math.hypot(c.x - pose.x, c.z - pose.z) <
+                  CONFIG.radius + CONFIG.policeRadius - 0.3,
               )
             )
               return false;
@@ -523,7 +575,13 @@ export class Simulation {
           p.angle += clamp(angleDelta(heading, p.angle), -5 * dt, 5 * dt);
           p.vx = -Math.sin(heading) * 7;
           p.vz = -Math.cos(heading) * 7;
-        } else p.angle += clamp(angleDelta(desired, p.angle), -3 * dt, 3 * dt);
+          // Off a post, keep to that heading until the nose has turned
+          // (else auto-forward drives straight back into it next frame).
+          if (post) p.postEscape = { heading, until: this.elapsed + 0.7 };
+        } else if (!post)
+          p.angle += clamp(angleDelta(desired, p.angle), -3 * dt, 3 * dt);
+        // (Boxed in against a post with no way to slide: hold the heading
+        // rather than twitch left and right on the spot.)
       }
     }
   }

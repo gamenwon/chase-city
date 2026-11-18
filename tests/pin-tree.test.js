@@ -28,42 +28,49 @@ function play(s, seconds, steer = {}) {
   return countdown;
 }
 
-// Two scenes that were never arrested before the fix (screenshot 04).
+// Truly boxed in: tree in front, police wrecks on both sides and across
+// the back (screenshot 04 style). With wrecks only at the sides the car now
+// slides out backwards on its own, so those scenes are no longer traps.
 const TRAPPED = [
-  // wrecks on both sides, tree in front: was "stuck-on-obstacle"
-  { treeIndex: 0, heading: 4.7, sides: [-1, 1], seed: 11 },
-  // wrecks on both sides, live police across the rear 5 m out: was
-  // "not-held-by-police"
-  { treeIndex: 3, heading: 3.1, sides: [-1, 1], seed: 14 },
+  { treeIndex: 0, heading: 4.7, sides: [-1, 1], seed: 11, rear: true },
+  { treeIndex: 3, heading: 4.7, sides: [-1, 1], seed: 14, rear: true },
 ];
 for (const cfg of TRAPPED)
   test(`tree + police wrecks + police (${JSON.stringify(cfg)}): truly trapped, BUSTED after the 3 s countdown`, () => {
     // When the countdown starts, the full game cannot get the car out.
     const s = wreckScene(cfg);
-    let f = 0;
-    for (; f < 20 * 60 && !s.pin.trapped && !s.result; f++) {
+    // (The ordinary police-contact countdown may already be running when
+    // the pin check confirms the trap: count every countdown frame.)
+    const countdown = [];
+    for (let f = 0; f < 20 * 60 && !s.pin.trapped && !s.result; f++) {
       s.health = 100;
       s.update(1 / 60, {});
+      if (s.arrest > 0) countdown.push(s.arrest);
     }
     assert.ok(s.pin.trapped, `countdown started (${s.pin.reason})`);
     assert.ok(truth(s) < 4, "full game cannot get the car out");
-    const countdown = [s.arrest];
     countdown.push(...play(s, 6));
     assert.equal(s.result, "arrested", s.pin.reason);
     assert.ok(countdown.length >= CONFIG.arrestSeconds * 60 - 2, "the countdown was shown");
   });
 
-// Stuck against a tree with police round it, but a real way out exists:
-// never arrested (the player just has to steer).
+// Nose-in to a tree with police coming, but a real way out exists: never
+// arrested there; the car slides off the tree and drives away on its own.
 for (const cfg of [
   { treeIndex: 3, heading: 3.1, seed: 22 },
   { treeIndex: 3, heading: 4.7, seed: 22 },
 ])
-  test(`stuck on a tree, police near, but a way out exists (${JSON.stringify(cfg)}): no arrest`, () => {
+  test(`stuck on a tree, police near, but a way out exists (${JSON.stringify(cfg)}): no arrest at the tree`, () => {
     const s = liveScene(cfg);
-    play(s, 12);
+    const start = { x: s.player.x, z: s.player.z };
+    let away = 0;
+    for (let f = 0; f < 8 * 60 && !s.result; f++) {
+      s.health = 100;
+      s.update(1 / 60, {});
+      away = Math.max(away, Math.hypot(s.player.x - start.x, s.player.z - start.z));
+    }
     assert.equal(s.result, null, s.pin.reason);
-    assert.ok(truth(s) > 10, "the full game does get out");
+    assert.ok(away > 15, `the car got away from the tree (${away.toFixed(1)} m)`);
   });
 
 test("stuck on a big tree with no police at all: never arrested", () => {

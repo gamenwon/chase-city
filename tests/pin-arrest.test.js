@@ -100,16 +100,17 @@ for (const name of PINNED)
     const start = { x: s.player.x, z: s.player.z };
     // Full throttle (the car always drives forward), no steering: for the
     // first two seconds it goes nowhere while the throttle keeps pushing.
-    // `tried`: how far the car's own velocity would have taken it (what the
-    // speedometer shows, integrated); `moved`: where it actually got.
-    let tried = 0;
+    // (Since the trapping fix the car no longer slides into police cars
+    // that block every way, so it does not jitter against them: the
+    // throttle shows as engine speed, not as velocity.)
+    let throttle = 0;
     for (let f = 0; f < 120; f++) {
       s.update(1 / 60, {});
-      tried += Math.hypot(s.player.vx, s.player.vz) / 60;
+      throttle += s.player.speed / 120;
     }
     const moved = Math.hypot(s.player.x - start.x, s.player.z - start.z);
     assert.ok(moved < PIN.STILL_DISTANCE, `moved ${moved.toFixed(2)} m`);
-    assert.ok(tried >= 1 && moved < tried / 2, `tried ${tried.toFixed(2)} m, moved ${moved.toFixed(2)} m`);
+    assert.ok(throttle > 3, `throttle on (engine speed ${throttle.toFixed(1)})`);
     // Then: arrested, after a visible countdown that only runs up.
     const countdown = [];
     let last = 0;

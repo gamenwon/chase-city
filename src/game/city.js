@@ -300,6 +300,15 @@ function breakProp(sim, city, prop, car, impact) {
   });
 }
 
+// Standing props that stop a car (big trees, and posts below their break
+// speed): the player's movement treats them like walls when it looks for a
+// way to slide off (simulation.js drivePlayer).
+export function standingPostsNear(city, x, z, reach = 4) {
+  return nearbyProps(city, x, z, reach).filter(
+    (q) => q.state === "stand" && PROPS[q.kind].solid,
+  );
+}
+
 function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
   for (const prop of nearbyProps(city, car.x, car.z)) {
     const spec = PROPS[prop.kind];
@@ -328,6 +337,13 @@ function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
     const nx = dx / d,
       nz = dz / d;
     const impact = Math.max(0, car.vx * nx + car.vz * nz);
+    // A new contact (not the same car still pressed against the same prop
+    // a moment later): only a new one shakes the camera, hurts or sounds.
+    const fresh =
+      !isPlayer ||
+      car.propContact?.id !== prop.id ||
+      sim.elapsed - car.propContact.at > 0.35;
+    car.propContact = { id: prop.id, at: sim.elapsed };
     city.stats.propHits++;
     if (impact >= spec.breakAt * ram) {
       breakProp(sim, city, prop, car, impact);
@@ -355,6 +371,7 @@ function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
     prop.wobble = Math.min(1, prop.wobble + impact / 10);
     prop.dirty = true;
     city.moving.add(prop);
+    if (!fresh) continue;
     if (impact > 2)
       event(city, sim, {
         type: "prop",

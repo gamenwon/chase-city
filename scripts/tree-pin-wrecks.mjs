@@ -6,7 +6,7 @@ import { createLayout } from "../src/world/layout.js";
 import { random } from "./autoplay.js";
 import { escapeAttempts } from "./audit-arrests.js";
 const layout = createLayout();
-export function wreckScene({ treeIndex = 3, heading = 0, seed = 1, sides = [-1, 1], f = 0.4, gap = 0.15 } = {}) {
+export function wreckScene({ treeIndex = 3, heading = 0, seed = 1, sides = [-1, 1], f = 0.4, gap = 0.15, rear = false } = {}) {
   const s = new Simulation(layout, { width: 390, height: 664, random: random(seed), city: true,
     cityBudget: { profile: "test", level: 1, peds: 0, traffic: 0, parked: 0, range: 70 } });
   s.start();
@@ -21,6 +21,15 @@ export function wreckScene({ treeIndex = 3, heading = 0, seed = 1, sides = [-1, 
     Object.assign(c, { x: p.x + rx * side * (2.1 + gap) + fx * f, z: p.z + rz * side * (2.1 + gap) + fz * f, angle: heading, vx: 0, vz: 0 });
     s.explodePolice(c);
   });
+  // Optionally a wreck across the back too (fully boxed in).
+  if (rear) {
+    const c = s.police[sides.length];
+    Object.assign(c, { x: p.x - fx * 4.6, z: p.z - fz * 4.6, angle: heading + Math.PI / 2, vx: 0, vz: 0 });
+    s.explodePolice(c);
+    // Boxed in for real: the wrecks have settled (solid, as they are 0.9 s
+    // after the crash), so the car cannot slip out through them first.
+    for (const w of s.wrecks) w.solid = true;
+  }
   // The rest start 14-20 m away and chase.
   s.police.forEach((c, i) => {
     if (c.state !== "active") return;

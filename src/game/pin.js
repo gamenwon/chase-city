@@ -40,6 +40,7 @@ export const PIN = Object.freeze({
   TOUCH_SECONDS: 1, // touched a police car this recently...
   HOLD_GAP: 2, // ...or one stands this close to the car body (m)
   WRECK_GAP: 1, // a police wreck this close to the body helps hold it (m)
+  WRECK_SCENE: 14, // boxed in by wrecks: live police within this range hold it
   ESCAPE_DISTANCE: 2.5, // moved this far from the pin point = got away
   PROBE_EVERY: 0.5, // at most one probe started per this many seconds
   RECHECK_EVERY: 2, // a countdown re-checks at least this often
@@ -413,11 +414,23 @@ export function updatePin(sim, dt) {
   const still =
     sim.elapsed - oldest.time >= PIN.STILL_SECONDS - 1e-9 &&
     Math.hypot(p.x - oldest.x, p.z - oldest.z) < PIN.STILL_DISTANCE;
-  const near = still ? holdingPolice(sim) : [];
-  const wrecks = still && near.length ? wrecksHolding(sim) : [];
-  const held =
+  let near = still ? holdingPolice(sim) : [];
+  const wrecks = still ? wrecksHolding(sim) : [];
+  let held =
     sim.elapsed - (p.policeContactAt ?? -Infinity) <= PIN.TOUCH_SECONDS ||
     near.some((c) => bodyGap(p, c) < PIN.HOLD_GAP);
+  // Boxed in by police wrecks (two or more against the body) with live
+  // police on the scene: the wrecks themselves keep the police from
+  // touching the car, so they count as the hold. (The probe still has to
+  // confirm there is no way out, and that without the police and their
+  // wrecks the car would get away: a tree or wall alone never arrests.)
+  if (!held && wrecks.length >= PIN.MIN_NEAR) {
+    const onScene = nearPolice(sim, PIN.WRECK_SCENE);
+    if (onScene.length) {
+      near = onScene;
+      held = true;
+    }
+  }
   if (!still || !near.length || near.length + wrecks.length < PIN.MIN_NEAR || !held) {
     pin.candidateFor = 0;
     pin.probe = null;

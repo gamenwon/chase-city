@@ -112,8 +112,12 @@ test("reaction depends on impact speed and size: light props go at a touch, post
   // A hard hit brings the lamp and the tree down.
   assert.equal(at("lamp", 14).prop.state, "falling");
   assert.equal(at("tree", 16).prop.state, "falling");
-  // A post the car cannot break stops it like a wall.
-  assert.ok(Math.hypot(lamp.s.player.vx, lamp.s.player.vz) < 4);
+  // A post the car cannot break stops it like a wall: no speed left
+  // through it (the car may then slide off sideways, as at a wall).
+  const lp = lamp.s.player, lq = lamp.prop;
+  const tx = lq.x - lp.x, tz = lq.z - lp.z, td = Math.hypot(tx, tz);
+  assert.ok((lp.vx * tx + lp.vz * tz) / td < 1);
+  assert.ok(td > CONFIG.radius + PROPS.lamp.r - 0.05);
 });
 
 test("a big tree never breaks and damages the car that hits it", () => {
