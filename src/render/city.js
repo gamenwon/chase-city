@@ -1,73 +1,50 @@
 import * as THREE from "three";
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { civilianCarGeometry } from "./kit.js";
 
 // V1.9 city life renderer. Everything is instanced (one draw call per part
 // type), nothing casts shadows, and props are only re-uploaded when they
 // change, so it stays cheap on phones. Same flat low-poly style as the rest
 // of the city.
 
+// Approved art direction: dark poles with warm heads, faceted trees in
+// three greens, bright signs. Canopies stay inside the old footprints so no
+// prop reaches a wall or another prop.
 const PROP_PARTS = {
   trash: [
-    { geo: "cyl", size: [0.42, 0.85, 0.42], at: [0, 0.43, 0], color: 0x2f7d55 },
-    { geo: "box", size: [0.95, 0.12, 0.95], at: [0, 0.9, 0], color: 0x1c4a34 },
+    { geo: "box", size: [0.62, 0.8, 0.62], at: [0, 0.4, 0], color: 0x2f8a4c },
+    { geo: "box", size: [0.7, 0.1, 0.7], at: [0, 0.85, 0], color: 0x1f5a34 },
+    { geo: "box", size: [0.3, 0.04, 0.64], at: [0, 0.91, 0], color: 0x2a292e },
   ],
   sign: [
-    { geo: "box", size: [0.1, 2.4, 0.1], at: [0, 1.2, 0], color: 0x9aa7ab },
-    { geo: "box", size: [0.9, 0.9, 0.08], at: [0, 2.3, 0], color: 0x2364ce },
-    { geo: "box", size: [0.5, 0.12, 0.09], at: [0, 2.3, 0], color: 0xffffff },
+    { geo: "box", size: [0.1, 2.4, 0.1], at: [0, 1.2, 0], color: 0x55535c },
+    { geo: "box", size: [0.9, 0.9, 0.08], at: [0, 2.3, 0], color: 0x2457c5 },
+    { geo: "box", size: [0.5, 0.12, 0.09], at: [0, 2.3, 0], color: 0xf4f4f0 },
   ],
   lamp: [
-    { geo: "box", size: [0.14, 4.4, 0.14], at: [0, 2.2, 0], color: 0x233c48 },
-    { geo: "box", size: [0.4, 0.18, 1.4], at: [0, 4.4, 0.6], color: 0xffeac3 },
+    { geo: "box", size: [0.26, 0.4, 0.26], at: [0, 0.2, 0], color: 0x2a292e },
+    { geo: "box", size: [0.14, 4.4, 0.14], at: [0, 2.2, 0], color: 0x2a292e },
+    { geo: "box", size: [0.12, 0.1, 1.2], at: [0, 4.35, 0.55], color: 0x2a292e },
+    { geo: "box", size: [0.42, 0.16, 0.5], at: [0, 4.3, 1.1], color: 0xffe08a, emissive: 0xffc850 },
   ],
   tree: [
-    { geo: "box", size: [0.3, 1.6, 0.3], at: [0, 0.8, 0], color: 0x7f4926 },
-    { geo: "ico", size: [1.15, 1.4, 1.15], at: [0, 2.3, 0], color: 0x2f9d45 },
+    { geo: "box", size: [0.3, 1.6, 0.3], at: [0, 0.8, 0], color: 0x7a4a2a },
+    { geo: "ico", size: [1.15, 1.4, 1.15], at: [0, 2.3, 0], color: 0x3da04a },
+    { geo: "ico", size: [0.7, 0.8, 0.7], at: [0, 3.35, 0], color: 0x5cb23a },
   ],
   bigTree: [
-    { geo: "box", size: [0.55, 2.2, 0.55], at: [0, 1.1, 0], color: 0x6f3d1f },
-    { geo: "ico", size: [1.8, 2.25, 1.8], at: [0, 3.2, 0], color: 0x168a37 },
+    { geo: "box", size: [0.55, 2.2, 0.55], at: [0, 1.1, 0], color: 0x6b3f22 },
+    { geo: "ico", size: [1.8, 2.25, 1.8], at: [0, 3.2, 0], color: 0x2e8b3e },
+    { geo: "ico", size: [1.1, 1.3, 1.1], at: [0, 4.9, 0], color: 0x3da04a },
   ],
 };
 const SHIRTS = [0xe8473b, 0x2f6fd8, 0xf2b636, 0x3aa776, 0x9b59d0, 0xf07fb0];
 const SKIN = [0xf1c8a0, 0xc68a5a, 0x7d4f2f];
-const CAR_COLORS = [0x4f8fd8, 0xe8e2d4, 0xd8463b, 0x3d4a52, 0x58b56d, 0xe8a23a];
+const CAR_COLORS = [0x2457c5, 0xf4f4f0, 0xd62f2a, 0x3a3940, 0x2fa36b, 0xf5c01a, 0xf0781e, 0x1f6e6a];
 
 function geometry(kind) {
   if (kind === "cyl") return new THREE.CylinderGeometry(0.5, 0.45, 1, 8);
   if (kind === "ico") return new THREE.IcosahedronGeometry(1, 0);
   return new THREE.BoxGeometry(1, 1, 1);
-}
-
-// One merged civilian car (vertex colours: body white so the per-instance
-// colour paints it, windows/wheels dark).
-function carGeometry() {
-  const parts = [];
-  const add = (w, h, d, x, y, z, color) => {
-    const g = new THREE.BoxGeometry(w, h, d);
-    g.translate(x, y, z);
-    const c = new THREE.Color(color);
-    const colors = new Float32Array(g.attributes.position.count * 3);
-    for (let i = 0; i < colors.length; i += 3) {
-      colors[i] = c.r;
-      colors[i + 1] = c.g;
-      colors[i + 2] = c.b;
-    }
-    g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    parts.push(g);
-  };
-  add(1.8, 0.6, 3.5, 0, 0.62, 0, 0xffffff); // body
-  add(1.55, 0.55, 1.7, 0, 1.18, 0.2, 0x26404c); // cabin glass
-  add(1.6, 0.1, 1.55, 0, 1.5, 0.2, 0xffffff); // roof
-  for (const x of [-0.95, 0.95])
-    for (const z of [-1.1, 1.1]) add(0.28, 0.62, 0.62, x, 0.36, z, 0x17252b);
-  for (const x of [-0.55, 0.55]) {
-    add(0.4, 0.18, 0.06, x, 0.7, -1.76, 0xfff3c4);
-    add(0.4, 0.16, 0.06, x, 0.7, 1.76, 0xff3028);
-  }
-  const merged = mergeGeometries(parts);
-  parts.forEach((g) => g.dispose());
-  return merged;
 }
 
 export class CityLifeRenderer {
@@ -111,7 +88,7 @@ export class CityLifeRenderer {
         part,
         mesh: this.instanced(
           geometry(part.geo),
-          this.material(part.color),
+          this.material(part.color, part.emissive ? { emissive: part.emissive, emissiveIntensity: 0.6 } : {}),
           props.length,
         ),
       }));
@@ -152,7 +129,7 @@ export class CityLifeRenderer {
     };
     // Civilian cars (moving, parked, wrecked) in one draw call.
     this.carMesh = this.instanced(
-      carGeometry(),
+      civilianCarGeometry(),
       new THREE.MeshStandardMaterial({
         vertexColors: true,
         roughness: 0.6,

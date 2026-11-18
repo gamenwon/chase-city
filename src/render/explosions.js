@@ -66,7 +66,7 @@ export class ExplosionEffects {
     this.lastEvent = 0;
     this.chunkGeometry = new THREE.BoxGeometry(0.4, 0.35, 0.55);
     this.puffGeometry = new THREE.IcosahedronGeometry(1, 0);
-    this.chunkMaterials = [0x172c35, 0xf3f0df, 0xffb820].map(
+    this.chunkMaterials = [0x2a292e, 0xd62f2a, 0xff8a1a].map(
       (color) => new THREE.MeshStandardMaterial({ color }),
     );
     this.debris = new DebrisField(
@@ -86,19 +86,19 @@ export class ExplosionEffects {
     group.visible = false;
     this.scene.add(group);
     const flameMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffb218,
+      color: 0xff6a1a,
       transparent: true,
       depthWrite: false,
     });
     const smokeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x42505a,
+      color: 0x2a282d,
       transparent: true,
       depthWrite: false,
     });
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(1, 0.07, 4, 32),
       new THREE.MeshBasicMaterial({
-        color: 0xffef9d,
+        color: 0xffb347,
         transparent: true,
         opacity: 0.9,
         depthWrite: false,
@@ -110,7 +110,7 @@ export class ExplosionEffects {
     const core = new THREE.Mesh(
       this.puffGeometry,
       new THREE.MeshBasicMaterial({
-        color: 0xfff4ad,
+        color: 0xffe14a,
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,

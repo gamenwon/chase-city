@@ -13,6 +13,7 @@ import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
+import { K, buildingGroup, coloredGeometry, playerCar, policeCar, parkBench, bakeStatic } from "./kit.js";
 const palette = [0xf34b32, 0xffbf22, 0x087cba, 0x13a783, 0xf38617, 0x2364ce];
 export class CityRenderer {
   constructor(canvas, layout, options = {}) {
@@ -29,13 +30,16 @@ export class CityRenderer {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.7));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.setClearColor(theme.sky);
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(theme.sky, theme.fogNear, theme.fogFar);
     this.cameraRig = new ChaseCamera(innerWidth, innerHeight);
     this.camera = this.cameraRig.camera;
-    this.scene.add(new THREE.HemisphereLight(0xe9f9ff, 0x35513c, 2.2));
-    const sun = new THREE.DirectionalLight(0xffefd6, 3);
+    // Clear, warm sun with readable shadows; neutral fill.
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x5f5a58, 1.35));
+    const sun = new THREE.DirectionalLight(0xfff2e0, 3.3);
     sun.position.set(-45, 90, 35);
     sun.castShadow = true;
     sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
@@ -55,29 +59,50 @@ export class CityRenderer {
     for (let n = -90; n <= 90; n += 30) {
       this.box(n, 0.06, 0, 11, 0.08, 216, theme.road);
       this.box(0, 0.07, n, 216, 0.08, 11, theme.road);
-      for (let k = -104; k < 108; k += 6) {
-        if (Math.abs(k % 30) < 7 || Math.abs(k % 30) > 23) continue;
-        this.box(n, 0.13, k, 0.16, 0.025, 2.4, theme.marking);
-        this.box(k, 0.14, n, 2.4, 0.025, 0.16, theme.marking);
-      }
+      // Double yellow centre line on each stretch between junctions.
+      for (let m = -105; m < 105; m += 30)
+        for (const s of [-0.16, 0.16]) {
+          this.box(n + s, 0.13, m + 15, 0.12, 0.025, 16, theme.marking);
+          this.box(m + 15, 0.14, n + s, 16, 0.025, 0.12, theme.marking);
+        }
       for (let m = -90; m <= 90; m += 30) {
         for (let side of [-1, 1])
           for (let t = -3; t <= 3; t += 1.2) {
-            this.box(n + t, 0.15, m + side * 7, 0.65, 0.03, 2.5, 0xdce8dc);
-            this.box(n + side * 7, 0.15, m + t, 2.5, 0.03, 0.65, 0xdce8dc);
+            this.box(n + t, 0.15, m + side * 7, 0.65, 0.03, 2.5, K.lineWhite);
+            this.box(n + side * 7, 0.15, m + t, 2.5, 0.03, 0.65, K.lineWhite);
           }
       }
     }
     for (let x = -75; x <= 105; x += 30)
       for (let z = -75; z <= 105; z += 30)
-        if (x < 100 && z < 100) this.box(x, 0.15, z, 19, 0.4, 19, 0xc1bba2);
+        if (x < 100 && z < 100) {
+          // Pavement block: kerb ring, slabs with joints.
+          this.box(x, 0.15, z, 19, 0.4, 19, K.curb);
+          this.box(x, 0.16, z, 18.4, 0.4, 18.4, K.walk);
+          for (let o = -7.5; o <= 7.5; o += 1.5) {
+            this.box(x + o, 0.365, z, 0.05, 0.01, 18.4, K.walkJoint);
+            this.box(x, 0.366, z + o, 18.4, 0.01, 0.05, K.walkJoint);
+          }
+        }
     for (const p of layout.parks) {
-      this.box(p.x, 0.39, p.z, 18, 0.2, 18, 0x55ae22);
-      this.box(p.x, 0.51, p.z, 2, 0.05, 18, 0xe9cf8a);
-      this.box(p.x, 0.52, p.z, 18, 0.05, 2, 0xe9cf8a);
+      // Lawn with mowing stripes, edged paved paths crossing at a small
+      // square. Everything here is flat: cars can drive across a park.
+      this.box(p.x, 0.39, p.z, 18, 0.2, 18, K.grass);
+      for (let i = -2; i <= 2; i++) this.box(p.x, 0.495, p.z + i * 3.6, 18, 0.01, 1.8, K.grassStripe);
+      this.box(p.x, 0.51, p.z, 2.4, 0.04, 18, K.pave);
+      this.box(p.x, 0.515, p.z, 18, 0.04, 2.4, K.pave);
+      for (const s of [-1, 1]) {
+        this.box(p.x + s * 1.29, 0.51, p.z - 5.25, 0.18, 0.06, 7.5, K.paveEdge);
+        this.box(p.x + s * 1.29, 0.51, p.z + 5.25, 0.18, 0.06, 7.5, K.paveEdge);
+        this.box(p.x - 5.25, 0.51, p.z + s * 1.29, 7.5, 0.06, 0.18, K.paveEdge);
+        this.box(p.x + 5.25, 0.51, p.z + s * 1.29, 7.5, 0.06, 0.18, K.paveEdge);
+      }
+      this.box(p.x, 0.52, p.z, 3.0, 0.045, 3.0, 0xb8ab92);
       // V1.9: the park trees are big (solid) city props, drawn by
-      // CityLifeRenderer.
-      this.box(p.x + 4, 0.75, p.z, 3, 0.5, 0.8, 0xa84b1e);
+      // CityLifeRenderer. The bench is the park's fixed obstacle (3 x 0.8).
+      const bench = parkBench(this.scene, p.x + 4, p.z - 0.15, 0, 3.0);
+      bench.position.y = 0.49;
+      bakeStatic(bench);
     }
     this.buildings = [];
     const occlusionRay = new THREE.Raycaster();
@@ -85,38 +110,17 @@ export class CityRenderer {
       rayTarget = new THREE.Vector3(),
       rayDirection = new THREE.Vector3();
     for (const b of layout.buildings) {
-      const previous = new Set(this.scene.children);
-      this.box(b.x, b.h / 2 + 0.4, b.z, b.w, b.h, b.d, palette[b.color]);
-      this.box(b.x, b.h + 0.55, b.z, b.w + 0.35, 0.3, b.d + 0.35, 0xf8e6bd);
-      this.box(b.x + 1, b.h + 1, b.z, 2, 0.8, 2, 0x71878b);
-      for (let y = 2; y < b.h; y += 2.4)
-        for (let o = -2.2; o <= 2.2; o += 2.2) {
-          this.box(b.x + o, y, b.z + b.d / 2 + 0.025, 1, 0.95, 0.05, 0x173e50);
-          this.box(b.x - b.w / 2 - 0.025, y, b.z + o, 0.05, 0.95, 1, 0x173e50);
-        }
-      this.box(b.x, 1.3, b.z + b.d / 2 + 0.12, 2.4, 1.8, 0.2, 0x113a46);
-      this.box(b.x, 2.4, b.z + b.d / 2 + 0.7, 3.8, 0.2, 1.5, 0xffd021);
-      const pieces = this.scene.children.filter(
-        (child) => !previous.has(child),
-      );
-      const geometries = pieces.map((piece) => {
-        piece.updateMatrix();
-        const geometry = piece.geometry.clone().applyMatrix4(piece.matrix);
-        const color = piece.material.color;
-        const colors = new Float32Array(geometry.attributes.position.count * 3);
-        for (let i = 0; i < colors.length; i += 3) {
-          colors[i] = color.r;
-          colors[i + 1] = color.g;
-          colors[i + 2] = color.b;
-        }
-        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-        this.scene.remove(piece);
-        piece.geometry.dispose();
-        return geometry;
-      });
+      // Street-facing sides (away from the block centre) get shopfronts.
+      const cx = Math.round((b.x - 15) / 30) * 30 + 15,
+        cz = Math.round((b.z - 15) / 30) * 30 + 15;
+      const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
+      const group = buildingGroup(b, seed, [Math.sign(b.x - cx), Math.sign(b.z - cz)]);
+      const geometry = coloredGeometry(group, { dropDown: true, flush: b });
+      geometry.translate(b.x, 0, b.z);
+      const geometries = [geometry];
       const mesh = new THREE.Mesh(
         mergeGeometries(geometries),
-        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, flatShading: true }),
       );
       geometries.forEach((g) => g.dispose());
       mesh.castShadow = true;
@@ -129,6 +133,8 @@ export class CityRenderer {
         "windows",
         "door",
         "sign",
+        "balconies",
+        "bands",
       ];
       mesh.geometry.computeBoundingBox();
       this.scene.add(mesh);
@@ -153,9 +159,11 @@ export class CityRenderer {
     // V1.9: street trees, lamps, signs and bins are interactive city props
     // (src/game/city.js), drawn by CityLifeRenderer.
     this.batchStatic();
-    this.player = this.car(0xffcc08, false);
+    // Approved art kit: magenta muscle car, black-and-white interceptors.
+    this.player = playerCar();
+    this.scene.add(this.player);
     this.police = Array.from({ length: CONFIG.policeCount }, () =>
-      this.car(0xf2f0e5, true),
+      this.addPoliceCar(),
     );
     this.occlusion = new BuildingOcclusion(this.buildings);
     // Every explosion that goes off near the player shakes the camera; the
@@ -230,29 +238,12 @@ export class CityRenderer {
     crown.castShadow = true;
     this.scene.add(crown);
   }
-  car(color, cop) {
-    const g = new THREE.Group();
-    this.scene.add(g);
-    this.box(0, 0.65, 0, 1.8, 0.65, 3.4, color, g);
-    this.box(0, 1.15, 0.15, 1.5, 0.6, 1.6, cop ? 0x173749 : 0x1a4955, g);
-    this.box(0, 1.5, 0.2, 1.55, 0.12, 1.45, color, g);
-    g.userData.wheels = [];
-    for (const x of [-0.95, 0.95])
-      for (const z of [-1.05, 1.05])
-        g.userData.wheels.push(
-          this.box(x, 0.4, z, 0.3, 0.65, 0.65, 0x17252b, g),
-        );
-    for (const x of [-0.55, 0.55]) {
-      this.box(x, 0.7, -1.73, 0.45, 0.22, 0.06, 0xfff3c4, g);
-      this.box(x, 0.7, 1.73, 0.45, 0.2, 0.06, 0xff3028, g);
-    }
-    if (cop) {
-      g.userData.red = this.box(-0.4, 1.65, 0.2, 0.65, 0.22, 0.4, 0xff263c, g);
-      g.userData.blue = this.box(0.4, 1.65, 0.2, 0.65, 0.22, 0.4, 0x1689ff, g);
-      this.box(0, 0.72, -0.95, 1.82, 0.15, 0.65, 0x132a36, g);
-    } else this.box(0, 1, 1.45, 2, 0.15, 0.4, 0x172d36, g);
-    return g;
+  addPoliceCar() {
+    const car = policeCar();
+    this.scene.add(car);
+    return car;
   }
+
   resize() {
     const w = innerWidth,
       h = innerHeight;
@@ -273,7 +264,7 @@ export class CityRenderer {
       sim.hitCooldown > 0.4 && Math.floor(sim.elapsed * 15) % 2
     );
     while (this.police.length < sim.police.length)
-      this.police.push(this.car(0xf2f0e5, true));
+      this.police.push(this.addPoliceCar());
     for (let i = sim.police.length; i < this.police.length; i++)
       this.police[i].visible = false;
     sim.police.forEach((c, i) => {

@@ -15,13 +15,14 @@
 import { createLayout } from "./layout.js";
 
 const DOWNTOWN_THEME = Object.freeze({
-  sky: 0x83c8d3,
-  fogNear: 105,
-  fogFar: 240,
-  grass: 0x116748,
-  pavement: 0x38535a,
-  road: 0x23373e,
-  marking: 0xf8eab6,
+  // Approved art direction: vivid colours, dark asphalt (art-district.html).
+  sky: 0xa9c0d6,
+  fogNear: 110,
+  fogFar: 250,
+  grass: 0x43a047,
+  pavement: 0xbdbab3,
+  road: 0x37363b,
+  marking: 0xf2b705,
 });
 
 export const MAPS = Object.freeze({

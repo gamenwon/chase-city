@@ -1451,14 +1451,48 @@ function district(root) {
     }
   };
   const hedge = (x, z, w, d) => B(P(x, z), w, 0.9, d, 0x2e7d3a, 0, 0, 0);
+  // Symmetric plaza layout round the fountain (an 8-fold plan):
+  // - four flower beds on the diagonals, all at the same radius, laid
+  //   along the circle (tangent), clear of the fountain step and the edge;
+  // - a pair of benches flanking each of the four path entrances, at the
+  //   same radius and offset, facing the fountain;
+  // - a bin beside each bed on the diagonal; lamps flank each path.
+  const flowerBedAt = (x, z, w, d, ry) => {
+    const fb = P(x, z, ry);
+    for (const s of [-1, 1]) {
+      B(fb, w, 0.35, 0.15, 0x8a5a32, 0, 0, s * (d / 2 - 0.075));
+      B(fb, 0.15, 0.35, d - 0.3, 0x8a5a32, s * (w / 2 - 0.075), 0, 0);
+    }
+    B(fb, w - 0.3, 0.3, d - 0.3, 0x5a3a22, 0, 0, 0);
+    const cols = [C.red, C.yellow, 0xe0367a, C.orange];
+    const nx = Math.round((w - 0.5) / 0.4), nz = Math.round((d - 0.5) / 0.4);
+    for (let i = 0; i < nx; i++)
+      for (let j = 0; j < nz; j++) {
+        const fx = -w / 2 + 0.45 + i * ((w - 0.9) / Math.max(1, nx - 1));
+        const fz = -d / 2 + 0.45 + j * ((d - 0.9) / Math.max(1, nz - 1));
+        B(fb, 0.04, 0.25, 0.04, C.leaf[0], fx, 0.3, fz);
+        add(fb, new THREE.OctahedronGeometry(0.13, 0), cols[(i + j) % cols.length], fx, 0.62, fz);
+      }
+  };
+  const BR = 7.4; // bed radius
   for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    flowerBed(PX + dx * 7.0, PZ + dz * 7.0, 3.2, 1.6);
-    parkBench(PX + dx * 3.6 + dx * 3.1, PZ + dz * 0.0 + dz * 3.4, dx > 0 ? -Math.PI / 2 : Math.PI / 2);
+    const a = Math.atan2(dz, dx);
+    // Long side along the circle: rotate so local x is tangent.
+    flowerBedAt(PX + Math.cos(a) * BR, PZ + Math.sin(a) * BR, 3.0, 1.2, -a - Math.PI / 2);
+    parkBin(PX + Math.cos(a) * 9.0, PZ + Math.sin(a) * 9.0);
   }
-  parkBench(PX, PZ - 7.6, 0);
-  parkBench(PX, PZ + 7.6, Math.PI);
-  for (const [x, z] of [[PX - 3.0, PZ - 12], [PX + 3.0, PZ + 12], [PX - 12, PZ + 3.0], [PX + 12, PZ - 3.0]]) parkLamp(x, z);
-  for (const [x, z] of [[PX + 2.3, PZ - 8.4], [PX - 2.3, PZ + 8.4]]) parkBin(x, z);
+  const SR = 8.0, SO = 2.7; // bench radius and offset from the path axis
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2; // path directions: +x, +z, -x, -z
+    const ux = Math.cos(a), uz = Math.sin(a);
+    for (const s of [-1, 1]) {
+      const x = PX + ux * SR - uz * s * SO,
+        z = PZ + uz * SR + ux * s * SO;
+      // Face the fountain: the bench's back (+z local) points outward.
+      parkBench(x, z, Math.atan2(ux, uz));
+    }
+  }
+  for (const [x, z] of [[PX - 3.0, PZ - 12], [PX + 3.0, PZ - 12], [PX - 3.0, PZ + 12], [PX + 3.0, PZ + 12], [PX - 12, PZ - 3.0], [PX - 12, PZ + 3.0], [PX + 12, PZ - 3.0], [PX + 12, PZ + 3.0]]) parkLamp(x, z);
   // Drinking fountain.
   const drink = P(PX + 3.4, PZ - 16);
   B(drink, 0.5, 0.9, 0.5, C.stone, 0, 0, 0);
