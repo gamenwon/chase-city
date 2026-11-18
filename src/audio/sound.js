@@ -9,13 +9,18 @@ export function soundTargets(sim) {
       .filter((c) => c.state === "active")
       .map((c) => Math.hypot(c.x - p.x, c.z - p.z)),
   );
+  // Tire screech: only for a real, held turn at speed (a tap of the
+  // button or a slow turn stays quiet); louder and higher with more speed
+  // and a harder turn or slide.
+  const turnLoad = (Math.abs(p.turn || 0) * speed) / 24 + lateral * 0.2;
+  const screech =
+    clamp((turnLoad - 0.75) / 0.9, 0, 1) * clamp((speed - 9) / 7, 0, 1);
   return {
     engineHz: 45 + speed * 6,
     engineGain: 0.012 + clamp(speed / 24, 0, 1) * 0.035,
     sirenGain: 0.06 * Math.pow(clamp(1 - nearest / 75, 0, 1), 2),
-    skidGain:
-      0.045 *
-      clamp(((Math.abs(p.turn) * speed) / 24 + lateral * 0.2 - 0.8) / 2, 0, 1),
+    skidGain: 0.055 * screech,
+    skidHz: 980 + speed * 14 + clamp(turnLoad, 0, 2.5) * 90,
   };
 }
 // All sounds are synthesized locally. No samples, network assets or autoplay.
@@ -81,30 +86,84 @@ export class SoundSystem {
       data[i] = n / 2147483648 - 1;
     }
     this.loops = {};
-    for (const name of ["engine", "siren", "skid"]) {
+    for (const name of ["engine", "siren"]) {
       const gain = c.createGain();
       gain.gain.value = 0;
       gain.connect(this.compressor);
       const filter = c.createBiquadFilter();
-      filter.type = name === "skid" ? "bandpass" : "lowpass";
-      filter.frequency.value =
-        name === "skid" ? 1700 : name === "engine" ? 500 : 1800;
+      filter.type = "lowpass";
+      filter.frequency.value = name === "engine" ? 500 : 1800;
       filter.Q.value = 0.7;
       filter.connect(gain);
-      let source;
-      if (name === "skid") {
-        source = c.createBufferSource();
-        source.buffer = this.noise;
-        source.loop = true;
-      } else {
-        source = c.createOscillator();
-        source.type = name === "engine" ? "sawtooth" : "sine";
-        source.frequency.value = name === "engine" ? 45 : 650;
-      }
+      const source = c.createOscillator();
+      source.type = name === "engine" ? "sawtooth" : "sine";
+      source.frequency.value = name === "engine" ? 45 : 650;
       source.connect(filter);
       source.start();
       this.loops[name] = { source, gain, filter };
     }
+    this.loops.skid = this.buildScreech();
+  }
+  // Tire screech ("SKREEEE"): one sustained voice, never stacked. A pair of
+  // slightly detuned saw tones through a narrow band-pass gives the tonal
+  // squeal; a fast irregular tremolo gives the rubber judder; band-passed
+  // noise adds the friction hiss. update() only moves its level and pitch.
+  buildScreech() {
+    const c = this.context;
+    const gain = c.createGain();
+    gain.gain.value = 0;
+    gain.connect(this.compressor);
+    const judder = c.createGain(); // tremolo stage
+    judder.gain.value = 0.75;
+    judder.connect(gain);
+    const tone = c.createBiquadFilter();
+    tone.type = "bandpass";
+    tone.frequency.value = 1300;
+    tone.Q.value = 7;
+    tone.connect(judder);
+    const hiss = c.createBiquadFilter();
+    hiss.type = "bandpass";
+    hiss.frequency.value = 2600;
+    hiss.Q.value = 1.4;
+    const hissGain = c.createGain();
+    hissGain.gain.value = 0.35;
+    hiss.connect(hissGain);
+    hissGain.connect(judder);
+    const a = c.createOscillator(),
+      b = c.createOscillator();
+    a.type = b.type = "sawtooth";
+    a.frequency.value = 1000;
+    b.frequency.value = 1000;
+    b.detune.value = 23;
+    const mix = c.createGain();
+    mix.gain.value = 0.5;
+    a.connect(mix);
+    b.connect(mix);
+    mix.connect(tone);
+    const noise = c.createBufferSource();
+    noise.buffer = this.noise;
+    noise.loop = true;
+    noise.connect(hiss);
+    // Vibrato (7 Hz, +-30 cents) and judder (27 + 41 Hz, uneven).
+    const vib = c.createOscillator(),
+      vibDepth = c.createGain();
+    vib.frequency.value = 7;
+    vibDepth.gain.value = 30;
+    vib.connect(vibDepth);
+    vibDepth.connect(a.detune);
+    vibDepth.connect(b.detune);
+    const j1 = c.createOscillator(),
+      j2 = c.createOscillator(),
+      jDepth = c.createGain();
+    j1.type = "square";
+    j1.frequency.value = 27;
+    j2.frequency.value = 41;
+    jDepth.gain.value = 0.22;
+    j1.connect(jDepth);
+    j2.connect(jDepth);
+    jDepth.connect(judder.gain);
+    for (const s of [a, b, noise, vib, j1, j2]) s.start();
+    return { source: a, second: b, gain, filter: tone, level: 0 };
   }
   parameter(param, value, time = 0.04) {
     param.setTargetAtTime(value, this.context.currentTime, time);
@@ -140,6 +199,7 @@ export class SoundSystem {
     }
   }
   voice(kind, strength = 1, frequency = 200, delay = 0) {
+    if (kind === "bigExplosion") return this.bigExplosion(strength, delay);
     if (
       !this.context ||
       this.muted ||
@@ -217,6 +277,96 @@ export class SoundSystem {
     source.start(start);
     source.stop(start + duration + 0.03);
   }
+  // Major explosion: a sub-bass drop (thump), a sharp crack, a noisy body
+  // that darkens, and a low rumble tail (~2.5 s). One at a time: another
+  // within 0.35 s is merged into it. Levels sit under the compressor, so
+  // there is no clipping; loudness order: impact < car < major.
+  bigExplosion(strength = 1, delay = 0) {
+    if (!this.context || this.muted || !this.available || this.context.state !== "running") return;
+    const c = this.context,
+      start = c.currentTime + delay;
+    if (Math.abs(start - (this.cooldowns.bigExplosion ?? -100)) < 0.35) return;
+    if (this.voices.size >= 6) return;
+    this.cooldowns.bigExplosion = start;
+    const k = clamp(strength, 0.15, 1);
+    const nodes = [];
+    const out = c.createGain();
+    out.gain.value = k;
+    out.connect(this.compressor);
+    nodes.push(out);
+    const env = (g, peak, attack, decay, at = start) => {
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(peak, at + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + attack + decay);
+    };
+    // Thump: sine sweeping 75 -> 30 Hz.
+    const sub = c.createOscillator(),
+      subGain = c.createGain();
+    sub.frequency.setValueAtTime(75, start);
+    sub.frequency.exponentialRampToValueAtTime(30, start + 0.9);
+    env(subGain, 0.42, 0.006, 1.0);
+    sub.connect(subGain);
+    subGain.connect(out);
+    // Crack: high-passed noise, 70 ms.
+    const crack = c.createBufferSource(),
+      hp = c.createBiquadFilter(),
+      crackGain = c.createGain();
+    crack.buffer = this.noise;
+    hp.type = "highpass";
+    hp.frequency.value = 1400;
+    env(crackGain, 0.2, 0.002, 0.07);
+    crack.connect(hp);
+    hp.connect(crackGain);
+    crackGain.connect(out);
+    // Body: low-passed noise closing from 2 kHz to 140 Hz over 1.3 s.
+    const body = c.createBufferSource(),
+      lp = c.createBiquadFilter(),
+      bodyGain = c.createGain();
+    body.buffer = this.noise;
+    body.playbackRate.value = 0.7;
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(2000, start);
+    lp.frequency.exponentialRampToValueAtTime(140, start + 1.3);
+    env(bodyGain, 0.34, 0.006, 1.3);
+    body.connect(lp);
+    lp.connect(bodyGain);
+    bodyGain.connect(out);
+    // Rumble tail: very low noise swelling in, dying over ~2.5 s.
+    const tail = c.createBufferSource(),
+      tl = c.createBiquadFilter(),
+      tailGain = c.createGain();
+    tail.buffer = this.noise;
+    tail.loop = true;
+    tail.playbackRate.value = 0.35;
+    tl.type = "lowpass";
+    tl.frequency.value = 140;
+    // Swells in, holds, then dies away slowly (time constant 0.55 s).
+    tailGain.gain.setValueAtTime(0, start);
+    tailGain.gain.linearRampToValueAtTime(0.75, start + 0.25);
+    tailGain.gain.setTargetAtTime(0, start + 0.45, 0.55);
+    tail.connect(tl);
+    tl.connect(tailGain);
+    tailGain.connect(out);
+    nodes.push(subGain, hp, crackGain, lp, bodyGain, tl, tailGain);
+    const sources = [sub, crack, body, tail];
+    const voice = {
+      source: tail,
+      dispose: () => {
+        for (const n of [...sources, ...nodes])
+          try {
+            n.disconnect();
+          } catch {}
+        this.voices.delete(voice);
+      },
+    };
+    tail.onended = voice.dispose;
+    this.voices.add(voice);
+    for (const s of sources) s.start(start);
+    sub.stop(start + 1.1);
+    crack.stop(start + 0.1);
+    body.stop(start + 1.35);
+    tail.stop(start + 2.7);
+  }
   finish(success) {
     this.setRunning(false);
     [...(success ? [523, 659, 784] : [220, 164, 110])].forEach((hz, i) =>
@@ -235,14 +385,23 @@ export class SoundSystem {
         700 + 240 * Math.sin(this.context.currentTime * 5.5),
         0.025,
       );
-      for (const name of ["engine", "siren", "skid"])
+      for (const name of ["engine", "siren"])
         this.parameter(this.loops[name].gain.gain, targets[`${name}Gain`]);
+      // Screech: fades in fast (0.06 s), out slowly (0.22 s); pitch follows.
+      const skid = this.loops.skid;
+      this.parameter(skid.gain.gain, targets.skidGain, targets.skidGain > skid.level ? 0.06 : 0.22);
+      skid.level = targets.skidGain;
+      this.parameter(skid.source.frequency, targets.skidHz, 0.08);
+      this.parameter(skid.second.frequency, targets.skidHz, 0.08);
+      this.parameter(skid.filter.frequency, targets.skidHz * 1.25, 0.08);
       for (const event of sim.events)
         if (event.id > this.lastExplosion) {
           this.lastExplosion = event.id;
           if (event.type === "explosion")
             this.voice(
-              "explosion",
+              // A gas station or a structure going up is a bigger sound
+              // than a car (a layered blast, see bigExplosion).
+              event.cause === "gas" || event.major ? "bigExplosion" : "explosion",
               1 -
                 Math.min(
                   0.8,
