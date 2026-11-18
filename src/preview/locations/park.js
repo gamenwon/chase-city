@@ -6,7 +6,7 @@
 // (tiers toppled, basin wall gone on the impact side, a leaking pipe and a
 // puddle) stays until restart.
 import * as THREE from "three";
-import { C, B, G, cyl, ico, bake, tree, octRing, octDisc, pieceMesh } from "./parts.js";
+import { C, B, G, cyl, ico, bake, tree, octRing, octDisc, pieceMesh, mergeGeometries } from "./parts.js";
 import { PARK } from "./layout.js";
 
 const TOP = 0.4;
@@ -31,24 +31,44 @@ function fountainTiers(g) {
   ico(g, 0.17, C.stone, 0, 2.86, 0);
 }
 function fountainBroken(g) {
-  fountainBase(g, true);
-  // Pedestal snapped low; lower bowl tipped against the basin; column and
-  // top bowl fallen out through the gap onto the plaza; rubble.
-  cyl(g, 0.42, 0.5, 0.55, C.stone, 0, 0.27, 0, 8);
-  const top = cyl(g, 0.42, 0.42, 0.06, 0x8f8778, 0, 0.82, 0, 8);
-  top.rotation.z = 0.2;
-  const bowl = cyl(g, 1.1, 0.5, 0.32, 0xd9cdb8, -0.6, 0.35, -0.9, 8);
-  bowl.rotation.set(-0.5, 0, 0.35);
-  const col = G(g, 0.3, 0.12, 3.0, 0.3);
-  const c1 = cyl(col, 0.22, 0.26, 0.75, C.stone, 0, 0, 0, 8);
-  c1.rotation.x = Math.PI / 2;
-  c1.position.set(0, 0.22, 0.4);
-  const tb = cyl(col, 0.62, 0.24, 0.24, 0xd9cdb8, 0.2, 0.0, 1.4, 8);
-  tb.rotation.x = 1.3;
-  for (let i = 0; i < 9; i++) {
-    const a = -0.9 + i * 0.22;
-    const r = B(g, 0.35 + (i % 3) * 0.15, 0.2 + (i % 2) * 0.12, 0.3, i % 2 ? 0xd9cdb8 : C.stone, Math.sin(a) * (2.6 + (i % 3) * 0.5), 0, Math.cos(a) * (2.6 + (i % 3) * 0.5), i);
-    r.rotation.z = (i % 3) * 0.3;
+  // Blown apart toward +z (the runtime turns it to face the car): three
+  // basin segments gone, the two beside the gap cracked and leaning out,
+  // the pedestal snapped, the lower bowl split in two, column and top bowl
+  // thrown out onto the plaza, a broken pipe sticking up, rubble.
+  octDisc(g, 2.75 / cos8, 0.22, C.stone, 0, 0, 0);
+  octRing(g, 2.35, 0.55, 0.3, 0xd9cdb8, 0.22, [0, 1, 7, 2, 6]);
+  octRing(g, 2.43, 0.1, 0.46, C.stone, 0.77, [0, 1, 7, 2, 6]);
+  octDisc(g, 2.05 / cos8, 0.05, 0x2f6f8c, 0, 0.22, 0);
+  const side = 2 * 2.35 * Math.tan(Math.PI / 8);
+  for (const i of [2, 6]) {
+    // Cracked segments beside the gap: lower than the rest, tilted out.
+    const a = (i * Math.PI) / 4;
+    const s = B(g, side * 0.8, 0.42, 0.3, 0xd9cdb8, Math.sin(a) * 2.25, 0.2, Math.cos(a) * 2.25, a);
+    s.rotation.x = 0.28;
+  }
+  // Pipe and the snapped pedestal stump.
+  cyl(g, 0.42, 0.5, 0.45, C.stone, 0, 0.27, 0, 8);
+  const cap = cyl(g, 0.4, 0.42, 0.08, 0x8f8778, 0.05, 0.72, 0, 8);
+  cap.rotation.z = 0.35;
+  cyl(g, 0.07, 0.07, 0.8, C.metal, 0.05, 0.6, -0.05, 6);
+  // Lower bowl split: one half tipped in the basin, one out on the plaza.
+  const h1 = cyl(g, 1.1, 0.5, 0.32, 0xd9cdb8, -0.7, 0.3, -0.5, 8);
+  h1.rotation.set(-0.6, 0.4, 0.5);
+  h1.scale.x = 0.55;
+  const h2 = cyl(g, 1.1, 0.5, 0.32, 0xd9cdb8, 1.4, 0.05, 3.4, 8);
+  h2.rotation.set(1.35, 0.9, 0.2);
+  h2.scale.x = 0.55;
+  // Column and top bowl thrown out.
+  const c1 = cyl(g, 0.22, 0.26, 0.75, C.stone, -0.5, 0.25, 3.8, 8);
+  c1.rotation.set(Math.PI / 2, 0.6, 0);
+  const tb = cyl(g, 0.62, 0.24, 0.24, 0xd9cdb8, -1.6, 0.3, 4.4, 8);
+  tb.rotation.set(1.2, 0.3, 0.4);
+  ico(g, 0.17, C.stone, 0.9, 0.17, 4.7);
+  // Rubble fan through the gap and round the basin.
+  for (let i = 0; i < 16; i++) {
+    const a = -1.1 + i * 0.15, r = 2.6 + (i % 4) * 0.55;
+    const piece = B(g, 0.3 + (i % 3) * 0.18, 0.18 + (i % 2) * 0.12, 0.28 + (i % 2) * 0.1, i % 2 ? 0xd9cdb8 : C.stone, Math.sin(a) * r, 0, Math.cos(a) * r, i * 0.7);
+    piece.rotation.z = (i % 3) * 0.25;
   }
 }
 function bed(g) {
@@ -122,9 +142,11 @@ export function buildPark(scene) {
     water.add(m);
     return m;
   };
-  disc(2.04, 0.62);
-  disc(0.98, 1.66);
-  disc(0.52, 2.66);
+  // Basin and bowl surfaces as one mesh, falling sheets as one mesh.
+  const discs = [disc(2.04, 0.62), disc(0.98, 1.66), disc(0.52, 2.66)];
+  const discGeo = mergeGeometries(discs.map((m) => m.geometry.clone().translate(0, m.position.y, 0)));
+  discs.forEach((m) => water.remove(m));
+  water.add(new THREE.Mesh(discGeo, waterMat));
   const sheets = [];
   for (let i = 0; i < 8; i++) {
     const a = (i * Math.PI) / 4 + Math.PI / 8;
@@ -138,6 +160,17 @@ export function buildPark(scene) {
       sheets.push(m);
     }
   }
+  const sheetGeo = mergeGeometries(
+    sheets.map((m) => {
+      m.updateMatrix();
+      return m.geometry.clone().applyMatrix4(m.matrix);
+    }),
+  );
+  sheets.forEach((m) => water.remove(m));
+  const sheetMesh = new THREE.Mesh(sheetGeo, sheetMat);
+  water.add(sheetMesh);
+  sheets.length = 0;
+  sheets.push(sheetMesh);
   const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.9, 6), sheetMat);
   jet.position.y = 3.3;
   water.add(jet);
@@ -146,12 +179,28 @@ export function buildPark(scene) {
   const spill = new THREE.Group();
   spill.position.set(0, TOP, 0);
   spill.visible = false;
-  const low = disc.call(null, 2.04, 0.36);
+  const low = disc.call(null, 2.04, 0.3);
   spill.add(low);
-  const puddle = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.02, 9), waterMat);
-  puddle.scale.set(1.8, 1, 1.4);
-  puddle.position.set(0, 0.06, 3.2);
-  spill.add(puddle);
+  // Puddles: a big one spreading out through the gap, two smaller ones;
+  // they grow to full size after the burst (runtime).
+  const puddles = [];
+  for (const [x, z, sx, sz] of [[0, 3.6, 2.6, 2.0], [-2.6, 2.4, 1.0, 0.8], [2.4, 2.8, 1.1, 0.9]]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.02, 9), waterMat);
+    m.position.set(x, 0.07, z);
+    m.userData.full = new THREE.Vector3(sx, 1, sz);
+    spill.add(m);
+    puddles.push(m);
+  }
+  // Water pouring over the broken rim into the gap.
+  const pour = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 0.04), sheetMat);
+  pour.position.set(0, 0.32, 2.2);
+  pour.rotation.x = -0.5;
+  spill.add(pour);
+  // The broken pipe keeps spouting (a steady jet, 3.5 m).
+  const leakJet = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, 3.5, 6), sheetMat);
+  leakJet.geometry.translate(0, 1.75, 0);
+  leakJet.position.set(0.05, 0.95, -0.05);
+  spill.add(leakJet);
   root.add(spill);
 
   const w = (x, z) => ({ x: PARK.x + x, z: PARK.z + z });
@@ -176,7 +225,7 @@ export function buildPark(scene) {
   }
   return {
     root,
-    fountain: { x: PARK.x, z: PARK.z, intact, broken, water, sheets, jet, spill, root, state: "intact" },
+    fountain: { x: PARK.x, z: PARK.z, intact, broken, water, sheets, jet, spill, puddles, pour, leakJet, root, state: "intact" },
     benches,
     lamps,
     bins,

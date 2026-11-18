@@ -78,7 +78,9 @@ async function stage(page, name) {
   }, name);
 }
 
-for (const name of ["pinned-1100-roads-5", "pinned-390-roads-9"])
+// pinned-1100-roads-5 is not used: the full game gets out by knocking the
+// lamp beside it over (see tests/pin-arrest.test.js).
+for (const name of ["pinned-1100-evasive-11", "pinned-390-roads-9"])
   test(`boxed in by police (${name}): throttle on but no movement -> 3-2-1 countdown -> BUSTED`, async ({
     page,
   }, info) => {

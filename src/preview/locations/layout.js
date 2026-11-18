@@ -12,9 +12,9 @@
 // closed by debris.
 import { createLayout } from "../../world/layout.js";
 
-export const GAS = { x: -45, z: -45 };
-export const COURT = { x: 45, z: 45 };
-export const PARK = { x: 15, z: -45 };
+import { GAS, COURT, PARK } from "./layout-consts.js";
+import { parkPlan, yardPlan } from "./plan.js";
+export { GAS, COURT, PARK };
 
 // Gas station plan (block-local metres; x east, z south).
 export const GAS_PLAN = {
@@ -50,5 +50,10 @@ export function previewLayout() {
   solid(PARK, 0, 0, 2 * f, f * 0.9, "fountain");
   solid(PARK, 0, 0, f * 0.9, 2 * f, "fountain");
   for (const x of [-6.8, 6.8]) for (const z of [-6.8, 6.8]) solid(PARK, x, z, 0.6, 0.6, "tree");
-  return { buildings, parks, obstacles, locations: { gas: GAS, court: COURT, park: PARK } };
+  // Park features and outer-ring yards: only their small solid pieces
+  // (statue plinths, site cabins, containers) are added to the layout.
+  const features = parkPlan(parks);
+  const yards = yardPlan();
+  for (const f of [...features, ...yards]) obstacles.push(...f.solids);
+  return { buildings, parks, obstacles, features, yards, locations: { gas: GAS, court: COURT, park: PARK } };
 }
