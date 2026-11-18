@@ -13,6 +13,7 @@
 // the city edge; the road side stays open, so a car can always drive in,
 // across and out, and the police can follow.
 import { PARK } from "./layout-consts.js";
+import { cafeClusters } from "./sites.js";
 
 const hash = (x, z) => {
   let h = Math.imul(Math.round(x) * 73856093 ^ Math.round(z) * 19349663, 0x5bd1e995);
@@ -26,41 +27,41 @@ export function parkPlan(parks) {
   return parks
     .filter((p) => !(p.x === PARK.x && p.z === PARK.z))
     .map((p, i) => {
-      // Every theme is used (round the list in park order, from a fixed
-      // start), so no two neighbouring parks in the list look the same.
+      // Every theme is used (round the list in park order), mirrored per
+      // park, and each gets its own café seating, so no two look alike.
       const theme = THEMES[(i + 1) % 4];
-      const flip = hash(p.z, p.x) < 0.5 ? 1 : -1; // mirror the layout per park
+      const flip = hash(p.z, p.x) < 0.5 ? 1 : -1;
       const at = (x, z) => ({ x: p.x + x * flip, z: p.z + z });
-      const f = { park: p, theme, items: [], pushers: [], solids: [] };
+      const f = { park: p, theme, items: [], flyers: [], vehicles: [], solids: [] };
       // Park lawns (scene.js) are 0.49 m high.
-      const add = (kind, x, z, ry = 0, extra = {}) => f.items.push({ kind, ...at(x, z), y: 0.49, ry: ry * flip, ...extra });
+      const Y = 0.49;
+      const add = (kind, x, z, ry = 0, extra = {}) => f.items.push({ kind, ...at(x, z), y: Y, ry: ry * flip, ...extra });
+      const seats = (spots) => f.flyers.push(...cafeClusters({ at: (u, v) => at(u, v) }, i * 5 + 3, spots, Y));
       if (theme === "memorial") {
-        // Statue on a plinth (the plinth is solid, 1.4 m square, inside a
-        // lawn quarter), planters either side, a bin.
         const s = at(-3.4, -3.4);
         f.solids.push({ x: s.x, z: s.z, w: 1.4, d: 1.4, kind: "plinth" });
         add("statue", -3.4, -3.4, Math.PI / 4);
         add("planter", -6.6, -2.4, Math.PI / 2);
         add("planter", -2.4, -6.6, 0);
-        add("planter", 3.4, 3.4, Math.PI / 4);
         add("bin", 2.6, -6.8, 0);
+        seats([[3.6, 3.6]]);
       } else if (theme === "family") {
-        // Ice cream truck parked on the lawn beside the north path, a
-        // kiosk in the opposite quarter, bins.
-        f.pushers.push({ kind: "iceTruck", ...at(-3.2, 4.6), y: 0.49, ry: 0 });
+        f.vehicles.push({ kind: "iceTruck", ...at(-3.2, 4.6), y: Y, ry: 0 });
         add("kiosk", 3.6, -3.6, 0);
         add("bin", -2.6, 7.4, 0);
-        add("bin", 6.9, -2.6, Math.PI / 2);
+        seats([[3.0, -6.8], [6.9, -2.8], [2.6, 2.8]]);
       } else if (theme === "art") {
         add("sculptureA", -3.4, 3.4, 0.3);
         add("sculptureB", 3.4, -3.4, -0.5);
         add("planter", -3.4, -3.6, Math.PI / 4);
         add("planter", 3.6, 3.4, -Math.PI / 4);
+        seats([[-6.8, -2.6]]);
       } else {
         add("kiosk", -3.6, -3.6, Math.PI / 2);
         add("kiosk", 3.6, 3.6, -Math.PI / 2);
         add("bikeRack", -3.4, 3.6, 0);
         add("bin", 2.6, -6.8, 0);
+        seats([[3.6, -3.6], [6.9, -2.2], [-2.2, 6.9]]);
       }
       return f;
     });

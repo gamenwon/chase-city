@@ -40,12 +40,14 @@ export function parasol(g, a = C.red, b = C.white) {
   // Market parasol: weighted base, pole, 8-panel canopy in two colours.
   cyl(g, 0.3, 0.32, 0.12, C.dark, 0, 0, 0, 8);
   cyl(g, 0.03, 0.03, 2.3, C.white, 0, 0.12, 0, 6);
+  // Eight-sided canopy, ribs in the second colour, a scalloped valance.
+  const canopy = add(g, new THREE.ConeGeometry(1.3, 0.5, 8), a, 0, 2.25, 0);
+  canopy.rotation.y = Math.PI / 8;
   for (let i = 0; i < 8; i++) {
-    const p = add(g, new THREE.CylinderGeometry(0, 1.25, 0.45, 3, 1, true), i % 2 ? a : b, 0, 2.2, 0);
-    p.rotation.y = (i * Math.PI) / 4;
-    p.scale.set(0.42, 1, 1);
-    p.position.set(Math.sin((i * Math.PI) / 4) * 0.55, 2.2, Math.cos((i * Math.PI) / 4) * 0.55);
-    p.rotation.x = 0.0;
+    const ang = (i * Math.PI) / 4;
+    const rib = B(g, 0.05, 0.05, 1.32, b, Math.sin(ang) * 0.62, 2.2, Math.cos(ang) * 0.62, ang);
+    rib.rotation.x = 0.36;
+    B(g, 0.95, 0.14, 0.03, b, Math.sin(ang + Math.PI / 8) * 1.2, 1.86, Math.cos(ang + Math.PI / 8) * 1.2, ang + Math.PI / 8);
   }
   cyl(g, 0.05, 0.05, 0.1, C.dark, 0, 2.45, 0, 6);
 }
@@ -261,14 +263,14 @@ export class FlyerSystem {
       return;
     }
     if (def.bits) for (let i = 0; i < def.bitN; i++) this.spawn(sim, def.bits, it.x, it.y + 0.5, it.z, car, speed * 0.8, nx, nz, 0.3);
-    const base = Math.min(1.8, Math.max(0.55, 1 / Math.sqrt(def.mass)));
+    const base = Math.min(1.35, Math.max(0.5, 1 / Math.sqrt(def.mass)));
     const r = () => Math.random();
     const along = 0.35 + 0.35 * r(), side = (r() - 0.5) * 0.7;
     const vx = ((car.vx || 0) * along + nx * speed * 0.3 + -nz * speed * side * 0.4) * base;
     const vz = ((car.vz || 0) * along + nz * speed * 0.3 + nx * speed * side * 0.4) * base;
     it.vx = vx;
     it.vz = vz;
-    it.vy = Math.min(11, (1.2 + speed * 0.22) * base * (0.6 + 0.7 * r()));
+    it.vy = Math.min(9, (1.2 + speed * 0.2) * base * (0.6 + 0.6 * r()));
     if (def.roll) it.vy *= 0.35;
     const spinAxis = new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
     it.w = { axis: spinAxis, rate: (4 + 10 * r()) * base };
@@ -288,7 +290,7 @@ export class FlyerSystem {
     pool.mesh.visible = true;
     if (kind === "fruit") pool.mesh.setColorAt(idx, FRUIT[idx % 4]), (pool.mesh.instanceColor.needsUpdate = true);
     const it = { spec: { kind }, def: FLYERS[kind] || { mass, side: 0.06 }, mesh: pool.mesh, idx, x, y, z, q: new THREE.Quaternion(), hits: 3, state: "rest" };
-    const base = Math.min(2.2, 1 / Math.sqrt(mass));
+    const base = Math.min(1.6, 1 / Math.sqrt(mass));
     const a = Math.random() * Math.PI * 2;
     it.vx = ((car.vx || 0) * 0.35 + Math.cos(a) * speed * 0.25 + nx * speed * 0.2) * base;
     it.vz = ((car.vz || 0) * 0.35 + Math.sin(a) * speed * 0.25 + nz * speed * 0.2) * base;
@@ -309,7 +311,7 @@ export class FlyerSystem {
     const keep = [];
     for (const it of this.active) {
       it.vy -= 15 * dt;
-      const drag = Math.exp(-dt * 0.5);
+      const drag = Math.exp(-dt * 1.1);
       it.vx *= drag;
       it.vz *= drag;
       it.x += it.vx * dt;
@@ -328,7 +330,9 @@ export class FlyerSystem {
           it.w.rate *= 0.5;
           it.y = floor;
         } else {
-          // Settle: lie on the side nearest to how it came down.
+          // Settle: lie on the side nearest to how it came down; never
+          // inside a wall or a solid piece (moved to its nearest side).
+          this.hooks.outside?.(it);
           it.y = (it.spec.y ?? 0.05) + this.restLift(it);
           it.state = "down";
           this.pose(it);

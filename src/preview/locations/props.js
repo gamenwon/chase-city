@@ -274,3 +274,82 @@ export function yardDecor(root, y) {
     B(c, 6.02, 0.12, 2.42, C.dark, 0, 2.4, 0);
   });
 }
+
+// ------------------------------------------------ outer-ring site props --
+export function brush(g, broken = false) {
+  // Car-wash roller: steel frame top, core, tufts of blue and red bristles.
+  const h = 2.6;
+  if (!broken) {
+    B(g, 0.5, 0.25, 0.5, C.metal, 0, h + 0.3, 0);
+    cyl(g, 0.06, 0.06, h + 0.3, C.metal, 0, 0.1, 0, 6);
+    for (let k = 0; k < 7; k++)
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + k * 0.5;
+        const t = B(g, 0.08, 0.32, 0.4, k % 2 ? 0x2457c5 : 0xd62f2a, Math.sin(a) * 0.24, 0.2 + k * 0.36, Math.cos(a) * 0.24, a);
+        t.rotation.x = 0.2;
+      }
+  } else {
+    // Snapped off and lying on the floor, tufts scattered.
+    const r = G(g, 0, 0.3, 0, 0.4);
+    r.rotation.z = Math.PI / 2;
+    cyl(r, 0.06, 0.06, h, C.metal, 0, -h / 2, 0, 6);
+    for (let k = 0; k < 6; k++) B(r, 0.42, 0.3, 0.42, k % 2 ? 0x2457c5 : 0xd62f2a, 0, -h / 2 + 0.2 + k * 0.4, 0, k);
+    for (let i = 0; i < 8; i++) B(g, 0.1, 0.06, 0.35, i % 2 ? 0x2457c5 : 0xd62f2a, Math.cos(i) * 1.2, 0, Math.sin(i * 1.7) * 1.0, i);
+  }
+}
+export function stall(g, broken = false) {
+  // Market stall: trestle table with produce, four posts, striped awning,
+  // name board.
+  const w = 3.4, d = 1.8;
+  const produce = [0xe8401c, 0xf5c01a, 0x5cb23a, 0xf0781e, 0x7a3fb8];
+  if (!broken) {
+    B(g, w, 0.08, d * 0.8, 0xc9935a, 0, 0.85, -0.1);
+    for (const x of [-w / 2 + 0.2, w / 2 - 0.2]) for (const z of [-d / 2 + 0.2, d / 2 - 0.4]) B(g, 0.08, 0.85, 0.08, 0x9c6a3a, x, 0, z);
+    for (let i = 0; i < 5; i++) {
+      B(g, 0.6, 0.18, 0.5, 0xb98a55, -1.3 + i * 0.65, 0.93, -0.25);
+      for (let k = 0; k < 4; k++) ico(g, 0.1, produce[i], -1.42 + i * 0.65 + (k % 2) * 0.22, 1.16, -0.35 + Math.floor(k / 2) * 0.2);
+    }
+    for (const x of [-w / 2, w / 2]) for (const z of [-d / 2, d / 2]) B(g, 0.08, 2.4, 0.08, C.white, x, 0, z);
+    for (let i = 0; i < 6; i++) {
+      const s = B(g, w / 6, 0.05, d + 0.6, i % 2 ? C.white : [C.red, C.blue, C.green][Math.abs(Math.round(i / 2)) % 3], -w / 2 + w / 12 + (i * w) / 6, 2.4, -0.1);
+      s.rotation.x = 0.18;
+    }
+    B(g, w * 0.7, 0.4, 0.06, C.yellow, 0, 2.6, -d / 2 - 0.35);
+  } else {
+    // Awning down over the smashed table, posts snapped, produce spilled.
+    const aw = G(g, 0.2, 0.6, 0.2, 0.15);
+    aw.rotation.z = 0.35;
+    for (let i = 0; i < 6; i++) B(aw, w / 6, 0.05, d + 0.6, i % 2 ? C.white : C.red, -w / 2 + w / 12 + (i * w) / 6, 0, 0);
+    const tb = B(g, w, 0.08, d * 0.8, 0xc9935a, -0.3, 0.2, -0.3, 0.2);
+    tb.rotation.x = 0.3;
+    for (let i = 0; i < 4; i++) {
+      const p = B(g, 0.08, 1.2, 0.08, C.white, -1.6 + i * 1.1, 0.05, -1.2 + (i % 2) * 1.8, i);
+      p.rotation.z = 1.3;
+    }
+    for (let i = 0; i < 14; i++) ico(g, 0.1, produce[i % 5], Math.cos(i * 1.3) * (0.8 + (i % 4) * 0.5), 0.08, -1.2 + Math.sin(i * 2.1) * 1.3);
+  }
+}
+export function booth(g, broken = false) {
+  // Security booth: windows all round, flat roof with an overhang.
+  B(g, 1.6, 0.2, 1.6, C.dark, 0, 0, 0);
+  B(g, 1.5, 1.0, 1.5, C.white, 0, 0.2, 0);
+  for (let f = 0; f < 4; f++) {
+    const fg = G(g, 0, 0, 0, (f * Math.PI) / 2);
+    B(fg, 1.2, 0.9, 0.04, broken ? 0x141316 : C.glass, 0, 1.25, 0.76);
+    if (broken) for (let i = 0; i < 3; i++) B(fg, 0.3, 0.2, 0.03, C.glass, -0.45 + i * 0.45, 1.25 + (i % 2) * 0.5, 0.77, 0, i);
+  }
+  for (const [x, z] of [[-0.72, -0.72], [0.72, -0.72], [-0.72, 0.72], [0.72, 0.72]]) B(g, 0.08, 1.0, 0.08, C.dark, x, 1.2, z);
+  const roof = B(g, 2.0, 0.2, 2.0, C.blue, 0, 2.2, 0);
+  if (broken) {
+    roof.rotation.z = 0.25;
+    roof.position.y = 2.05;
+  }
+}
+export function flagpole(g) {
+  cyl(g, 0.12, 0.15, 0.3, C.stone, 0, 0, 0, 6);
+  cyl(g, 0.04, 0.05, 6.0, C.chrome, 0, 0.3, 0, 6);
+  ico(g, 0.08, C.yellow, 0, 6.35, 0);
+  const fl = B(g, 1.4, 0.9, 0.03, C.red, 0.72, 5.2, 0);
+  fl.rotation.y = 0.15;
+  B(g, 1.4, 0.3, 0.035, C.yellow, 0.72, 5.5, 0);
+}

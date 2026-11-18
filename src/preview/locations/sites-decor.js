@@ -2,6 +2,7 @@
 // ground surfaces, markings, landmarks, buildings, the solid pieces.
 import * as THREE from "three";
 import { C, B, G, cyl, ico, add, signBoard } from "./parts.js";
+// Sign faces are drawn from one texture atlas per site (parts.js bake).
 
 const T = 0.02; // on top of the 0.02 slab (group at y 0.03)
 
@@ -58,7 +59,7 @@ function construction(g) {
   const sb = G(g, 9.0, T, 1.4, -Math.PI / 2);
   for (const x of [-1, 1]) B(sb, 0.12, 3.2, 0.12, C.dark, x, 0, 0);
   B(sb, 2.6, 1.3, 0.08, C.yellow, 0, 2.0, 0);
-  for (let i = 0; i < 5; i++) B(sb, 0.4, 0.2, 0.09, C.dark, -1 + i * 0.5, 2.05, 0);
+  signBoard(sb, "SITE", 2.4, 1.1, 0, 2.65, -0.06, Math.PI, "#f5c01a", "#232227");
 }
 function depot(g) {
   slab(g, 0x9a968e);
@@ -78,7 +79,7 @@ function depot(g) {
   const gt = G(g, 7.9, T, 5.9);
   for (const x of [-1.3, 1.3]) B(gt, 0.3, 6.0, 0.3, C.yellow, x, 0, 0);
   B(gt, 3.0, 1.2, 0.3, C.orange, 0, 5.0, 0);
-  for (let i = 0; i < 5; i++) B(gt, 0.38, 0.6, 0.05, C.white, -1.0 + i * 0.5, 5.3, -0.18);
+  signBoard(gt, "DEPOT", 2.8, 1.0, 0, 5.6, -0.16, Math.PI, "#f0781e", "#ffffff");
 }
 function carwash(g) {
   slab(g, 0x4f8fb8);
@@ -107,7 +108,7 @@ function carwash(g) {
   // Landmark: WASH sign with big bubbles on the roof.
   const s = G(g, 0, 4.1, 2.0);
   B(s, 5.0, 1.4, 0.3, C.white, 0, 0.2, 0);
-  B(s, 4.6, 1.0, 0.32, 0x2fa4e0, 0, 0.4, 0);
+  signBoard(s, "CAR WASH", 4.6, 1.0, 0, 0.9, -0.12, Math.PI, "#2fa4e0", "#ffffff");
   for (const [x, y, r] of [[-2.4, 1.9, 0.6], [-1.2, 2.5, 0.45], [0.2, 2.1, 0.7], [1.6, 2.6, 0.5], [2.6, 1.8, 0.4]]) ico(s, r, 0x9fe0ff, x, y, 0);
 }
 function market(g) {
@@ -117,7 +118,7 @@ function market(g) {
   const a = G(g, 0, T, -5.6);
   for (const x of [-4.2, 4.2]) B(a, 0.3, 4.6, 0.3, C.red, x, 0, 0);
   B(a, 9.0, 1.0, 0.3, C.yellow, 0, 4.4, 0);
-  for (let i = 0; i < 7; i++) B(a, 0.7, 0.55, 0.06, C.red, -3.6 + i * 1.2, 4.6, -0.18);
+  signBoard(a, "MARKET", 8.4, 0.85, 0, 4.9, -0.16, Math.PI, "#f5c01a", "#d62f2a");
   for (let i = 0; i < 12; i++) ico(g, 0.1, [C.red, C.yellow, C.blue, C.green][i % 4], -4 + i * 0.73, 3.6 - Math.sin((i / 11) * Math.PI) * 0.5, -5.6);
 }
 function cafe(g) {
@@ -133,6 +134,7 @@ function cafe(g) {
     const s = B(c, 0.78, 0.05, 1.1, i % 2 ? C.white : C.green, -2.73 + i * 0.78, 2.4, -1.75);
     s.rotation.x = -0.3;
   }
+  signBoard(c, "CAFE", 2.6, 0.5, 0, 2.95, -1.42, Math.PI, "#232227", "#f4f4f0");
   const cup = G(c, 0, 3.1, 0);
   cyl(cup, 0.9, 0.7, 1.4, C.white, 0, 0, 0, 8);
   cyl(cup, 0.92, 0.92, 0.25, C.red, 0, 1.0, 0, 8);

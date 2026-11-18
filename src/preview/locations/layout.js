@@ -13,7 +13,8 @@
 import { createLayout } from "../../world/layout.js";
 
 import { GAS, COURT, PARK } from "./layout-consts.js";
-import { parkPlan, yardPlan } from "./plan.js";
+import { parkPlan } from "./plan.js";
+import { sitePlan } from "./sites.js";
 export { GAS, COURT, PARK };
 
 // Gas station plan (block-local metres; x east, z south).
@@ -53,7 +54,7 @@ export function previewLayout() {
   // Park features and outer-ring yards: only their small solid pieces
   // (statue plinths, site cabins, containers) are added to the layout.
   const features = parkPlan(parks);
-  const yards = yardPlan();
+  const yards = sitePlan();
   for (const f of [...features, ...yards]) obstacles.push(...f.solids);
   return { buildings, parks, obstacles, features, yards, locations: { gas: GAS, court: COURT, park: PARK } };
 }

@@ -285,21 +285,28 @@ export class VehicleSystem {
         const nx = dx / d, nz = dz / d, push = radius + r - d;
         const m = v.def.mass, share = m / (m + PLAYER_MASS);
         // The car gives way in proportion to the vehicle's mass...
-        car.x -= nx * push * share;
-        car.z -= nz * push * share;
-        v.x += nx * push * (1 - share);
-        v.z += nz * push * (1 - share);
+        // (a heavy one hardly creeps when a car leans on it).
+        const give = (1 - share) * (1 - share);
+        car.x -= nx * push * (1 - give);
+        car.z -= nz * push * (1 - give);
+        v.x += nx * push * give;
+        v.z += nz * push * give;
         const closing = Math.max(0, (car.vx || 0) * nx + (car.vz || 0) * nz - v.vx * nx - v.vz * nz);
         // ...is slowed by it, and shoves it.
         car.vx -= nx * closing * share * 0.9;
         car.vz -= nz * closing * share * 0.9;
         if (isPlayer) car.speed = Math.max(0, (car.speed ?? 0) - closing * share * 0.8);
-        const imp = closing * (1 - share) * 1.15;
+        // Heavy vehicles take far less of the blow (a 6 t excavator on
+        // tracks barely shifts; a sedan slides away).
+        // Leaning on a heavy vehicle with the throttle on (no real impact)
+        // hardly moves it.
+        const imp = closing * Math.pow(1 - share, 1.5) * 1.3 * (closing > 4 || m < 2.5 ? 1 : 0.15);
         v.vx += nx * imp;
         v.vz += nz * imp;
         v.spin += (nx * az - nz * ax) * imp * 0.4 * Math.sign(o || 1);
         v.moving = true;
-        if (closing > 3 && sim.elapsed - v.hitAt > 0.5) {
+        // Damage: real hits only (pressing against it does none).
+        if (closing > 6 && sim.elapsed - v.hitAt > 0.5) {
           v.hitAt = sim.elapsed;
           v.dmg += closing;
           sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "crash", x: v.x, z: v.z, strength: closing });
@@ -313,6 +320,44 @@ export class VehicleSystem {
       }
     }
   }
+  // Body circles along a vehicle (same as the car collision shape).
+  circles(v) {
+    const ax = Math.sin(v.ry), az = Math.cos(v.ry);
+    const r = v.def.W / 2 + 0.05, n = Math.max(2, Math.ceil(v.def.L / v.def.W));
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      const o = -v.def.L / 2 + r + ((v.def.L - 2 * r) * k) / (n - 1);
+      out.push({ x: v.x + ax * o, z: v.z + az * o, r });
+    }
+    return out;
+  }
+  // A shoved vehicle that runs into another pushes it (by mass) instead of
+  // passing through it; momentum is shared.
+  separate(v) {
+    for (const u of this.list) {
+      if (u === v || Math.abs(u.x - v.x) > 8 || Math.abs(u.z - v.z) > 8) continue;
+      for (const a of this.circles(v))
+        for (const b of this.circles(u)) {
+          const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz), min = a.r + b.r;
+          if (d >= min || d < 1e-6) continue;
+          const nx = dx / d, nz = dz / d, push = min - d;
+          const mv = v.def.mass, mu = u.def.mass, su = mv / (mv + mu);
+          v.x -= nx * push * (1 - su);
+          v.z -= nz * push * (1 - su);
+          u.x += nx * push * su;
+          u.z += nz * push * su;
+          const rel = (v.vx - u.vx) * nx + (v.vz - u.vz) * nz;
+          if (rel > 0) {
+            v.vx -= nx * rel * su;
+            v.vz -= nz * rel * su;
+            u.vx += nx * rel * (1 - su) * 0.8;
+            u.vz += nz * rel * (1 - su) * 0.8;
+            u.moving = true;
+          }
+          this.pose(u);
+        }
+    }
+  }
   update(sim, dt) {
     for (const v of this.list) {
       if (!v.moving) continue;
@@ -321,11 +366,12 @@ export class VehicleSystem {
       v.z += v.vz * dt;
       v.ry += v.spin * dt;
       // Heavier vehicles stop sooner (tyre and track friction).
-      const k = Math.exp(-dt * (2 + v.def.mass * 0.6));
+      const k = Math.exp(-dt * (2 + v.def.mass * 1.4));
       v.vx *= k;
       v.vz *= k;
       v.spin *= k;
       sim.constrain(v, v.def.W / 2 + 0.3, was);
+      this.separate(v);
       if (Math.hypot(v.vx, v.vz) < 0.05 && Math.abs(v.spin) < 0.02) {
         v.vx = v.vz = v.spin = 0;
         v.moving = false; // settled: no more updates

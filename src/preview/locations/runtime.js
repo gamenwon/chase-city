@@ -12,7 +12,10 @@ import { buildCourt, fencePanel, hoop } from "./court.js";
 import { buildPark } from "./park.js";
 import { GAS, COURT, PARK, FOUNTAIN_R } from "./layout.js";
 import * as P from "./props.js";
-import { civilianCarGeometry } from "../../render/kit.js";
+import { VehicleSystem } from "./vehicles.js";
+import { FlyerSystem } from "./furniture.js";
+import { siteDecor } from "./sites-decor.js";
+import { Storefronts } from "./storefronts.js";
 
 const TOP = 0.4;
 const ZERO = new THREE.Vector3();
@@ -37,13 +40,10 @@ const KINDS = {
   pallet: { build: P.pallet, r: 0.8, fall: 1.2, lift: 0.4, slide: 1.4, spin: 1 },
   planter: { build: (g) => P.planter(g), broken: (g) => P.planter(g, true), r: 1.0 },
   kiosk: { build: (g) => P.kiosk(g), broken: (g) => P.kiosk(g, true), r: 1.4 },
-};
-// Pushable vehicles: shoved out of the way by any car (the car itself is
-// not slowed), take damage from hard hits and end up as wrecks.
-const PUSHERS = {
-  iceTruck: { build: (g) => P.iceTruck(g), wreck: (g) => P.iceTruck(g, true), L: 4.6, W: 2.0, mass: 1.6, wreckAt: 14 },
-  parkedCar: { geometry: () => civilianCarGeometry(), L: 3.7, W: 1.8, mass: 1.0, wreckAt: 16 },
-  forklift: { build: P.forklift, L: 2.6, W: 1.3, mass: 0.9, wreckAt: 10 },
+  brush: { build: (g) => P.brush(g), broken: (g) => P.brush(g, true), r: 0.45, burst: "foam" },
+  stall: { build: (g) => P.stall(g), broken: (g) => P.stall(g, true), r: 1.6, burst: "fruit" },
+  booth: { build: (g) => P.booth(g), broken: (g) => P.booth(g, true), r: 0.9, burst: "glass" },
+  flagpole: { build: P.flagpole, r: 0.3, fall: 1.48, lift: 0.15, slide: 0 },
 };
 const CAR_COLORS = [0x2457c5, 0xf4f4f0, 0xd62f2a, 0x3a3940, 0x2fa36b, 0xf5c01a, 0xf0781e, 0x1f6e6a];
 const CELL = 60;
@@ -93,7 +93,7 @@ export class LocationsRuntime {
     }
     for (const y of layout.yards || []) {
       const decor = new THREE.Group();
-      P.yardDecor(decor, y);
+      siteDecor(decor, y);
       scene.add(bake(decor));
     }
     // Instanced copies are grouped by 60 m map cell, each group with real
@@ -122,22 +122,39 @@ export class LocationsRuntime {
       if (SMALL.has(kind)) for (const m of [live, broken]) if (m) m.castShadow = false;
       list.forEach((spec, idx) => this.items.push({ kind, spec, ...def, mesh: live, idx, bmesh: broken }));
     }
-    // Pushable vehicles.
-    this.pushers = [];
-    this.pusherGroups = [];
-    const pushSpecs = groups.flatMap((f) => f.pushers);
-    const carMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, flatShading: true });
-    for (const [key, list] of groupBy(pushSpecs, (s) => s.kind)) {
-      const kind = list[0].kind, def = PUSHERS[kind], cell = key.split("|")[1];
-      const g = def.geometry ? (geos[kind] ||= def.geometry()) : geo(kind, def.build);
-      const mat = def.geometry ? carMat : bakedMaterial;
-      const live = cellMesh(scene, g, mat, list.length, cell);
-      const dead = cellMesh(scene, def.wreck ? geo(kind + "!", def.wreck) : g, mat, list.length, cell);
-      if (def.geometry) list.forEach((p, i) => live.setColorAt(i, new THREE.Color(CAR_COLORS[p.color ?? i % 8])));
-      if (def.geometry) for (let i = 0; i < list.length; i++) dead.setColorAt(i, new THREE.Color(0x3a3437));
-      this.pusherGroups.push({ live, dead });
-      list.forEach((spec, idx) => this.pushers.push({ kind, spec, def, mesh: live, idx, dmesh: dead }));
-    }
+    // Parked and work vehicles (damage stages, mass), and loose things
+    // that fly (café furniture, crates, scaffolding...).
+    this.vehicles = new VehicleSystem(scene, groups.flatMap((f) => f.vehicles || []), {
+      boom: (sim, v) => {
+        // A wrecked vehicle goes up like a car (the game's own explosion
+        // look and sound), then burns and smokes.
+        sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "parked", x: v.x, z: v.z, angle: v.ry, time: sim.elapsed, delay: 0, chainDepth: v.def.mass > 3 ? 2 : 0, playerX: sim.player.x, playerZ: sim.player.z });
+        if (sim.events.length > 64) sim.events.shift();
+        this.fx.push({ kind: "burn", follow: v, x: v.x, z: v.z, born: sim.elapsed, size: 0.7 + Math.min(1.2, v.def.mass * 0.25), decay: true });
+        for (let i = 0; i < 6; i++) this.throwChunk(1, v.x, v.z, 3 + Math.random() * 4, Math.random() * 6.3);
+      },
+    });
+    this.storefronts = new Storefronts(scene, layout.buildings || [], {
+      glass: (x, z, nx, nz) => {
+        for (let i = 0; i < 10; i++) this.throwChunk(1, x, z, 2 + Math.random() * 4, Math.atan2(nx, nz) + (Math.random() - 0.5) * 1.8);
+      },
+      fire: (x, z, nx, nz) => {
+        // Flames out of the shop window, smoke up the facade.
+        for (const s of [-1.4, 1.2]) this.fx.push({ kind: "burn", x: x + nz * s, z: z - nx * s, y: TOP + 0.6, born: this.sim?.elapsed ?? 0, size: 1.1, decay: true, long: true });
+      },
+    });
+    this.flyers = new FlyerSystem(scene, groups.flatMap((f) => f.flyers || []), {
+      outside: (it) => {
+        const sim = this.sim;
+        if (!sim) return;
+        for (const b of sim.nearSolids(it.x, it.z, 1)) {
+          const px = b.w / 2 + 0.3 - Math.abs(it.x - b.x), pz = b.d / 2 + 0.3 - Math.abs(it.z - b.z);
+          if (px <= 0 || pz <= 0) continue;
+          if (px < pz) it.x += Math.sign(it.x - b.x || 1) * px;
+          else it.z += Math.sign(it.z - b.z || 1) * pz;
+        }
+      },
+    });
     // Basketballs.
     this.ballMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.12, 1), new THREE.MeshStandardMaterial({ color: C.ball, roughness: 0.6, flatShading: true }), this.court.balls.length);
     this.ballMesh.castShadow = true;
@@ -149,7 +166,8 @@ export class LocationsRuntime {
     this.fire = new THREE.InstancedMesh(puff, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.92, depthWrite: false }), 96);
     this.fire.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(96 * 3), 3);
     this.smoke = new THREE.InstancedMesh(puff, new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.6, depthWrite: false }), 64);
-    for (const m of [this.fire, this.smoke]) {
+    this.foam = new THREE.InstancedMesh(puff, new THREE.MeshLambertMaterial({ color: 0xf4fbff, transparent: true, opacity: 0.92, depthWrite: false }), 64);
+    for (const m of [this.fire, this.smoke, this.foam]) {
       m.frustumCulled = false;
       m.count = 0;
       scene.add(m);
@@ -220,14 +238,9 @@ export class LocationsRuntime {
       it.dy = 0;
       this.pose(it, 0);
     }
-    for (const g of this.pusherGroups) {
-      g.dead.count = 0;
-      g.dead.visible = false;
-    }
-    for (const p of this.pushers) {
-      Object.assign(p, { x: p.spec.x, z: p.spec.z, ry: p.spec.ry, vx: 0, vz: 0, spin: 0, dmg: 0, hitAt: -1, wrecked: false, moving: false, didx: null });
-      this.pusherPose(p);
-    }
+    this.vehicles.reset();
+    this.flyers.reset();
+    this.storefronts.reset();
     this.balls = this.court.balls.map((b) => ({ ...b, vx: 0, vy: 0, vz: 0, rest: true }));
     this.balls.forEach((b, i) => this.ballPose(b, i));
     this.ballMesh.instanceMatrix.needsUpdate = true;
@@ -254,6 +267,7 @@ export class LocationsRuntime {
   // ------------------------------------------------- simulation step --
   // Called after every sim.update(1/60).
   step(sim, dt) {
+    this.sim = sim;
     if (sim.runNumber !== this.run) this.reset(sim);
     this.time = sim.elapsed;
     const cars = [sim.player, ...sim.police.filter((c) => c.state === "active")];
@@ -267,7 +281,9 @@ export class LocationsRuntime {
       // Every breakable and pushable piece (each test starts with a cheap
       // 6 m box reject, so far pieces cost almost nothing).
       this.touchItems(car, radius, speed);
-      this.touchPushers(sim, car, radius);
+      this.vehicles.touch(sim, car, radius, car === sim.player);
+      this.storefronts.touch(sim, car, radius);
+      this.flyers.touch(sim, car, radius, speed);
       if (near(GAS, 13)) this.touchGas(sim, car, radius, speed);
       if (near(PARK, 13)) this.touchFountain(sim, car, radius, speed);
       if (near(GAS, 13) || near(COURT, 13) || near(PARK, 13)) {
@@ -408,6 +424,7 @@ export class LocationsRuntime {
       it.state = "down";
       this.pose(it, 0);
       for (let i = 0; i < 5; i++) this.throwChunk(1, it.spec.x, it.spec.z, 3 + Math.random() * 3, Math.atan2(dx, dz) + (Math.random() - 0.5) * 1.6);
+      this.burst(it, dx, dz);
       return;
     }
     if (it.kind === "hoop")
@@ -438,73 +455,32 @@ export class LocationsRuntime {
     this.chunks.push({ kind, index, x, y: TOP + 1.2, z, vx: Math.sin(heading) * speed * 0.5, vy: 6 + speed * 0.4, vz: Math.cos(heading) * speed * 0.5, rx: 0, rz: 0, spin: 4 + Math.random() * 6, done: false });
   }
 
-  // Pushable vehicles: two circles along the body; a car that overlaps one
-  // shoves the vehicle out (position and velocity), the car is not slowed.
-  touchPushers(sim, car, radius) {
-    for (const p of this.pushers) {
-      if (Math.abs(car.x - p.x) > 5 || Math.abs(car.z - p.z) > 5) continue;
-      const ax = Math.sin(p.ry), az = Math.cos(p.ry), r = p.def.W / 2 + 0.1;
-      for (const o of [-p.def.L / 4, p.def.L / 4]) {
-        const cx = p.x + ax * o, cz = p.z + az * o;
-        const dx = cx - car.x, dz = cz - car.z, d = Math.hypot(dx, dz);
-        if (d >= radius + r || d < 1e-6) continue;
-        const nx = dx / d, nz = dz / d, push = radius + r - d;
-        p.x += nx * push;
-        p.z += nz * push;
-        const closing = Math.max(0, (car.vx || 0) * nx + (car.vz || 0) * nz);
-        p.vx += (nx * closing * 0.9) / p.def.mass;
-        p.vz += (nz * closing * 0.9) / p.def.mass;
-        p.spin += ((nx * az - nz * ax) * closing * 0.35 * Math.sign(o)) / p.def.mass;
-        p.moving = true;
-        // Damage counts once per hit (a long shove is one hit), so a gentle
-        // nudge never wrecks anything and a hard ram (or a few) does.
-        if (closing > 4 && sim.elapsed - (p.hitAt ?? -1) > 0.6) {
-          p.hitAt = sim.elapsed;
-          p.dmg += closing;
-          this.stats.pushed++;
-          if (!p.wrecked && p.dmg >= p.def.wreckAt) {
-            p.wrecked = true;
-            this.stats.wrecked++;
-            this.fx.push({ kind: "smolder", x: p.x, z: p.z, born: sim.elapsed, size: 0.8, follow: p });
-            for (let i = 0; i < 6; i++) this.throwChunk(1, p.x, p.z, 3 + Math.random() * 3, Math.random() * 6.3);
-          }
-        }
+  // What a broken piece throws out: a car-wash brush bursts into foam and
+  // water, a market stall into fruit, a booth into glass.
+  burst(it, dx, dz) {
+    const s = it.spec, sim = this.sim;
+    if (it.burst === "foam") {
+      this.fx.push({ kind: "foam", x: s.x, z: s.z, y: s.y ?? 0.05, born: sim?.elapsed ?? 0 });
+      for (let i = 0; i < 70 && this.dropList.length < 210; i++) {
+        const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 4;
+        this.dropList.push({ x: s.x, y: (s.y ?? 0.05) + 1.2, z: s.z, vx: Math.cos(a) * v + dx * 3, vy: 3 + Math.random() * 5, vz: Math.sin(a) * v + dz * 3, floor: s.y ?? 0.05 });
       }
+    } else if (it.burst === "fruit" && sim) {
+      const car = { vx: dx * 12, vz: dz * 12 };
+      for (let i = 0; i < 22; i++) this.flyers.spawn(sim, "fruit", s.x + (Math.random() - 0.5) * 2.4, (s.y ?? 0.05) + 1.1, s.z, car, 9, dx, dz, 0.2);
+    } else if (it.burst === "glass") {
+      for (let i = 0; i < 8; i++) this.throwChunk(1, s.x, s.z, 2 + Math.random() * 3, Math.atan2(dx, dz) + (Math.random() - 0.5) * 2);
     }
   }
-  pushersStep(sim, dt) {
-    for (const p of this.pushers) {
-      if (!p.moving) continue;
-      const was = { x: p.x, z: p.z };
-      p.x += p.vx * dt;
-      p.z += p.vz * dt;
-      p.ry += p.spin * dt;
-      const k = Math.exp(-dt * 2.2);
-      p.vx *= k;
-      p.vz *= k;
-      p.spin *= k;
-      // Keep out of buildings and walls (same collision as the cars).
-      sim.constrain(p, p.def.W / 2 + 0.3, was);
-      if (Math.hypot(p.vx, p.vz) < 0.05 && Math.abs(p.spin) < 0.02) {
-        p.vx = p.vz = p.spin = 0;
-        p.moving = false; // settled: no more updates
-      }
-      this.pusherPose(p);
+  spinBrushes(now) {
+    for (const it of this.items) {
+      if (it.kind !== "brush" || it.state !== "stand") continue;
+      const s = it.spec;
+      this.q.setFromAxisAngle(UP, s.ry + now * 5 * (it.idx % 2 ? 1 : -1));
+      this.m.compose(this.v.set(s.x, s.y ?? TOP, s.z), this.q, this.s.setScalar(1));
+      it.mesh.setMatrixAt(it.idx, this.m);
+      it.mesh.instanceMatrix.needsUpdate = true;
     }
-  }
-  pusherPose(p) {
-    this.q.setFromAxisAngle(UP, p.ry);
-    this.m.compose(this.v.set(p.x, p.spec.y ?? 0.05, p.z), this.q, this.s.setScalar(p.wrecked ? 0 : 1));
-    p.mesh.setMatrixAt(p.idx, this.m);
-    p.mesh.instanceMatrix.needsUpdate = true;
-    if (!p.wrecked) return;
-    if (p.didx == null) {
-      p.didx = p.dmesh.count++;
-      p.dmesh.visible = true;
-    }
-    this.m.compose(this.v, this.q, this.s.setScalar(1));
-    p.dmesh.setMatrixAt(p.didx, this.m);
-    p.dmesh.instanceMatrix.needsUpdate = true;
   }
 
   // ------------------------------------------------------------ render --
@@ -558,7 +534,9 @@ export class LocationsRuntime {
       touched.add(c.kind);
     }
     for (const k of touched) this.chunkKinds[k].instanceMatrix.needsUpdate = true;
-    this.pushersStep(sim, dt);
+    this.vehicles.update(sim, dt);
+    this.flyers.update(sim, dt);
+    this.spinBrushes(now);
     this.canopyStep(dt);
     this.fxStep(now);
     this.waterStep(dt, now);
@@ -627,6 +605,12 @@ export class LocationsRuntime {
       this.fire.setMatrixAt(nf, this.m);
       this.fire.setColorAt(nf++, this.fireColors[ci]);
     };
+    let nfo = 0;
+    const foam = (x, y, z, r) => {
+      if (nfo >= 64 || r <= 0.02) return;
+      this.m.compose(this.v.set(x, y, z), this.q.identity(), this.s.set(r, r * 0.7, r));
+      this.foam.setMatrixAt(nfo++, this.m);
+    };
     const puff = (x, y, z, r) => {
       if (ns >= 64 || r <= 0.02) return;
       this.m.compose(this.v.set(x, y, z), this.q.identity(), this.s.set(r, r * 0.85, r));
@@ -658,19 +642,39 @@ export class LocationsRuntime {
           puff(f.x + Math.sin(i * 2.1) * 1.2, TOP + 2.5 + tt * 2.4, f.z + Math.cos(i * 2.1) * 1.2, f.size * (1.0 + tt * 0.45) * Math.max(0, 1 - tt / 4.2));
         }
       } else {
+        if (f.kind === "foam") {
+          // Foam heaps: swell up, sit there, slowly settle.
+          const age = now - f.born, k = Math.min(1, age / 0.6) * (age > 10 ? Math.max(0.35, 1 - (age - 10) / 10) : 1);
+          for (let i = 0; i < 7; i++) {
+            const a = i * 0.9 + f.x, r = 0.8 + (i % 3) * 0.6;
+            foam(f.x + Math.cos(a) * r, (f.y ?? 0.05) + 0.25 + (i % 2) * 0.3, f.z + Math.sin(a) * r, (0.55 + (i % 3) * 0.25) * k);
+          }
+          continue;
+        }
         // A spot that keeps burning: flickering flames, a thin smoke trail.
-        const fl = 0.85 + Math.sin(now * 17 + f.x) * 0.1 + Math.sin(now * 29 + f.z) * 0.07;
-        flame(f.x, TOP + 0.55, f.z, f.size * 0.75 * fl, 0);
-        flame(f.x + 0.15, TOP + 0.85, f.z - 0.1, f.size * 0.55 * fl, 1);
-        flame(f.x - 0.05, TOP + 1.05, f.z + 0.05, f.size * 0.32 * fl, 2);
+        // On a wreck it follows the vehicle and dies down to smoke.
+        if (f.follow) {
+          f.x = f.follow.x;
+          f.z = f.follow.z;
+        }
+        const age = now - f.born;
+        const fade = f.decay ? Math.max(0.2, 1 - Math.max(0, age - (f.long ? 20 : 8)) / 14) : 1;
+        const fl = (0.85 + Math.sin(now * 17 + f.x) * 0.1 + Math.sin(now * 29 + f.z) * 0.07) * fade;
+        const fy = (f.y ?? TOP) - TOP;
+        flame(f.x, TOP + 0.55 + fy, f.z, f.size * 0.75 * fl, 0);
+        flame(f.x + 0.15, TOP + 0.85 + fy, f.z - 0.1, f.size * 0.55 * fl, 1);
+        flame(f.x - 0.05, TOP + 1.05 + fy, f.z + 0.05, f.size * 0.32 * fl, 2);
         for (let i = 0; i < 2; i++) {
           const ph = ((now * 0.35 + i * 0.5 + f.x * 0.1) % 1 + 1) % 1;
-          puff(f.x + ph * 0.6, TOP + 1.5 + ph * 4.5, f.z, f.size * (0.5 + ph * 0.9) * (1 - ph));
+          puff(f.x + ph * 0.6, TOP + 1.5 + fy + ph * 4.5, f.z, f.size * (0.5 + ph * 0.9) * (1 - ph));
         }
       }
     }
     this.fire.count = nf;
     this.smoke.count = ns;
+    this.foam.count = nfo;
+    this.foam.visible = nfo > 0;
+    if (nfo) this.foam.instanceMatrix.needsUpdate = true;
     this.fire.visible = nf > 0;
     this.smoke.visible = ns > 0;
     if (nf) {
@@ -729,7 +733,7 @@ export class LocationsRuntime {
       d.x += d.vx * dt;
       d.y += d.vy * dt;
       d.z += d.vz * dt;
-      if (d.y < TOP + 0.05) continue;
+      if (d.y < (d.floor ?? TOP) + 0.05) continue;
       keep.push(d);
       if (n < 220) {
         this.m.makeTranslation(d.x, d.y, d.z);
