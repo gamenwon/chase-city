@@ -16,6 +16,7 @@ import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
 import { siteDecor } from "./sites-decor.js";
 import { Storefronts } from "./storefronts.js";
+import { PropBatch, PropInstances } from "./batch.js";
 
 const TOP = 0.4;
 const ZERO = new THREE.Vector3();
@@ -100,31 +101,24 @@ export class LocationsRuntime {
     // bounds, so only the cells on screen (and in the shadow camera) are
     // drawn. Broken / wrecked variants get a copy only once something
     // breaks (a group with nothing broken is not drawn at all).
+    // Every breakable piece, loose piece and parked vehicle is one instance
+    // in a single batched mesh (one draw call, culled per instance); a
+    // broken variant is a second instance, hidden until it breaks.
+    const multiDraw = !!renderer?.renderer?.extensions?.has?.("WEBGL_multi_draw") && !/[?&]nobatch/.test(globalThis.location?.search || "");
+    this.batch = multiDraw ? new PropBatch(scene) : new PropInstances(scene);
+    this.batchMode = multiDraw ? "batched" : "instanced";
     this.items = [];
-    const groupBy = (list, kindOf) => {
-      const out = new Map();
-      for (const s of list) {
-        const key = `${kindOf(s)}|${cellOf(s.x, s.z)}`;
-        if (!out.has(key)) out.set(key, []);
-        out.get(key).push(s);
-      }
-      return out;
-    };
-    const geos = {};
-    const geo = (key, build) => (geos[key] ||= pieceGeometry(build));
-    const allSpecs = Object.entries(specs).flatMap(([kind, list]) => list.map((s) => ({ ...s, kind })));
-    for (const [key, list] of groupBy(allSpecs, (s) => s.kind)) {
-      const kind = list[0].kind, def = KINDS[kind], cell = key.split("|")[1];
-      const live = cellMesh(scene, geo(kind, def.build), bakedMaterial, list.length, cell);
-      const broken = def.broken ? cellMesh(scene, geo(kind + "!", def.broken), bakedMaterial, list.length, cell) : null;
-      // Small street furniture casts no shadow (as the game's own street
-      // props); big pieces do.
-      if (SMALL.has(kind)) for (const m of [live, broken]) if (m) m.castShadow = false;
-      list.forEach((spec, idx) => this.items.push({ kind, spec, ...def, mesh: live, idx, bmesh: broken }));
+    for (const [kind, list] of Object.entries(specs)) {
+      const def = KINDS[kind];
+      const live = this.batch.geometry(kind, () => pieceGeometry(def.build));
+      const broken = def.broken ? this.batch.geometry(kind + "!", () => pieceGeometry(def.broken)) : null;
+      list.forEach((spec, idx) =>
+        this.items.push({ kind, spec, ...def, idx, h: this.batch.instance(live, true, spec.x, spec.z), bh: broken == null ? null : this.batch.instance(broken, false, spec.x, spec.z) }),
+      );
     }
     // Parked and work vehicles (damage stages, mass), and loose things
     // that fly (café furniture, crates, scaffolding...).
-    this.vehicles = new VehicleSystem(scene, groups.flatMap((f) => f.vehicles || []), {
+    this.vehicles = new VehicleSystem(this.batch, groups.flatMap((f) => f.vehicles || []), {
       boom: (sim, v) => {
         // A wrecked vehicle goes up like a car (the game's own explosion
         // look and sound), then burns and smokes.
@@ -143,7 +137,7 @@ export class LocationsRuntime {
         for (const s of [-1.4, 1.2]) this.fx.push({ kind: "burn", x: x + nz * s, z: z - nx * s, y: TOP + 0.6, born: this.sim?.elapsed ?? 0, size: 1.1, decay: true, long: true });
       },
     });
-    this.flyers = new FlyerSystem(scene, groups.flatMap((f) => f.flyers || []), {
+    this.flyers = new FlyerSystem(this.batch, groups.flatMap((f) => f.flyers || []), {
       outside: (it) => {
         const sim = this.sim;
         if (!sim) return;
@@ -225,13 +219,7 @@ export class LocationsRuntime {
     });
     this.dropList = [];
     this.speeds = new WeakMap();
-    for (const it of this.items)
-      if (it.bmesh) {
-        it.bmesh.count = 0;
-        it.bmesh.visible = false;
-      }
     for (const it of this.items) {
-      it.bidx = null;
       it.state = "stand";
       it.t = 0;
       it.dir = { x: 0, z: 1 };
@@ -467,7 +455,7 @@ export class LocationsRuntime {
       }
     } else if (it.burst === "fruit" && sim) {
       const car = { vx: dx * 12, vz: dz * 12 };
-      for (let i = 0; i < 22; i++) this.flyers.spawn(sim, "fruit", s.x + (Math.random() - 0.5) * 2.4, (s.y ?? 0.05) + 1.1, s.z, car, 9, dx, dz, 0.2);
+      for (let i = 0; i < 22; i++) this.flyers.spawn(sim, "fruit", s.x + (Math.random() - 0.5) * 2.4, (s.y ?? 0.05) + 1.1, s.z, car, 9, dx, dz, 0.2, s.y ?? 0.05);
     } else if (it.burst === "glass") {
       for (let i = 0; i < 8; i++) this.throwChunk(1, s.x, s.z, 2 + Math.random() * 3, Math.atan2(dx, dz) + (Math.random() - 0.5) * 2);
     }
@@ -478,8 +466,7 @@ export class LocationsRuntime {
       const s = it.spec;
       this.q.setFromAxisAngle(UP, s.ry + now * 5 * (it.idx % 2 ? 1 : -1));
       this.m.compose(this.v.set(s.x, s.y ?? TOP, s.z), this.q, this.s.setScalar(1));
-      it.mesh.setMatrixAt(it.idx, this.m);
-      it.mesh.instanceMatrix.needsUpdate = true;
+      this.batch.matrix(it.h, this.m);
     }
   }
 
@@ -547,17 +534,11 @@ export class LocationsRuntime {
       const down = it.state !== "stand";
       this.q.setFromAxisAngle(UP, s.ry);
       const y = s.y ?? TOP;
-      this.m.compose(this.v.set(s.x, y, s.z), this.q, this.s.setScalar(down ? 0 : 1));
-      it.mesh.setMatrixAt(it.idx, this.m);
-      it.mesh.instanceMatrix.needsUpdate = true;
-      if (!down) return;
-      if (it.bidx == null) {
-        it.bidx = it.bmesh.count++;
-        it.bmesh.visible = true;
-      }
       this.m.compose(this.v.set(s.x, y, s.z), this.q, this.s.setScalar(1));
-      it.bmesh.setMatrixAt(it.bidx, this.m);
-      it.bmesh.instanceMatrix.needsUpdate = true;
+      this.batch.matrix(it.h, this.m);
+      this.batch.matrix(it.bh, this.m);
+      this.batch.visible(it.h, !down);
+      this.batch.visible(it.bh, down);
       return;
     }
     const ang = it.fall * k;
@@ -571,8 +552,7 @@ export class LocationsRuntime {
       this.q,
       this.s.set(sx, 1, 1),
     );
-    it.mesh.setMatrixAt(it.idx, this.m);
-    it.mesh.instanceMatrix.needsUpdate = true;
+    this.batch.matrix(it.h, this.m);
   }
   ballPose(b, i) {
     this.m.makeTranslation(b.x, b.y, b.z);

@@ -197,32 +197,19 @@ export function stageGeometry(kind, stage) {
 }
 
 const COLORS = [0x2457c5, 0xf4f4f0, 0xd62f2a, 0x3a3940, 0x2fa36b, 0xf5c01a, 0xf0781e, 0x1f6e6a, 0x7a3fb8];
-const CELL = 60;
-const cellOf = (x, z) => `${Math.floor(x / CELL)},${Math.floor(z / CELL)}`;
 
 export class VehicleSystem {
-  // specs: [{ kind, x, z, y, ry, color? }]; hooks: { fire(veh), boom(sim, veh) }
-  constructor(scene, specs, hooks) {
+  // batch: PropBatch; specs: [{ kind, x, z, y, ry, color? }];
+  // hooks: { boom(sim, veh) }. Each vehicle is three batch instances (one
+  // per damage stage); only the current one is shown.
+  constructor(batch, specs, hooks) {
+    this.batch = batch;
     this.hooks = hooks;
-    this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, flatShading: true });
-    this.groups = new Map(); // `${kind}|${cell}` -> [mesh stage0, 1, 2]
     this.list = specs.map((spec, i) => {
-      const key = `${spec.kind}|${cellOf(spec.x, spec.z)}`;
-      if (!this.groups.has(key)) this.groups.set(key, { kind: spec.kind, cell: cellOf(spec.x, spec.z), n: 0 });
-      this.groups.get(key).n++;
-      return { spec, i, key, def: VEHICLES[spec.kind] };
+      const def = VEHICLES[spec.kind];
+      const ids = [0, 1, 2].map((stage) => batch.instance(batch.geometry(`veh:${spec.kind}:${stage}`, () => stageGeometry(spec.kind, stage)), false, spec.x, spec.z));
+      return { spec, i, def, ids };
     });
-    for (const g of this.groups.values()) {
-      const [cx, cz] = g.cell.split(",").map(Number);
-      g.meshes = [0, 1, 2].map((stage) => {
-        const m = new THREE.InstancedMesh(stageGeometry(g.kind, stage), this.material, g.n);
-        m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(g.n * 3).fill(1), 3);
-        m.boundingSphere = new THREE.Sphere(new THREE.Vector3((cx + 0.5) * CELL, 2, (cz + 0.5) * CELL), CELL * 0.75 + 16);
-        m.castShadow = m.receiveShadow = true;
-        scene.add(m);
-        return m;
-      });
-    }
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
     this.v = new THREE.Vector3();
@@ -232,44 +219,25 @@ export class VehicleSystem {
     this.reset();
   }
   reset() {
-    for (const g of this.groups.values()) {
-      g.used = [0, 0, 0];
-      g.meshes.forEach((m, s) => {
-        m.count = 0;
-        m.visible = false;
-      });
-    }
     for (const v of this.list) {
-      Object.assign(v, { x: v.spec.x, z: v.spec.z, ry: v.spec.ry, vx: 0, vz: 0, spin: 0, dmg: 0, hitAt: -9, stage: -1, slot: -1, moving: false, color: COLORS[(v.spec.color ?? v.i) % COLORS.length] });
+      Object.assign(v, { x: v.spec.x, z: v.spec.z, ry: v.spec.ry, vx: 0, vz: 0, spin: 0, dmg: 0, hitAt: -9, stage: -1, moving: false, color: COLORS[(v.spec.color ?? v.i) % COLORS.length] });
+      v.ids.forEach((id, stage) => {
+        this.batch.color(id, v.def.tint ? this.c.setHex(v.color) : this.c.setHex(stage === 2 ? 0xb0a8a8 : 0xffffff));
+        this.batch.visible(id, false);
+      });
       this.setStage(v, 0);
     }
   }
   setStage(v, stage) {
-    const g = this.groups.get(v.key);
-    if (v.slot >= 0) {
-      // Hide it in the old stage's mesh.
-      this.m.makeScale(0, 0, 0);
-      g.meshes[v.stage].setMatrixAt(v.slot, this.m);
-      g.meshes[v.stage].instanceMatrix.needsUpdate = true;
-    }
-    const mesh = g.meshes[stage];
+    if (v.stage >= 0) this.batch.visible(v.ids[v.stage], false);
     v.stage = stage;
-    v.slot = g.used[stage]++;
-    mesh.count = g.used[stage];
-    mesh.visible = true;
-    const tint = v.def.tint ? this.c.setHex(v.color) : this.c.setHex(0xffffff);
-    if (stage === 2 && !v.def.tint) this.c.setHex(0xb0a8a8);
-    mesh.setColorAt(v.slot, tint);
-    mesh.instanceColor.needsUpdate = true;
+    this.batch.visible(v.ids[stage], true);
     this.pose(v);
   }
   pose(v) {
-    const g = this.groups.get(v.key);
     this.q.setFromAxisAngle(this.UP, v.ry);
     this.m.compose(this.v.set(v.x, v.spec.y ?? 0.05, v.z), this.q, this.s.set(1, 1, 1));
-    const mesh = g.meshes[v.stage];
-    mesh.setMatrixAt(v.slot, this.m);
-    mesh.instanceMatrix.needsUpdate = true;
+    this.batch.matrix(v.ids[v.stage], this.m);
   }
   // A car (player or police) against the vehicles near it.
   touch(sim, car, radius, isPlayer) {

@@ -68,7 +68,7 @@ export function sitePlan() {
     if (kind === "parking") {
       const pick = ["sedan", "sedan", "van", "pickup", "sedan", "van"];
       for (let b = 0; b < 6; b++) {
-        if (hash(b + seg.x, seg.z - b) > 0.85) continue;
+        if (b === 5 || hash(b + seg.x, seg.z - b) > 0.85) continue; // bay 5: the booth
         // Nose in, front toward the edge (front is -z: ry + PI faces +v).
         veh(pick[(b + i) % 6], -7.5 + b * 3, 3.3, Math.PI + (hash(b, i) - 0.5) * 0.12, { color: Math.floor(hash(seg.z + b, b) * 9) });
       }

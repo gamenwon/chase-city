@@ -14,7 +14,7 @@ export function soundTargets(sim) {
   // and a harder turn or slide.
   const turnLoad = (Math.abs(p.turn || 0) * speed) / 24 + lateral * 0.2;
   const screech =
-    clamp((turnLoad - 0.75) / 0.9, 0, 1) * clamp((speed - 9) / 7, 0, 1);
+    clamp((turnLoad - 1.05) / 0.75, 0, 1) * clamp((speed - 9) / 7, 0, 1);
   return {
     engineHz: 45 + speed * 6,
     engineGain: 0.012 + clamp(speed / 24, 0, 1) * 0.035,
@@ -108,6 +108,8 @@ export class SoundSystem {
   // slightly detuned saw tones through a narrow band-pass gives the tonal
   // squeal; a fast irregular tremolo gives the rubber judder; band-passed
   // noise adds the friction hiss. update() only moves its level and pitch.
+  // Its sources exist only while it sounds (started on a real turn,
+  // stopped a while after it faded), so it costs nothing between turns.
   buildScreech() {
     const c = this.context;
     const gain = c.createGain();
@@ -129,41 +131,59 @@ export class SoundSystem {
     hissGain.gain.value = 0.35;
     hiss.connect(hissGain);
     hissGain.connect(judder);
-    const a = c.createOscillator(),
-      b = c.createOscillator();
-    a.type = b.type = "sawtooth";
-    a.frequency.value = 1000;
-    b.frequency.value = 1000;
-    b.detune.value = 23;
     const mix = c.createGain();
     mix.gain.value = 0.5;
-    a.connect(mix);
-    b.connect(mix);
     mix.connect(tone);
-    const noise = c.createBufferSource();
-    noise.buffer = this.noise;
-    noise.loop = true;
-    noise.connect(hiss);
-    // Vibrato (7 Hz, +-30 cents) and judder (27 + 41 Hz, uneven).
-    const vib = c.createOscillator(),
-      vibDepth = c.createGain();
-    vib.frequency.value = 7;
+    const vibDepth = c.createGain();
     vibDepth.gain.value = 30;
-    vib.connect(vibDepth);
-    vibDepth.connect(a.detune);
-    vibDepth.connect(b.detune);
-    const j1 = c.createOscillator(),
-      j2 = c.createOscillator(),
-      jDepth = c.createGain();
-    j1.type = "square";
-    j1.frequency.value = 27;
-    j2.frequency.value = 41;
+    const jDepth = c.createGain();
     jDepth.gain.value = 0.22;
-    j1.connect(jDepth);
-    j2.connect(jDepth);
     jDepth.connect(judder.gain);
-    for (const s of [a, b, noise, vib, j1, j2]) s.start();
-    return { source: a, second: b, gain, filter: tone, level: 0 };
+    // Placeholder frequency params so update() can always set the pitch.
+    const idle = { frequency: { setTargetAtTime() {}, value: 1000 } };
+    const loop = { source: idle, second: idle, gain, filter: tone, level: 0, live: null, quietSince: 0 };
+    loop.start = () => {
+      const a = c.createOscillator(),
+        b = c.createOscillator();
+      a.type = b.type = "sawtooth";
+      a.frequency.value = b.frequency.value = loop.hz || 1000;
+      b.detune.value = 23;
+      a.connect(mix);
+      b.connect(mix);
+      const noise = c.createBufferSource();
+      noise.buffer = this.noise;
+      noise.loop = true;
+      noise.connect(hiss);
+      const vib = c.createOscillator();
+      vib.frequency.value = 7;
+      vib.connect(vibDepth);
+      vibDepth.connect(a.detune);
+      vibDepth.connect(b.detune);
+      const j1 = c.createOscillator(),
+        j2 = c.createOscillator();
+      j1.type = "square";
+      j1.frequency.value = 27;
+      j2.frequency.value = 41;
+      j1.connect(jDepth);
+      j2.connect(jDepth);
+      loop.live = [a, b, noise, vib, j1, j2];
+      for (const s of loop.live) s.start();
+      loop.source = a;
+      loop.second = b;
+    };
+    loop.stop = () => {
+      for (const s of loop.live || [])
+        try {
+          s.stop();
+          s.disconnect();
+        } catch {}
+      try {
+        vibDepth.disconnect();
+      } catch {}
+      loop.live = null;
+      loop.source = loop.second = idle;
+    };
+    return loop;
   }
   parameter(param, value, time = 0.04) {
     param.setTargetAtTime(value, this.context.currentTime, time);
@@ -181,6 +201,8 @@ export class SoundSystem {
           this.parameter(loop.gain.gain, 0, 0.015);
         } catch {}
       }
+      // Paused / finished: no screech sources running in the background.
+      if (this.loops?.skid?.live) this.loops.skid.stop();
       this.stopVoices();
     }
   }
@@ -389,6 +411,11 @@ export class SoundSystem {
         this.parameter(this.loops[name].gain.gain, targets[`${name}Gain`]);
       // Screech: fades in fast (0.06 s), out slowly (0.22 s); pitch follows.
       const skid = this.loops.skid;
+      const now = this.context.currentTime;
+      skid.hz = targets.skidHz;
+      if (targets.skidGain > 0 && !skid.live) skid.start();
+      if (targets.skidGain > 0) skid.quietSince = now;
+      else if (skid.live && now - skid.quietSince > 1.2) skid.stop(); // faded out a while ago
       this.parameter(skid.gain.gain, targets.skidGain, targets.skidGain > skid.level ? 0.06 : 0.22);
       skid.level = targets.skidGain;
       this.parameter(skid.source.frequency, targets.skidHz, 0.08);

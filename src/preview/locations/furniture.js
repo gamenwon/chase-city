@@ -152,53 +152,24 @@ export const BITS = {
   brick: { build: brick, cap: 160 },
 };
 const FRUIT = [0xe8401c, 0xf5c01a, 0x5cb23a, 0xf0781e].map((c) => new THREE.Color(c));
-const CELL = 60;
-const cellOf = (x, z) => `${Math.floor(x / CELL)},${Math.floor(z / CELL)}`;
 const UP = new THREE.Vector3(0, 1, 0);
 
 export class FlyerSystem {
-  // specs: [{ kind, x, y, z, ry, color?, color2?, group?, level? }]
-  constructor(scene, specs, hooks = {}) {
+  // batch: PropBatch; specs: [{ kind, x, y, z, ry, color?, group?, level? }]
+  constructor(batch, specs, hooks = {}) {
+    this.batch = batch;
     this.hooks = hooks;
-    this.mat = bakedMaterial;
-    this.tintMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: true });
-    this.geos = {};
-    const geo = (k) => (this.geos[k] ||= pieceGeometry(FLYERS[k]?.build || BITS[k].build));
-    const groups = new Map();
-    this.items = specs.map((spec, i) => {
-      const key = `${spec.kind}|${cellOf(spec.x, spec.z)}`;
-      if (!groups.has(key)) groups.set(key, []);
-      const it = { spec, i, def: FLYERS[spec.kind] };
-      groups.get(key).push(it);
-      return it;
-    });
-    const tinted = (k) => FLYERS[k]?.tint || FLYERS[k]?.tint2 || BITS[k]?.tint;
-    for (const [key, list] of groups) {
-      const [kind, cell] = key.split("|");
-      const [cx, cz] = cell.split(",").map(Number);
-      const m = new THREE.InstancedMesh(geo(kind), tinted(kind) ? this.tintMat : this.mat, list.length);
-      m.boundingSphere = new THREE.Sphere(new THREE.Vector3((cx + 0.5) * CELL, 2, (cz + 0.5) * CELL), CELL * 0.75 + 30);
-      m.castShadow = !["chair", "crate", "cargo", "cctv"].includes(kind);
-      m.receiveShadow = true;
-      if (tinted(kind)) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(list.length * 3).fill(1), 3);
-      scene.add(m);
-      list.forEach((it, idx) => {
-        it.mesh = m;
-        it.idx = idx;
-        if (tinted(kind)) m.setColorAt(idx, new THREE.Color(it.spec.color ?? 0xffffff));
-      });
-    }
-    // Spawn pools (table halves, fruit, bricks): global, frustum-free.
+    const geo = (k) => batch.geometry(`fly:${k}`, () => pieceGeometry(FLYERS[k]?.build || BITS[k].build));
+    this.c = new THREE.Color();
+    this.items = specs.map((spec, i) => ({ spec, i, def: FLYERS[spec.kind], h: batch.instance(geo(spec.kind), true, spec.x, spec.z) }));
+    for (const it of this.items) if (it.spec.color != null) batch.color(it.h, this.c.setHex(it.spec.color));
+    // Spawn pools (table halves, fruit, bricks): instances made up front,
+    // hidden until used.
     this.pools = {};
     for (const k of ["tableTop", "tableBase", "fruit", "brick"]) {
       const cap = BITS[k]?.cap || 40;
-      const m = new THREE.InstancedMesh(geo(k), tinted(k) ? this.tintMat : this.mat, cap);
-      m.frustumCulled = false;
-      m.count = 0;
-      m.visible = false;
-      if (tinted(k)) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
-      scene.add(m);
-      this.pools[k] = { mesh: m, cap, used: 0 };
+      const g = geo(k);
+      this.pools[k] = { ids: Array.from({ length: cap }, () => batch.instance(g, false)), cap, used: 0 };
     }
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
@@ -212,9 +183,8 @@ export class FlyerSystem {
     this.active = [];
     this.pending = [];
     for (const p of Object.values(this.pools)) {
+      for (let i = 0; i < p.used; i++) this.batch.visible(p.ids[i], false);
       p.used = 0;
-      p.mesh.count = 0;
-      p.mesh.visible = false;
     }
     for (const it of this.items) {
       const s = it.spec;
@@ -225,16 +195,18 @@ export class FlyerSystem {
       it.state = "rest";
       it.hits = 0;
       it.hidden = false;
+      this.batch.visible(it.h, true);
       this.pose(it);
     }
-    for (const it of this.items) it.mesh.instanceMatrix.needsUpdate = true;
     this.stats = { launched: 0, broken: 0, bits: 0 };
   }
   pose(it) {
-    const s = it.hidden ? 0 : 1;
-    this.m.compose(this.v.set(it.x, it.y, it.z), it.q, this.s.set(s, s, s));
-    it.mesh.setMatrixAt(it.idx, this.m);
-    it.mesh.instanceMatrix.needsUpdate = true;
+    if (it.hidden) {
+      this.batch.visible(it.h, false);
+      return;
+    }
+    this.m.compose(this.v.set(it.x, it.y, it.z), it.q, this.s);
+    this.batch.matrix(it.h, this.m);
   }
   // A car near the loose things: knock what it touches.
   touch(sim, car, radius, speed) {
@@ -259,10 +231,10 @@ export class FlyerSystem {
       it.hidden = true;
       this.pose(it);
       this.stats.broken++;
-      def.parts.forEach((p, i) => this.spawn(sim, p, it.x, it.y + 0.6 - i * 0.3, it.z, car, speed, nx, nz, FLYERS[p].mass));
+      def.parts.forEach((p, i) => this.spawn(sim, p, it.x, it.y + 0.6 - i * 0.3, it.z, car, speed, nx, nz, FLYERS[p].mass, it.spec.y ?? 0.05));
       return;
     }
-    if (def.bits) for (let i = 0; i < def.bitN; i++) this.spawn(sim, def.bits, it.x, it.y + 0.5, it.z, car, speed * 0.8, nx, nz, 0.3);
+    if (def.bits) for (let i = 0; i < def.bitN; i++) this.spawn(sim, def.bits, it.x, it.y + 0.5, it.z, car, speed * 0.8, nx, nz, 0.3, it.spec.y ?? 0.05);
     const base = Math.min(1.35, Math.max(0.5, 1 / Math.sqrt(def.mass)));
     const r = () => Math.random();
     const along = 0.35 + 0.35 * r(), side = (r() - 0.5) * 0.7;
@@ -282,14 +254,13 @@ export class FlyerSystem {
     if (it.hits === 1) sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: it.x, z: it.z, strength: Math.min(15, speed) * Math.min(1, def.mass + 0.3) });
   }
   // A loose piece (table half, fruit, brick) from a pool.
-  spawn(sim, kind, x, y, z, car, speed, nx, nz, mass) {
+  spawn(sim, kind, x, y, z, car, speed, nx, nz, mass, baseY = 0.05) {
     const pool = this.pools[kind];
     if (!pool || pool.used >= pool.cap || this.active.length >= 140) return;
-    const idx = pool.used++;
-    pool.mesh.count = pool.used;
-    pool.mesh.visible = true;
-    if (kind === "fruit") pool.mesh.setColorAt(idx, FRUIT[idx % 4]), (pool.mesh.instanceColor.needsUpdate = true);
-    const it = { spec: { kind }, def: FLYERS[kind] || { mass, side: 0.06 }, mesh: pool.mesh, idx, x, y, z, q: new THREE.Quaternion(), hits: 3, state: "rest" };
+    const h = pool.ids[pool.used++];
+    this.batch.visible(h, true);
+    if (kind === "fruit") this.batch.color(h, FRUIT[pool.used % 4]);
+    const it = { spec: { kind, y: baseY }, def: FLYERS[kind] || { mass, side: 0.06 }, h, x, y, z, q: new THREE.Quaternion(), hits: 3, state: "rest" };
     const base = Math.min(1.6, 1 / Math.sqrt(mass));
     const a = Math.random() * Math.PI * 2;
     it.vx = ((car.vx || 0) * 0.35 + Math.cos(a) * speed * 0.25 + nx * speed * 0.2) * base;
