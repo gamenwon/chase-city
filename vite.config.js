@@ -9,6 +9,7 @@ export default defineConfig({
         direction: "art-direction.html",
         district: "art-district.html",
         locations: "locations.html",
+        collapse: "collapse.html",
       },
       output: { manualChunks: { three: ["three"] } },
     },
