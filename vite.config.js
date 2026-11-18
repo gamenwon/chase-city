@@ -7,6 +7,7 @@ export default defineConfig({
         main: "index.html",
         art: "art-sample.html",
         direction: "art-direction.html",
+        district: "art-district.html",
       },
       output: { manualChunks: { three: ["three"] } },
     },

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>CHASE CITY 도시 지구 시안</title>
+    <style>
+      :root {
+        font-family: "Noto Sans KR", system-ui, sans-serif;
+        color: #2e2a30;
+        background: #bfd3e6;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #bfd3e6;
+      }
+      #view {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+      .card {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        left: 12px;
+        max-width: 320px;
+        padding: 12px 14px;
+        border-radius: 6px;
+        background: #fbf8f4ee;
+        box-shadow: 4px 4px 0 #2e2a3022;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .card h1 {
+        margin: 0 0 4px;
+        font-size: 16px;
+      }
+      .card p {
+        margin: 0;
+      }
+      #stats {
+        display: block;
+        margin-top: 6px;
+        font: 11px monospace;
+        color: #6a6470;
+      }
+      .bar {
+        position: fixed;
+        left: 50%;
+        bottom: max(12px, env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+        width: max-content;
+        max-width: calc(100vw - 20px);
+        padding: 6px;
+        border-radius: 6px;
+        background: #fbf8f4f2;
+        box-shadow: 4px 4px 0 #2e2a3026;
+      }
+      .bar button {
+        border: 0;
+        border-radius: 4px;
+        min-height: 40px;
+        padding: 8px 12px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+        background: transparent;
+        color: #2e2a30;
+        cursor: pointer;
+      }
+      .bar button[aria-pressed="true"] {
+        background: #2e2a30;
+        color: #fbf8f4;
+      }
+      .bar #state {
+        background: #3f8f6e;
+        color: #fff;
+      }
+      .bar #state[aria-pressed="true"] {
+        background: #d8443f;
+      }
+      .bar #replay {
+        background: #e0367a;
+        color: #fff;
+      }
+      @media (max-width: 640px) {
+        .card {
+          right: 12px;
+          max-width: none;
+        }
+        .card .long {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view" aria-label="CHASE CITY 도시 지구 3D 시안"></canvas>
+    <div class="card">
+      <h1>CHASE CITY · 도시 지구 시안 (각진 로우폴리)</h1>
+      <p>
+        주유소 · 농구장 · 분수 공원 · 상점가 · 주거/상업 건물.
+        <span class="long"
+          >드래그로 회전, 휠·두 손가락으로 확대. '파괴 전/후'로 상태를
+          바꾸고 '파괴 재생'으로 연출을 봅니다. 게임 화면은 바뀌지
+          않았습니다.</span
+        >
+      </p>
+      <span id="stats"></span>
+    </div>
+    <div class="bar" role="group" aria-label="보기">
+      <button data-view="all" aria-pressed="true">전체</button>
+      <button data-view="chase">추격</button>
+      <button data-view="gas">주유소</button>
+      <button data-view="court">농구장</button>
+      <button data-view="park">공원</button>
+      <button data-view="street">상점가</button>
+      <button id="state" aria-pressed="false">파괴 전</button>
+      <button id="replay">파괴 재생</button>
+    </div>
+    <script type="module" src="/src/art/district.js"></script>
+  </body>
+</html>
