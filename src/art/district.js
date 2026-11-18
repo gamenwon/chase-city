@@ -1084,160 +1084,474 @@ function district(root) {
   planter(P(-32, -AV - 1.5), 0, 0);
   hydrant(P(-12, -AV - 1.0), 0, 0);
 
-  // ---- NE: gas station and red billboard block.
-  B(g, 30, 0.31, 24, C.concrete, 22, 0, -24); // forecourt
-  for (let x = 8; x <= 36; x += 3.5) slab(g, 0.05, 24, 0.01, 0xb3ab9f, x, -24, 0.31);
-  // Convenience store.
-  const mart = P(22, -41);
-  B(mart, 18, 4.8, 8, C.white, 0, 0, 0);
-  B(mart, 18.3, 0.9, 8.3, 0x3f8f6e, 0, 4.8, 0);
-  B(mart, 14, 2.6, 0.2, C.glass, -1, 0.3, 4.02);
-  B(mart, 1.6, 2.6, 0.22, C.dark, 7, 0.0, 4.03);
-  signBoard(mart, "24 MART", 6, 0.8, -1, 5.25, 4.2, 0, "#3f8f6e", "#ffffff");
-  rooftopKit(mart, 18, 8, 5.7, 3);
-  bins(P(32, -36), 0, 0);
-  // Price pylon.
-  const pylon = P(35, -10);
-  B(pylon, 0.4, 5.0, 0.4, C.metal, 0, 0, 0);
-  B(pylon, 2.4, 3.0, 0.4, 0x3f8f6e, 0, 4.0, 0);
-  signBoard(pylon, "GAS", 2.0, 0.9, 0, 6.3, 0.22, 0, "#3f8f6e", "#ffd64a");
-  for (let i = 0; i < 3; i++) B(pylon, 1.8, 0.5, 0.42, i === 0 ? C.yellow : C.white, 0, 4.3 + i * 0.7, 0);
+  // ---- NE: gas station (detailed) and red billboard block.
+  // Forecourt: concrete slabs with joints both ways, drains, tank fill
+  // caps, oil stains, lane arrows; kerb aprons to the road.
+  const FX = 23, FZ = -21.5, FW = 30, FD = 25;
+  B(g, FW, 0.31, FD, C.concrete, FX, 0, FZ);
+  for (let x = FX - FW / 2 + 3; x < FX + FW / 2; x += 3) slab(g, 0.05, FD, 0.01, 0x9f9c95, x, FZ, 0.31);
+  for (let z = FZ - FD / 2 + 3; z < FZ + FD / 2; z += 3) slab(g, FW, 0.05, 0.01, 0x9f9c95, FX, z, 0.31);
+  for (const [x, z] of [[12, -12], [33, -12]]) {
+    slab(g, 1.4, 0.5, 0.012, 0x2b2a2e, x, z, 0.315);
+    for (let i = 0; i < 6; i++) slab(g, 0.06, 0.5, 0.014, 0x55535c, x - 0.6 + i * 0.24, z, 0.315);
+  }
+  for (let i = 0; i < 4; i++) {
+    cyl(g, 0.32, 0.32, 0.03, 0x55535c, 12 + i * 1.0, 0.31, -31.2, 8);
+    cyl(g, 0.2, 0.2, 0.035, [C.red, C.yellow, C.blue, C.green][i], 12 + i * 1.0, 0.31, -31.2, 8);
+  }
+  for (const [x, z, s] of [[19, -19, 1.2], [25.5, -24, 0.9], [20, -26, 0.7]]) {
+    const o = add(g, new THREE.CylinderGeometry(s, s * 0.8, 0.012, 7), 0x6e6a66, x, 0.316, z);
+    o.scale.z = 0.6;
+  }
+  // Lane arrows (shaft + head) leading under the canopy.
+  for (const ax of [14.5, 29.5]) {
+    slab(g, 0.35, 2.2, 0.012, C.lineWhite, ax, -13.5, 0.315);
+    const head = add(g, new THREE.CylinderGeometry(0, 0.7, 0.012, 3), C.lineWhite, ax, 0.32, -15.0);
+    head.rotation.y = Math.PI;
+  }
+  for (const ax of [11, 35]) slab(g, 4.5, 3.0, 0.31, C.concrete, ax, -7.5, 0); // driveway aprons
+  // Convenience store: plinth, white walls, aluminium-framed glazing,
+  // sliding doors, brand band with sign and stripe, posters, ice chest,
+  // propane cage, vending machine, bench, roof plant behind a parapet.
+  const mart = P(23, -41);
+  const MW = 18, MD = 8, MH = 4.6;
+  B(mart, MW, 0.4, MD, 0x5b5960, 0, 0, 0);
+  B(mart, MW, MH - 0.4, MD, C.white, 0, 0.4, 0);
+  B(mart, MW + 0.1, 0.9, MD + 0.1, C.red, 0, MH, 0);
+  fascia(mart, MW + 0.1, MD + 0.1, MH + 0.9, C.yellow, 0.16); // stripe round the edge only
+  B(mart, MW - 0.2, 0.04, MD - 0.2, 0x8a8781, 0, MH + 0.9, 0); // roof membrane
+  signBoard(mart, "24 MART", 6, 0.75, -1, MH + 0.45, MD / 2 + 0.13, 0, "#d62f2a", "#ffffff");
+  // Storefront frame (mullions sit in front of the glass, never through).
+  const fz = MD / 2 + 0.02;
+  B(mart, 14.4, 0.12, 0.14, 0xb9bcc2, -1, 0.4, fz);
+  B(mart, 14.4, 0.12, 0.14, 0xb9bcc2, -1, 3.0, fz);
+  for (let i = 0; i <= 8; i++) if (i !== 4 && i !== 5) B(mart, 0.1, 2.48, 0.14, 0xb9bcc2, -8.2 + i * 1.8, 0.52, fz);
+  // Sliding doors (between mullions 4 and 5): frames + darker glass.
+  for (const dx of [-0.4, 0.4]) {
+    B(mart, 0.8, 2.48, 0.04, 0x4f6a7a, -1 + 0.8 + dx - 0.4 + 0.4, 0.52, fz + 0.02);
+  }
+  B(mart, 1.8, 0.1, 0.16, 0x7a7d84, -0.2, 3.12, fz + 0.02);
+  for (const s of [-1, 1]) B(mart, 0.08, 2.48, 0.16, 0x7a7d84, -0.2 + s * 0.86, 0.52, fz + 0.02);
+  // Posters on the glass (thin, in front of it, between mullions).
+  for (const [px, c] of [[-7.3, C.yellow], [-5.5, C.blue], [3.5, C.orange], [5.3, C.green]]) B(mart, 1.2, 0.9, 0.02, c, px, 1.6, fz + 0.04);
+  // Lights over the door.
+  for (const lx of [-1.2, 0.8]) B(mart, 0.5, 0.12, 0.3, 0xfff1c0, lx, 3.3, fz + 0.15, 0, { emissive: 0xffd98a, emissiveIntensity: 0.6 });
+  const ice = G(mart, 3.2, 0, fz + 0.6);
+  B(ice, 1.6, 1.2, 0.8, C.white, 0, 0, 0);
+  B(ice, 1.62, 0.2, 0.82, C.blue, 0, 1.2, 0);
+  B(ice, 1.2, 0.3, 0.02, C.blue, 0, 0.6, 0.41);
+  const vend = G(mart, 6.9, 0, fz + 0.5);
+  B(vend, 1.0, 1.9, 0.8, C.red, 0, 0, 0);
+  B(vend, 0.6, 1.2, 0.02, C.glassDark, -0.12, 0.5, 0.41);
+  B(vend, 0.15, 0.6, 0.02, 0xe0e0e0, 0.35, 0.9, 0.41);
+  // Propane cage at the shop's side.
+  const cage = G(mart, -MW / 2 - 0.9, 0, 1.5);
+  B(cage, 1.4, 0.08, 1.0, C.metal, 0, 0, 0);
+  for (const [cx, cz] of [[-0.65, -0.45], [0.65, -0.45], [-0.65, 0.45], [0.65, 0.45]]) B(cage, 0.06, 1.6, 0.06, C.metal, cx, 0.08, cz);
+  B(cage, 1.4, 0.06, 1.0, C.metal, 0, 1.68, 0);
+  for (let i = 0; i < 3; i++) cyl(cage, 0.16, 0.16, 0.7, 0xdfe3e8, -0.4 + i * 0.4, 0.1, 0, 8);
+  for (let i = 0; i < 9; i++) B(cage, 0.02, 1.5, 0.02, C.metal, -0.6 + i * 0.15, 0.13, 0.48);
+  bench(mart, -6.5, fz + 0.9, Math.PI, C.blue);
+  parapet(mart, MW, MD, MH + 1.06, C.white, 0.35);
+  for (const [ux, uz] of [[-5, -1.5], [-2.4, -1.5]]) {
+    B(mart, 1.6, 0.8, 1.2, 0xcfd0d4, ux, MH + 1.06, uz);
+    cyl(mart, 0.3, 0.3, 0.05, 0x6a6a70, ux, MH + 1.86, uz, 8);
+  }
+  B(mart, 3.0, 0.4, 0.4, 0xb9bcc2, 1.4, MH + 1.3, -1.5);
+  // Air / water machine and vacuum post by the forecourt edge.
+  const air = P(36.5, -31);
+  B(air, 0.7, 1.4, 0.5, C.blue, 0, 0, 0);
+  B(air, 0.5, 0.35, 0.02, C.glassDark, 0, 0.9, 0.26);
+  B(air, 0.2, 0.2, 0.06, C.yellow, 0, 0.5, 0.26);
+  B(air, 0.08, 0.6, 0.08, C.dark, 0.42, 0.4, 0);
+  const vac = P(36.5, -27.5);
+  cyl(vac, 0.15, 0.18, 2.4, C.yellow, 0, 0, 0, 6);
+  B(vac, 0.8, 0.6, 0.6, C.yellow, 0, 2.4, 0);
+  B(vac, 0.04, 1.6, 0.04, C.dark, 0.32, 0.8, 0.32);
+  // Price pylon: stone plinth, two posts, brand head, three price rows.
+  const pylon = P(36.5, -11);
+  B(pylon, 3.0, 0.6, 1.0, C.stone, 0, 0, 0);
+  for (const s of [-1.1, 1.1]) B(pylon, 0.3, 4.6, 0.3, C.metal, s, 0.6, 0);
+  B(pylon, 2.8, 3.6, 0.5, C.white, 0, 3.2, 0);
+  B(pylon, 2.9, 1.0, 0.56, C.red, 0, 6.8, 0);
+  signBoard(pylon, "GAS", 2.2, 0.7, 0, 7.3, 0.3, 0, "#d62f2a", "#ffe14a");
+  ["REG 3.49", "PLUS 3.69", "DSL 3.89"].forEach((txt, i) =>
+    signBoard(pylon, txt, 2.4, 0.7, 0, 5.9 - i * 0.95, 0.27, 0, "#232227", i === 2 ? "#5cb23a" : "#ffe14a"),
+  );
+  // A pump: plinth, body, brand head with displays both sides, keypad,
+  // nozzles in holsters, a looped hose (angular tube) to each nozzle.
+  const hose = (p, pts) => {
+    const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+    return add(p, new THREE.TubeGeometry(curve, 10, 0.045, 5, false), C.rubber);
+  };
+  function pump(p, x, z, broken = false) {
+    const g2 = G(p, x, 0.3, z);
+    B(g2, 1.0, 0.15, 0.8, 0x4a4850, 0, 0, 0);
+    B(g2, 0.9, 1.3, 0.7, broken ? 0x3a3438 : C.white, 0, 0.15, 0);
+    if (broken) return g2;
+    B(g2, 0.92, 0.55, 0.72, C.red, 0, 1.45, 0);
+    B(g2, 0.94, 0.08, 0.74, C.yellow, 0, 1.45, 0);
+    for (const s of [-1, 1]) {
+      B(g2, 0.6, 0.3, 0.02, C.glassDark, 0, 1.0, s * 0.36);
+      B(g2, 0.4, 0.08, 0.02, 0x5cf07a, 0, 1.08, s * 0.37, 0, { emissive: 0x2ad050, emissiveIntensity: 0.6 });
+      B(g2, 0.22, 0.16, 0.03, 0x8f8f94, 0.25, 0.7, s * 0.365);
+      // Nozzles in holsters on the side, hoses looping from the top.
+      [C.yellow, C.green, V.trim].forEach((c, i) => {
+        B(g2, 0.06, 0.24, 0.12, c, s * 0.47, 0.75, -0.2 + i * 0.2);
+        hose(g2, [[s * 0.3, 1.75, -0.2 + i * 0.2], [s * 0.75, 1.5, -0.2 + i * 0.2], [s * 0.85, 0.7, -0.2 + i * 0.2], [s * 0.5, 0.85, -0.2 + i * 0.2]]);
+      });
+    }
+    return g2;
+  }
   site(g, "gas", 22, -22, "boom", (b, a) => {
-    // Canopy on four columns, two pump islands, a pickup filling up.
-    const cB = G(b, 22, top, -22);
-    for (const [sx, sz] of [[-6, -3.5], [6, -3.5], [-6, 3.5], [6, 3.5]]) B(cB, 0.5, 5.2, 0.5, C.white, sx, 0, sz);
-    B(cB, 17, 0.8, 11, C.white, 0, 5.2, 0);
-    fascia(cB, 17, 11, 5.3, 0x3f8f6e);
-    for (let i = -3; i <= 3; i++) B(cB, 1.2, 0.05, 0.4, 0xfff4cf, i * 2.2, 5.15, 0, 0, { emissive: 0xffe9a8, emissiveIntensity: 0.6 });
-    for (const sx of [-3, 3]) {
-      B(cB, 1.4, 0.3, 6.4, C.curb, sx, 0, 0);
-      for (const sz of [-1.6, 1.6]) {
-        const pump = G(cB, sx, 0.3, sz);
-        B(pump, 0.9, 1.9, 0.7, C.red, 0, 0, 0);
-        B(pump, 0.7, 0.5, 0.05, C.glassDark, 0, 1.2, 0.36);
-        B(pump, 0.9, 0.2, 0.7, C.white, 0, 1.9, 0);
-        B(pump, 0.12, 0.6, 0.12, C.dark, 0.5, 0.6, 0.2);
+    const CX = 22, CZ = -22, CW = 17, CD = 11, CH = 5.2;
+    const island = (p, ix, wrecked) => {
+      B(p, 1.4, 0.3, 6.4, wrecked ? 0x8a8781 : C.curb, ix, 0, 0);
+      for (const ez of [-3.4, 3.4]) {
+        for (let i = 0; i < 4; i++) B(p, 0.35, 0.3, 0.6, i % 2 ? V.trim : C.yellow, ix - 0.525 + i * 0.35, 0, ez);
+        for (const bx of [-0.5, 0.5]) {
+          const bol = cyl(p, 0.1, 0.1, 1.0, C.yellow, ix + bx, 0.3, ez + Math.sign(ez) * 0.15, 6);
+          if (wrecked) {
+            bol.rotation.z = bx * 1.6;
+            bol.position.y = 0.4;
+          }
+        }
       }
+      B(p, 0.5, 0.8, 0.4, C.green, ix, 0.3, -2.7); // bin with squeegee
+      if (!wrecked) cyl(p, 0.18, 0.15, 0.4, C.blue, ix, 1.1, -2.7, 6);
+    };
+    // Before: columns on plinths with guard bollards, canopy deck with
+    // lights underneath, red brand fascia with a yellow stripe and signs.
+    const cB = G(b, CX, top, CZ);
+    for (const [sx, sz] of [[-6, -3.5], [6, -3.5], [-6, 3.5], [6, 3.5]]) {
+      B(cB, 1.0, 0.6, 1.0, C.stone, sx, 0, sz);
+      B(cB, 0.55, CH - 0.6, 0.55, 0xdfe3e8, sx, 0.6, sz);
+      B(cB, 0.6, 0.5, 0.6, C.red, sx, 1.6, sz);
     }
-    const truck = G(b, 17.2, top, -20.8, 0);
-    truck.add(pickup(0xd8c49c));
+    B(cB, CW, 0.3, CD, C.white, 0, CH, 0);
+    for (let i = -3; i <= 3; i++)
+      for (const lz of [-2.5, 2.5]) B(cB, 1.0, 0.04, 0.6, 0xfff4cf, i * 2.3, CH - 0.04, lz, 0, { emissive: 0xffe9a8, emissiveIntensity: 0.7 });
+    fascia(cB, CW, CD, CH, C.red, 1.0);
+    B(cB, CW + 0.3, 0.14, 0.04, C.yellow, 0, CH + 0.25, CD / 2 + 0.14);
+    B(cB, 0.04, 0.14, CD + 0.3, C.yellow, -CW / 2 - 0.14, CH + 0.25, 0);
+    B(cB, CW - 0.3, 0.1, CD - 0.3, 0x8a8781, 0, CH + 0.3, 0); // deck roof inside the fascia
+    signBoard(cB, "GAS  •  24H", 6.0, 0.56, 0, CH + 0.68, CD / 2 + 0.25, 0, "#d62f2a", "#ffffff");
+    signBoard(cB, "GAS", 2.6, 0.56, -CW / 2 - 0.25, CH + 0.68, 0, -Math.PI / 2, "#d62f2a", "#ffe14a");
+    for (const ix of [-3, 3]) {
+      island(cB, ix, false);
+      for (const pz of [-1.6, 1.6]) pump(cB, ix, pz);
+    }
+    const ext = G(cB, -6, 0.6, 3.5);
+    cyl(ext, 0.14, 0.14, 0.6, C.red, 0.45, 0.4, 0, 8);
+    G(b, 17.2, top, -20.8, 0).add(pickup(0xd8c49c));
     // A police car pulling onto the forecourt after the player.
-    const copIn = G(b, 11.5, top, -12.5, Math.PI * 0.82);
-    copIn.add(policeCar());
-    // Wrecked: canopy slumped onto one side, columns buckled, pumps blown
-    // apart, scorch mark, fires and smoke; the police car caught in the
-    // blast is flipped and blackened.
-    const cA = G(a, 22, top, -22);
-    slab(cA, 16, 12, 0.02, C.scorch, 0, 0, 0.32);
-    for (const [sx, sz, rz] of [[-6, -3.5, 0.5], [6, -3.5, -0.1], [-6, 3.5, 0.6], [6, 3.5, 0]]) {
-      const col = B(cA, 0.5, sx < 0 ? 3.2 : 5.2, 0.5, 0xd9d2cc, sx, 0, sz);
-      col.rotation.z = rz;
+    G(b, 11.5, top, -12.5, Math.PI * 0.82).add(policeCar());
+    // Shop glazing (intact).
+    B(b, 14.2, 2.48, 0.03, C.glass, 23 - 1, top + 0.52, -41 + MD / 2 + 0.015, 0, { roughness: 0.2 });
+
+    // After: crater and scorch, columns snapped or buckled, the canopy
+    // slumped onto its broken corner, pumps blown off their plinths (heads
+    // tumbling, hoses torn), bollards bent, fires and black smoke; the
+    // pickup and the police car flipped and burnt; shop glass blown in.
+    const cA = G(a, CX, top, CZ);
+    // Scorch: an irregular dark patch, a darker blast mark at its heart.
+    for (const [sx, sz, r] of [[-1.5, 0.5, 4.6], [2.5, -1.2, 3.2], [-4.2, 2.0, 2.6], [1.0, 3.2, 2.4]]) {
+      const s = add(cA, new THREE.CylinderGeometry(r, r, 0.02, 7), 0x3a3437, sx, 0.32, sz);
+      s.rotation.y = r;
     }
-    const roof = G(cA, 1.0, 2.6, 0);
-    roof.rotation.z = 0.36;
-    B(roof, 17, 0.8, 11, 0xd9d2cc, 0, 0, 0);
-    fascia(roof, 17, 11, 0.1, 0x2f6a52);
-    for (const sx of [-3, 3]) {
-      B(cA, 1.4, 0.3, 6.4, 0x9a938c, sx, 0, 0);
-      for (const sz of [-1.6, 1.6]) {
-        const base = B(cA, 0.9, 0.5, 0.7, 0x7a2b2e, sx, 0.3, sz);
-        base.rotation.y = sz;
-        const top2 = B(cA, 0.9, 1.0, 0.7, 0x8a2f30, sx + 1.8 * Math.sign(sz), 0.0, sz * 2.4);
-        top2.rotation.set(1.4, sz, 0.3);
-        debris(top2);
+    add(cA, new THREE.CylinderGeometry(2.4, 1.8, 0.03, 7), 0x1f1c1e, -2.5, 0.335, -0.5);
+    for (const [sx, sz, h, rz, rx] of [[-6, -3.5, 2.0, 0.6, 0.1], [6, -3.5, CH - 0.6, -0.08, 0], [-6, 3.5, 1.4, 0, 0], [6, 3.5, CH - 0.9, 0.05, -0.1]]) {
+      B(cA, 1.0, 0.6, 1.0, 0x8a8781, sx, 0, sz);
+      const col = B(cA, 0.55, h, 0.55, 0x9a9da3, sx, 0.6, sz);
+      col.rotation.set(rx, 0, rz);
+    }
+    const deck = G(cA, 1.2, 2.9, 0.4);
+    deck.rotation.set(0.05, 0.06, 0.32);
+    B(deck, CW, 0.3, CD, 0xc9c5c0, 0, 0, 0);
+    fascia(deck, CW, CD, 0, 0x8e2420, 1.0);
+    B(deck, CW - 0.3, 0.1, CD - 0.3, 0x55525a, 0, 0.3, 0);
+    for (const ix of [-3, 3]) {
+      island(cA, ix, true);
+      for (const pz of [-1.6, 1.6]) {
+        pump(cA, ix, pz, true);
+        const head = B(cA, 0.92, 0.55, 0.72, 0x8e2420, ix + 2.4 * Math.sign(pz + 0.1), 0.3, pz * 2.8);
+        head.rotation.set(1.2, pz, 0.5);
+        debris(head);
+        const torn = hose(cA, [[ix, 0.7, pz], [ix + 1.2, 0.35, pz + 0.6], [ix + 2.2, 0.35, pz + 0.3]]);
+        debris(torn);
       }
     }
-    for (let i = 0; i < 14; i++) {
-      const d = B(cA, 0.5 + (i % 3) * 0.3, 0.12, 0.4 + (i % 2) * 0.3, i % 3 ? 0xd9d2cc : C.red, Math.cos(i * 2.4) * (7 + (i % 4)), 0, Math.sin(i * 2.4) * (6 + (i % 3)), i);
-      debris(d);
-    }
+    for (let i = 0; i < 18; i++)
+      debris(B(cA, 0.4 + (i % 3) * 0.35, 0.1, 0.3 + (i % 2) * 0.3, [0x9a9da3, C.red, C.white, C.yellow][i % 4], Math.cos(i * 2.4) * (7 + (i % 5)), 0, Math.sin(i * 2.4) * (6 + (i % 4)), i));
     const wreck = G(a, 17.2, top, -20.8, 0.4);
-    const pk = pickup(0x6d5f52);
+    const pk = pickup(0x4a3f38);
     pk.rotation.z = 2.6;
     pk.position.y = 1.6;
     wreck.add(pk);
-    // The police car caught by the blast: thrown onto its roof, scorched.
     const copOut = G(a, 9.8, top, -10.8, Math.PI * 0.6);
     const burnt = policeCar();
     burnt.traverse((o) => {
-      if (o.isMesh) o.material = M(o.material.color.getHex() === C.white ? 0x6a6266 : 0x2b2427);
+      if (o.isMesh) o.material = M(o.material.color.getHex() === C.white ? 0x5a5458 : 0x1f1c1e);
     });
     burnt.rotation.z = Math.PI - 0.25;
     burnt.position.y = 1.9;
     copOut.add(burnt);
-    const bar = B(a, 1.3, 0.3, 0.42, 0x6a6266, 7.2, top, -8.6, 0.7);
-    debris(bar);
+    debris(B(a, 1.3, 0.3, 0.42, 0x5a5458, 7.2, top, -8.6, 0.7));
     flames(G(a, 9.8, top + 0.3, -10.8), [[0, 0, 0]]);
-    // Blown-in shop windows and glass across the forecourt.
-    B(a, 14, 2.6, 0.22, 0x2b2427, 21, top + 0.3, -36.95);
-    for (let i = 0; i < 16; i++) debris(B(a, 0.35, 0.03, 0.25, C.glass, 13 + i * 1.1, top + 0.02, -35.5 + (i % 4) * 0.8, i));
-    flames(cA, [[-3, 0.3, -1], [3.5, 0.3, 1.5], [-4.6, 0.3, 2.4], [0, 0.3, 4.8]]);
+    // Shop: glass gone (dark interior), shards on the forecourt.
+    B(a, 14.2, 2.48, 0.03, 0x141316, 22, top + 0.52, -41 + MD / 2 + 0.015);
+    for (let i = 0; i < 18; i++) debris(B(a, 0.35, 0.03, 0.25, C.glass, 13 + i * 1.0, top + 0.02, -35.6 + (i % 4) * 0.8, i));
+    flames(cA, [[-3, 0.3, -1], [3.5, 0.3, 1.5], [-4.6, 0.3, 2.4], [0.4, 0.3, 4.6], [-1.5, 0.3, -2.8]]);
     smoke(cA, [[-3, 3, -1, 1.6], [-2.4, 6, -0.4, 1.3], [3.6, 3.4, 1.4, 1.5], [3, 7, 1, 1.2], [-1, 9, 0, 1.0]]);
   });
   redBillboard(P(43, -26), 0, 0, 0);
-  streetLight(P(33, -AV - 1), 0, 0);
+  streetLight(P(30, -AV - 1), 0, 0);
 
-  // ---- SW: public park with a fountain, paths and trees.
-  slab(g, R - ST - 3, R - AV - 3, 0.36, C.grass, -(R + ST) / 2, (R + AV) / 2);
-  for (const [w, d, x, z, ry] of [
-    [3, 46, -28, 29, 0.78],
-    [3, 46, -28, 29, -0.78],
-    [42, 3, -28, 29, 0],
-  ]) {
-    const s = slab(g, w, d, 0.04, C.path, x, z, 0.36);
-    s.rotation.y = ry;
-  }
-  site(g, "fountain", -28, 29, "splash", (b, a) => {
-    const fB = G(b, -28, 0.4, 29);
-    cyl(fB, 5.0, 5.2, 0.8, C.curb, 0, 0, 0, 8);
-    cyl(fB, 4.4, 4.4, 0.82, C.water, 0, 0, 0, 8, { roughness: 0.2 });
-    cyl(fB, 0.7, 0.9, 2.0, C.curb, 0, 0.8, 0, 8);
-    cyl(fB, 1.9, 0.9, 0.5, C.curb, 0, 2.8, 0, 8);
-    cyl(fB, 1.6, 1.6, 0.52, C.water, 0, 2.8, 0, 8, { roughness: 0.2 });
-    cyl(fB, 0.25, 0.35, 1.0, C.curb, 0, 3.3, 0, 6);
-    add(fB, new THREE.ConeGeometry(0.9, 1.6, 8, 1, true), 0xbfeefa, 0, 4.8, 0, { transparent: true, opacity: 0.55, roughness: 0.1 });
-    // Wrecked: rim split into chunks, column toppled, a huge water geyser
-    // and a spreading puddle.
-    const fA = G(a, -28, 0.4, 29);
-    for (let i = 0; i < 8; i++) {
-      const ang = (i / 8) * Math.PI * 2;
-      const chunk = B(fA, 3.6, 0.8, 0.6, C.curb, Math.cos(ang) * (5.2 + (i % 3) * 0.6), 0, Math.sin(ang) * (5.2 + (i % 3) * 0.6), -ang + Math.PI / 2);
-      chunk.rotation.z = (i % 2 ? 0.3 : -0.2);
-      if (i % 3 === 0) debris(chunk);
+  // ---- SW: public park (detailed). Lawns with mowing stripes, paved paths
+  // with edging, a round plaza with a tiered fountain, flower beds, hedges,
+  // park benches, lamps, bins, a drinking fountain, a playground on a
+  // rubber surface, a pavilion, an iron fence with gate openings.
+  const PX = -28.5, PZ = 29, PW = R - ST - 3, PD = R - AV - 3; // 44 x 43
+  slab(g, PW, PD, 0.36, C.grass, PX, PZ);
+  for (let i = 0; i < 7; i++) slab(g, PW, 3, 0.004, 0x4caa50, PX, PZ - PD / 2 + 3 + i * 6, 0.36);
+  const pave = 0xcbbfa8, edge = 0x8f8778;
+  const path = (x, z, w, d) => {
+    slab(g, w, d, 0.05, pave, x, z, 0.364);
+    if (w > d) for (const s of [-1, 1]) slab(g, w, 0.18, 0.09, edge, x, z + s * (d / 2 + 0.09), 0.364);
+    else for (const s of [-1, 1]) slab(g, 0.18, d, 0.09, edge, x + s * (w / 2 + 0.09), z, 0.364);
+  };
+  const PR = 9.5; // plaza radius
+  path(PX, PZ - PD / 2 + (PD / 2 - PR) / 2, 3.2, PD / 2 - PR);
+  path(PX, PZ + PD / 2 - (PD / 2 - PR) / 2, 3.2, PD / 2 - PR);
+  path(PX - PW / 2 + (PW / 2 - PR) / 2, PZ, PW / 2 - PR, 3.2);
+  path(PX + PW / 2 - (PW / 2 - PR) / 2, PZ, PW / 2 - PR, 3.2);
+  // Plaza: two paving rings and an edge ring (octagonal, stacked, no
+  // coplanar overlap).
+  cyl(g, PR + 0.2, PR + 0.2, 0.08, edge, PX, 0.36, PZ, 8);
+  cyl(g, PR, PR, 0.1, pave, PX, 0.36, PZ, 8);
+  cyl(g, PR - 1.6, PR - 1.6, 0.11, 0xb8ab92, PX, 0.36, PZ, 8);
+  cyl(g, PR - 2.4, PR - 2.4, 0.12, pave, PX, 0.36, PZ, 8);
+  site(g, "fountain", PX, PZ, "splash", (b, a) => {
+    // Tiered fountain: octagonal step, basin walls with coping, water,
+    // pedestal with spouts, two bowls, finial; arcs of water.
+    const fB = G(b, PX, 0.48, PZ);
+    octPrism(fB, 5.6, 0, 0.2, C.stone, 0);
+    octPrism(fB, 5.0, 4.4, 0.7, C.stone, 0.2); // basin wall
+    octPrism(fB, 5.15, 4.3, 0.14, 0xd9cdb8, 0.9); // coping
+    octPrism(fB, 4.4, 0, 0.5, C.water, 0.2, { roughness: 0.15 });
+    octPrism(fB, 3.2, 2.9, 0.02, 0x6fc6ef, 0.7, { roughness: 0.15 }); // ripple ring
+    cyl(fB, 1.1, 1.3, 0.6, C.stone, 0, 0.8, 0, 8);
+    cyl(fB, 0.55, 0.7, 1.8, C.stone, 0, 1.4, 0, 8);
+    for (let i = 0; i < 4; i++) {
+      const sp = B(fB, 0.2, 0.2, 0.4, 0xb8692f, Math.cos(i * Math.PI / 2) * 0.75, 1.9, Math.sin(i * Math.PI / 2) * 0.75, -i * Math.PI / 2 + Math.PI / 2);
+      void sp;
     }
-    cyl(fA, 6.5, 6.5, 0.1, C.water, 0, 0, 0, 10, { roughness: 0.15 });
-    const col = G(fA, 3.0, 0.5, -1.0);
-    col.rotation.z = Math.PI / 2 - 0.2;
-    cyl(col, 0.7, 0.9, 2.0, C.curb, 0, 0, 0, 8);
-    cyl(col, 1.9, 0.9, 0.5, C.curb, 0, 2.0, 0, 8);
-    debris(col);
-    const geyser = add(fA, new THREE.CylinderGeometry(0.6, 1.4, 11, 8, 1, true), 0x9fe6ff, 0, 5.5, 0, { transparent: true, opacity: 0.55, roughness: 0.05 });
+    cyl(fB, 2.0, 0.7, 0.45, C.stone, 0, 3.2, 0, 8);
+    cyl(fB, 1.85, 1.85, 0.04, C.water, 0, 3.58, 0, 8, { roughness: 0.15 }); // below the rim
+    cyl(fB, 0.3, 0.4, 0.9, C.stone, 0, 3.65, 0, 8);
+    cyl(fB, 1.0, 0.4, 0.3, C.stone, 0, 4.55, 0, 8);
+    cyl(fB, 0.92, 0.92, 0.04, C.water, 0, 4.8, 0, 8, { roughness: 0.15 });
+    add(fB, new THREE.OctahedronGeometry(0.28, 0), 0xb8692f, 0, 5.2, 0);
+    // Water: a falling veil from each bowl and four arcing jets.
+    const veil = (r, y, h) => {
+      const m = add(fB, new THREE.CylinderGeometry(r, r + 0.15, h, 8, 1, true), 0xbfeefa, 0, y, 0, { transparent: true, opacity: 0.45, roughness: 0.05 });
+      m.castShadow = false;
+    };
+    // From each bowl's rim down to the water below it.
+    veil(2.02, (3.65 + 0.7) / 2, 3.65 - 0.7);
+    veil(1.0, (4.85 + 3.62) / 2, 4.85 - 3.62);
+    for (let i = 0; i < 4; i++) {
+      const ang = i * Math.PI / 2;
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(Math.cos(ang) * 0.95, 1.9, Math.sin(ang) * 0.95),
+        new THREE.Vector3(Math.cos(ang) * 2.2, 2.9, Math.sin(ang) * 2.2),
+        new THREE.Vector3(Math.cos(ang) * 3.2, 0.85, Math.sin(ang) * 3.2),
+      );
+      const jet = add(fB, new THREE.TubeGeometry(curve, 8, 0.07, 5, false), 0xbfeefa, 0, 0, 0, { transparent: true, opacity: 0.7 });
+      jet.castShadow = false;
+    }
+    // After: basin walls knocked out and thrown, the pedestal snapped, the
+    // bowls rolled across the plaza, a geyser and water over the plaza.
+    const fA = G(a, PX, 0.48, PZ);
+    cyl(fA, 5.6, 5.6, 0.2, 0x9a958c, 0, 0, 0, 8);
+    cyl(fA, 8.6, 8.6, 0.06, C.water, 0, 0.0, 0, 10, { roughness: 0.1, transparent: true, opacity: 0.8 });
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      const out = i % 3 === 0 ? 2.4 : i % 3 === 1 ? 0.6 : 0;
+      const w = B(fA, 3.6, 0.7, 0.45, C.stone, Math.cos(ang) * (4.55 + out), 0.2 - (out ? 0.15 : 0), Math.sin(ang) * (4.55 + out), -ang + Math.PI / 2 + out * 0.2);
+      if (out > 1) {
+        w.rotation.z = 0.5;
+        debris(w);
+      }
+    }
+    cyl(fA, 1.1, 1.3, 0.6, 0x9a958c, 0, 0.2, 0, 8);
+    const stub = cyl(fA, 0.55, 0.7, 0.6, C.stone, 0, 0.8, 0, 8);
+    stub.rotation.z = 0.2;
+    const shaft = G(fA, 2.6, 0.5, -1.4);
+    shaft.rotation.set(0.2, 0.4, Math.PI / 2 - 0.15);
+    cyl(shaft, 0.55, 0.7, 1.4, C.stone, 0, 0, 0, 8);
+    debris(shaft);
+    const bowl = G(fA, -5.8, 0.2, 3.2);
+    bowl.rotation.set(0.6, 0, 0.4);
+    cyl(bowl, 2.0, 0.7, 0.45, C.stone, 0, 0, 0, 8);
+    debris(bowl);
+    const bowl2 = G(fA, 4.5, 0.2, 5.5);
+    bowl2.rotation.set(-0.5, 0, 0.8);
+    cyl(bowl2, 1.0, 0.4, 0.3, C.stone, 0, 0, 0, 8);
+    debris(bowl2);
+    const geyser = add(fA, new THREE.CylinderGeometry(0.5, 1.5, 12, 8, 1, true), 0x9fe6ff, 0, 6.2, 0, { transparent: true, opacity: 0.55, roughness: 0.05 });
     geyser.userData.fx = "geyser";
     geyser.castShadow = false;
-    for (let i = 0; i < 14; i++) {
-      const d = add(fA, new THREE.IcosahedronGeometry(0.5 + (i % 3) * 0.2, 0), 0xbff0ff, Math.cos(i) * (1 + (i % 4)), 9 + (i % 5) * 0.8, Math.sin(i) * (1 + (i % 4)), { transparent: true, opacity: 0.7, roughness: 0.05 });
+    for (let i = 0; i < 16; i++) {
+      const d = add(fA, new THREE.IcosahedronGeometry(0.5 + (i % 3) * 0.25, 0), 0xbff0ff, Math.cos(i) * (1 + (i % 5)), 9.5 + (i % 5) * 0.9, Math.sin(i) * (1 + (i % 5)), { transparent: true, opacity: 0.7, roughness: 0.05 });
       d.userData.fx = "spray";
       d.castShadow = false;
     }
   });
-  for (const [x, z, k, s] of [[-44, 12, 0, 1.1], [-40, 45, 1, 1], [-14, 44, 2, 1.2], [-12, 14, 1, 0.9], [-45, 28, 0, 1], [-28, 45, 2, 1.1], [-20, 20, 0, 0.8], [-36, 38, 1, 0.9]])
+  // Park furniture.
+  const parkBench = (x, z, ry) => {
+    const pb = P(x, z, ry);
+    for (const s of [-0.9, 0.9]) {
+      B(pb, 0.08, 0.45, 0.55, 0x1f3a2a, s, 0, 0);
+      B(pb, 0.08, 0.5, 0.08, 0x1f3a2a, s, 0.45, 0.25);
+      B(pb, 0.08, 0.06, 0.5, 0x1f3a2a, s, 0.68, 0.0);
+    }
+    for (let i = 0; i < 3; i++) B(pb, 2.0, 0.05, 0.14, 0xb5703a, 0, 0.45, -0.18 + i * 0.17);
+    for (let i = 0; i < 2; i++) B(pb, 2.0, 0.12, 0.04, 0xb5703a, 0, 0.62 + i * 0.2, 0.3);
+  };
+  const parkLamp = (x, z) => {
+    const l = P(x, z);
+    cyl(l, 0.18, 0.22, 0.3, 0x1f2a24, 0, 0, 0, 6);
+    cyl(l, 0.06, 0.07, 3.4, 0x1f2a24, 0, 0.3, 0, 6);
+    B(l, 0.42, 0.06, 0.42, 0x1f2a24, 0, 3.7, 0);
+    B(l, 0.32, 0.45, 0.32, 0xfff1c0, 0, 3.76, 0, 0, { emissive: 0xffd98a, emissiveIntensity: 0.7 });
+    add(l, new THREE.ConeGeometry(0.32, 0.3, 4), 0x1f2a24, 0, 4.36, 0).rotation.y = Math.PI / 4;
+  };
+  const parkBin = (x, z) => {
+    const pb = P(x, z);
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      B(pb, 0.16, 0.85, 0.05, 0x2f7d4f, Math.cos(ang) * 0.3, 0, Math.sin(ang) * 0.3, -ang + Math.PI / 2);
+    }
+    cyl(pb, 0.36, 0.36, 0.08, 0x1f3a2a, 0, 0.85, 0, 8);
+  };
+  const flowerBed = (x, z, w, d) => {
+    const fb = P(x, z);
+    for (const s of [-1, 1]) {
+      B(fb, w, 0.35, 0.15, 0x8a5a32, 0, 0, s * (d / 2 - 0.075));
+      B(fb, 0.15, 0.35, d - 0.3, 0x8a5a32, s * (w / 2 - 0.075), 0, 0);
+    }
+    B(fb, w - 0.3, 0.3, d - 0.3, 0x5a3a22, 0, 0, 0);
+    const cols = [C.red, C.yellow, 0xe0367a, C.orange, 0xffffff];
+    for (let i = 0; i < Math.floor(w * d * 2.2); i++) {
+      const fx = -w / 2 + 0.35 + ((i * 0.618) % 1) * (w - 0.7);
+      const fz = -d / 2 + 0.35 + ((i * 0.381 + 0.17) % 1) * (d - 0.7);
+      B(fb, 0.04, 0.25, 0.04, C.leaf[0], fx, 0.3, fz);
+      add(fb, new THREE.OctahedronGeometry(0.13, 0), cols[i % cols.length], fx, 0.62, fz);
+    }
+  };
+  const hedge = (x, z, w, d) => B(P(x, z), w, 0.9, d, 0x2e7d3a, 0, 0, 0);
+  for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    flowerBed(PX + dx * 7.0, PZ + dz * 7.0, 3.2, 1.6);
+    parkBench(PX + dx * 3.6 + dx * 3.1, PZ + dz * 0.0 + dz * 3.4, dx > 0 ? -Math.PI / 2 : Math.PI / 2);
+  }
+  parkBench(PX, PZ - 7.6, 0);
+  parkBench(PX, PZ + 7.6, Math.PI);
+  for (const [x, z] of [[PX - 3.0, PZ - 12], [PX + 3.0, PZ + 12], [PX - 12, PZ + 3.0], [PX + 12, PZ - 3.0]]) parkLamp(x, z);
+  for (const [x, z] of [[PX + 2.3, PZ - 8.4], [PX - 2.3, PZ + 8.4]]) parkBin(x, z);
+  // Drinking fountain.
+  const drink = P(PX + 3.4, PZ - 16);
+  B(drink, 0.5, 0.9, 0.5, C.stone, 0, 0, 0);
+  cyl(drink, 0.35, 0.25, 0.15, 0x9da1a8, 0, 0.9, 0, 8);
+  // Hedges lining the cross paths near the plaza.
+  for (const s of [-1, 1]) {
+    hedge(PX + s * 2.2, PZ - 15, 0.7, 8);
+    hedge(PX + s * 2.2, PZ + 15, 0.7, 8);
+    hedge(PX - 15, PZ + s * 2.2, 8, 0.7);
+    hedge(PX + 15, PZ + s * 2.2, 8, 0.7);
+  }
+  // Trees: tall faceted crowns and cone conifers, off the paths.
+  for (const [x, z, k, s] of [[-45, 13, 0, 1.25], [-38, 15, 1, 1.0], [-45, 22, 2, 1.1], [-19, 22, 0, 1.0], [-14, 14.5, 1, 1.15], [-20, 47.5, 2, 1.2], [-12, 36, 0, 1.0], [-36, 47, 1, 0.9], [-24, 46, 0, 1.0]])
     tree(P(x, z), 0, 0, k, s);
-  for (const [x, z, ry] of [[-21, 29, Math.PI / 2], [-35, 29, -Math.PI / 2], [-28, 36, Math.PI], [-28, 22, 0]]) bench(P(x, z), 0, 0, ry);
-  picketFence(P(-28, AV + 3.4), 0, 0, 34, 0, 0x6b5a4e);
-  for (const [x, z] of [[-40, 18], [-16, 40]]) streetLight(P(x, z), 0, 0);
-  // Swing set (reference 4) at the park's corner.
-  const swing = P(-44, 44, 0.4);
-  for (const s of [-1.6, 1.6]) {
-    const l1 = B(swing, 0.12, 3.2, 0.12, 0xd9734f, s, 0, -0.6);
+  for (const [x, z, s] of [[-48, 33.5, 1.2], [-48, 37.5, 1.0], [-10, 25, 1.1], [-36, 19, 0.9]]) conifer(P(x, z), 0, 0, s);
+  // Playground on a rubber surface: slide tower, swings, seesaw, sandpit.
+  const PG = P(-41, 41);
+  slab(PG, 12, 11, 0.06, 0xd9502f, 0, 0, 0.06);
+  for (const s of [-1, 1]) {
+    slab(PG, 12.3, 0.15, 0.2, 0x5a5560, 0, s * 5.57, 0);
+    slab(PG, 0.15, 11, 0.2, 0x5a5560, s * 6.07, 0, 0);
+  }
+  const tower = G(PG, -2.5, 0.12, -2);
+  for (const [tx, tz] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) B(tower, 0.14, 3.6, 0.14, C.blue, tx, 0, tz);
+  B(tower, 1.8, 0.12, 1.8, C.yellow, 0, 1.6, 0);
+  for (const s of [-1, 1]) B(tower, 1.74, 0.06, 0.06, C.red, 0, 2.4, s * 0.8);
+  add(tower, new THREE.ConeGeometry(1.5, 1.0, 4), C.red, 0, 4.1, 0).rotation.y = Math.PI / 4;
+  for (let i = 0; i < 5; i++) B(tower, 0.6, 0.06, 0.12, C.yellow, -0.0, 0.3 + i * 0.3, -0.95 - i * 0.12).rotation.x = 0; // ladder rungs
+  for (const s of [-0.32, 0.32]) {
+    const rail = B(tower, 0.06, 0.06, 1.0, C.blue, s, 0, -1.2);
+    rail.rotation.x = 1.0;
+  }
+  const slide = G(tower, 0, 1.6, 0.9);
+  slide.rotation.x = 0.55;
+  B(slide, 0.8, 0.06, 3.2, C.yellow, 0, -0.06, 1.6);
+  for (const s of [-0.43, 0.43]) B(slide, 0.06, 0.25, 3.2, C.orange, s, 0, 1.6);
+  const sw = G(PG, 2.6, 0.12, -2.4);
+  for (const s of [-1.8, 1.8]) {
+    const l1 = B(sw, 0.12, 3.0, 0.12, C.green, s, 0, -0.5);
     l1.rotation.x = 0.2;
-    const l2 = B(swing, 0.12, 3.2, 0.12, 0xd9734f, s, 0, 0.6);
+    const l2 = B(sw, 0.12, 3.0, 0.12, C.green, s, 0, 0.5);
     l2.rotation.x = -0.2;
   }
-  B(swing, 3.4, 0.12, 0.12, 0xd9734f, 0, 3.05, 0);
-  for (const s of [-0.7, 0.7]) {
-    B(swing, 0.03, 2.0, 0.03, C.metal, s, 1.0, 0);
-    B(swing, 0.5, 0.06, 0.25, C.dark, s, 1.0, 0);
+  B(sw, 3.8, 0.12, 0.12, C.green, 0, 2.86, 0);
+  for (const s of [-0.75, 0.75]) {
+    for (const t of [-0.18, 0.18]) B(sw, 0.03, 1.9, 0.03, C.metal, s + t, 0.95, 0);
+    B(sw, 0.5, 0.06, 0.25, V.trim, s, 0.92, 0);
   }
+  const see = G(PG, 2.6, 0.12, 2.6, 0.3);
+  B(see, 0.4, 0.45, 0.3, C.metal, 0, 0, 0);
+  const plank = B(see, 3.2, 0.1, 0.32, C.red, 0, 0.45, 0);
+  plank.rotation.z = 0.18;
+  for (const s of [-1.3, 1.3]) B(see, 0.06, 0.28, 0.3, C.yellow, s, 0.45 + s * 0.18 + 0.05, 0);
+  const sand = G(PG, -2.6, 0.12, 2.8);
+  for (const s of [-1, 1]) {
+    B(sand, 3.0, 0.3, 0.15, 0x8a5a32, 0, 0, s * 1.2);
+    B(sand, 0.15, 0.3, 2.25, 0x8a5a32, s * 1.43, 0, 0);
+  }
+  B(sand, 2.7, 0.22, 2.25, 0xe6c88a, 0, 0, 0);
+  // Pavilion: eight posts, a raised floor and an angular roof.
+  const pav = P(-15.5, 41.5);
+  cyl(pav, 3.0, 3.0, 0.35, C.stone, 0, 0, 0, 8);
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    B(pav, 0.18, 2.8, 0.18, C.white, Math.cos(ang) * 2.6, 0.35, Math.sin(ang) * 2.6);
+  }
+  cyl(pav, 3.2, 3.2, 0.25, C.white, 0, 3.15, 0, 8);
+  add(pav, new THREE.ConeGeometry(3.5, 1.8, 8), C.teal, 0, 4.3, 0).rotation.y = Math.PI / 8;
+  add(pav, new THREE.OctahedronGeometry(0.2, 0), C.yellow, 0, 5.35, 0);
+  // Iron fence round the park with openings at the four gates.
+  const ironRun = (x0, z0, x1, z1) => {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const f = P((x0 + x1) / 2, (z0 + z1) / 2, Math.atan2(-(z1 - z0), x1 - x0));
+    for (let i = 0; i <= Math.round(len / 2); i++) {
+      const px = -len / 2 + (i * len) / Math.round(len / 2);
+      B(f, 0.12, 1.2, 0.12, 0x1f2a24, px, 0, 0);
+      add(f, new THREE.ConeGeometry(0.09, 0.2, 4), 0x1f2a24, px, 1.3, 0);
+    }
+    for (const y of [0.15, 0.95]) B(f, len, 0.05, 0.05, 0x1f2a24, 0, y, 0);
+    for (let i = 0; i < Math.floor(len / 0.25); i++) B(f, 0.025, 0.85, 0.025, 0x1f2a24, -len / 2 + 0.12 + i * 0.25, 0.15, 0);
+  };
+  const fx0 = PX - PW / 2 + 0.3, fx1 = PX + PW / 2 - 0.3, fz0 = PZ - PD / 2 + 0.3, fz1 = PZ + PD / 2 - 0.3;
+  ironRun(fx0, fz0, PX - 2.6, fz0);
+  ironRun(PX + 2.6, fz0, -14, fz0);
+  ironRun(fx0, fz1, PX - 2.6, fz1);
+  ironRun(PX + 2.6, fz1, fx1, fz1);
+  ironRun(fx0, fz0, fx0, PZ - 2.6);
+  ironRun(fx0, PZ + 2.6, fx0, fz1);
+  ironRun(fx1, fz0 + 6, fx1, PZ - 2.6);
+  ironRun(fx1, PZ + 2.6, fx1, fz1);
+  signBoard(P(PX + 3.4, fz0 - 0.2), "CITY PARK", 2.8, 0.6, 0, 1.6, 0, 0, "#2f7d4f", "#ffffff");
+  B(P(PX + 3.4, fz0 - 0.2), 0.1, 1.3, 0.1, 0x1f2a24, -1.2, 0, 0);
+  B(P(PX + 3.4, fz0 - 0.2), 0.1, 1.3, 0.1, 0x1f2a24, 1.2, 0, 0);
 
   // ---- SE: basketball court, residential, corner café.
   site(g, "court", 29, 36, "dust", (b, a) => {
@@ -1391,6 +1705,23 @@ function district(root) {
     if (o.isGroup && o.children.some((c) => c.isGroup === false) && o.parent === g && o.position.y === 0.1) o.userData.keep = true;
   });
   return { g, cops: [cop1, cop2], player };
+}
+
+// Octagonal prism or ring (rIn > 0), one solid piece: corners meet exactly.
+// Oriented like an 8-sided cylinder (a vertex on +z).
+function octPrism(p, rOut, rIn, h, c, y = 0, o) {
+  const poly = (r) => Array.from({ length: 8 }, (_, i) => {
+    const a = (i / 8) * Math.PI * 2;
+    return new THREE.Vector2(Math.sin(a) * r, Math.cos(a) * r);
+  });
+  const s = new THREE.Shape(poly(rOut));
+  if (rIn > 0) s.holes.push(new THREE.Path(poly(rIn).reverse()));
+  const g = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false });
+  // Shape is in x/y, extruded along z: rotating +90° about x maps shape y
+  // to +z (vertex on +z) and the extrusion to -y; lift it by h.
+  g.rotateX(Math.PI / 2);
+  g.translate(0, h, 0);
+  return add(p, g, c, 0, y, 0, o);
 }
 
 // Coloured band round a slab's edge (no overlapping faces).
