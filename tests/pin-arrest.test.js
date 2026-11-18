@@ -81,7 +81,6 @@ function load(name, { police = true } = {}) {
 }
 
 const PINNED = [
-  "pinned-1100-roads-5",
   "pinned-1100-evasive-11",
   "pinned-390-roads-9",
   "pinned-390-evasive-5",
@@ -125,6 +124,19 @@ for (const name of PINNED)
     // The countdown took the full 3 s (it was shown, not skipped).
     assert.ok(countdown.length >= CONFIG.arrestSeconds * 60 - 2);
   });
+
+// Recorded as pinned, but the full game says otherwise: a quick left-right
+// steering knocks the street lamp beside the car over and it drives away
+// (30+ m). The earlier probe treated the lamp as unbreakable and arrested;
+// the probe now breaks lamps at the game's break speed, so: no arrest.
+test("pinned-1100-roads-5: the lamp beside the car gives way (full game drives out), so no arrest", () => {
+  const { s, fx } = load("pinned-1100-roads-5");
+  for (let f = 0; f < 150; f++) s.update(1 / 60, {});
+  const best = Math.max(...escapeAttempts(layout, s, fx.source.width, 740).map((a) => a.best));
+  assert.ok(best > 10, `full-game escape ${best} m`);
+  for (let f = 0; f < 8 * 60 && !s.result; f++) s.update(1 / 60, {});
+  assert.equal(s.result, null, s.pin.reason);
+});
 
 for (const name of OPEN)
   test(`stuck but a real way out exists (${name}): never arrested`, () => {
