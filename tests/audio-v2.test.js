@@ -40,7 +40,7 @@ test("gas-station explosions use the big explosion; car explosions the ordinary 
   s.loops = {
     engine: { source: { frequency: param() }, gain: { gain: param() } },
     siren: { source: { frequency: param() }, gain: { gain: param() } },
-    skid: { source: { frequency: param() }, second: { frequency: param() }, filter: { frequency: param() }, gain: { gain: param() }, level: 0 },
+    skid: { pitch() {}, gain: { gain: param() }, level: 0 },
   };
   const played = [];
   s.voice = (kind) => played.push(kind);

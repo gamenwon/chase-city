@@ -104,72 +104,90 @@ export class SoundSystem {
     }
     this.loops.skid = this.buildScreech();
   }
-  // Tire screech ("SKREEEE"): one sustained voice, never stacked. A pair of
-  // slightly detuned saw tones through a narrow band-pass gives the tonal
-  // squeal; a fast irregular tremolo gives the rubber judder; band-passed
-  // noise adds the friction hiss. update() only moves its level and pitch.
-  // Its sources exist only while it sounds (started on a real turn,
-  // stopped a while after it faded), so it costs nothing between turns.
+  // Tire screech: one sustained voice, never stacked. Modelled on rubber
+  // stick-slip on asphalt rather than on oscillators (which sound
+  // electronic): broadband noise rings a bank of narrow resonances (the
+  // squeal and two inharmonic partials), its pitch drifts at random a
+  // little, its level chatters irregularly (the tread gripping and letting
+  // go), and a soft high scrub sits under it. Two noise sources played at
+  // different rates never line up, so there is no audible loop. update()
+  // only moves its level and pitch (loop.pitch). Its sources exist only
+  // while it sounds, so it costs nothing between turns.
   buildScreech() {
     const c = this.context;
     const gain = c.createGain();
     gain.gain.value = 0;
     gain.connect(this.compressor);
-    const judder = c.createGain(); // tremolo stage
-    judder.gain.value = 0.75;
-    judder.connect(gain);
-    const tone = c.createBiquadFilter();
-    tone.type = "bandpass";
-    tone.frequency.value = 1300;
-    tone.Q.value = 7;
-    tone.connect(judder);
-    const hiss = c.createBiquadFilter();
-    hiss.type = "bandpass";
-    hiss.frequency.value = 2600;
-    hiss.Q.value = 1.4;
-    const hissGain = c.createGain();
-    hissGain.gain.value = 0.35;
-    hiss.connect(hissGain);
-    hissGain.connect(judder);
-    const mix = c.createGain();
-    mix.gain.value = 0.5;
-    mix.connect(tone);
-    const vibDepth = c.createGain();
-    vibDepth.gain.value = 30;
-    const jDepth = c.createGain();
-    jDepth.gain.value = 0.22;
-    jDepth.connect(judder.gain);
-    // Placeholder frequency params so update() can always set the pitch.
-    const idle = { frequency: { setTargetAtTime() {}, value: 1000 } };
-    const loop = { source: idle, second: idle, gain, filter: tone, level: 0, live: null, quietSince: 0 };
+    // Chatter: the level wobbles irregularly round 1 (AM by slow noise).
+    const chatter = c.createGain();
+    chatter.gain.value = 1;
+    chatter.connect(gain);
+    const PARTIALS = [
+      [1, 34, 1.0],
+      [2.13, 26, 0.42],
+      [3.37, 20, 0.18],
+    ];
+    const bands = PARTIALS.map(([ratio, q, level]) => {
+      const f = c.createBiquadFilter();
+      f.type = "bandpass";
+      f.frequency.value = 1100 * ratio;
+      f.Q.value = q;
+      const g = c.createGain();
+      g.gain.value = level * 13; // narrow bands pass little energy
+      f.connect(g);
+      g.connect(chatter);
+      return { f, ratio };
+    });
+    const scrub = c.createBiquadFilter();
+    scrub.type = "highpass";
+    scrub.frequency.value = 3200;
+    const scrubGain = c.createGain();
+    scrubGain.gain.value = 0.07;
+    scrub.connect(scrubGain);
+    scrubGain.connect(chatter);
+    // Modulators: slow pitch drift (+-45 cents) and fast level chatter.
+    const driftLp = c.createBiquadFilter();
+    driftLp.type = "lowpass";
+    driftLp.frequency.value = 5;
+    const drift = c.createGain();
+    drift.gain.value = 45 * 18; // low-passed noise is quiet: scale up
+    driftLp.connect(drift);
+    for (const b of bands) drift.connect(b.f.detune);
+    const chatLp = c.createBiquadFilter();
+    chatLp.type = "bandpass";
+    chatLp.frequency.value = 38;
+    chatLp.Q.value = 0.7;
+    const chat = c.createGain();
+    chat.gain.value = 2.2;
+    chatLp.connect(chat);
+    chat.connect(chatter.gain);
+    const loop = { gain, level: 0, live: null, quietSince: 0, hz: 1100 };
+    loop.pitch = (hz, time = 0.08) => {
+      loop.hz = hz;
+      for (const b of bands) b.f.frequency.setTargetAtTime(hz * b.ratio, c.currentTime, time);
+    };
     loop.start = () => {
-      const a = c.createOscillator(),
-        b = c.createOscillator();
-      a.type = b.type = "sawtooth";
-      a.frequency.value = b.frequency.value = loop.hz || 1000;
-      b.detune.value = 23;
-      a.connect(mix);
-      b.connect(mix);
-      const noise = c.createBufferSource();
-      noise.buffer = this.noise;
-      noise.loop = true;
-      noise.connect(hiss);
-      const vib = c.createOscillator();
-      vib.frequency.value = 7;
-      vib.connect(vibDepth);
-      vibDepth.connect(a.detune);
-      vibDepth.connect(b.detune);
-      const j1 = c.createOscillator(),
-        j2 = c.createOscillator();
-      j1.type = "square";
-      j1.frequency.value = 27;
-      j2.frequency.value = 41;
-      j1.connect(jDepth);
-      j2.connect(jDepth);
-      loop.live = [a, b, noise, vib, j1, j2];
-      for (const s of loop.live) s.start();
-      loop.source = a;
-      loop.second = b;
+      const src = (rate) => {
+        const n = c.createBufferSource();
+        n.buffer = this.noise;
+        n.loop = true;
+        n.playbackRate.value = rate;
+        return n;
+      };
+      const a = src(1),
+        b2 = src(0.913),
+        m1 = src(0.71),
+        m2 = src(1.37);
+      for (const band of bands) {
+        band.f.frequency.value = loop.hz * band.ratio;
+        a.connect(band.f);
+      }
+      b2.connect(scrub);
+      m1.connect(driftLp);
+      m2.connect(chatLp);
+      // Start at a random point in the buffer each time.
+      loop.live = [a, b2, m1, m2];
+      for (const s of loop.live) s.start(0, Math.random() * 0.9);
     };
     loop.stop = () => {
       for (const s of loop.live || [])
@@ -177,11 +195,7 @@ export class SoundSystem {
           s.stop();
           s.disconnect();
         } catch {}
-      try {
-        vibDepth.disconnect();
-      } catch {}
       loop.live = null;
-      loop.source = loop.second = idle;
     };
     return loop;
   }
@@ -418,9 +432,7 @@ export class SoundSystem {
       else if (skid.live && now - skid.quietSince > 1.2) skid.stop(); // faded out a while ago
       this.parameter(skid.gain.gain, targets.skidGain, targets.skidGain > skid.level ? 0.06 : 0.22);
       skid.level = targets.skidGain;
-      this.parameter(skid.source.frequency, targets.skidHz, 0.08);
-      this.parameter(skid.second.frequency, targets.skidHz, 0.08);
-      this.parameter(skid.filter.frequency, targets.skidHz * 1.25, 0.08);
+      skid.pitch(targets.skidHz, 0.08);
       for (const event of sim.events)
         if (event.id > this.lastExplosion) {
           this.lastExplosion = event.id;
