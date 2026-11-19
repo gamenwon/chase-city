@@ -123,6 +123,58 @@ export function cctv(g) {
   B(g, 0.4, 0.22, 0.22, C.white, 0.6, 3.7, 0);
   B(g, 0.06, 0.12, 0.12, C.glassDark, 0.82, 3.75, 0);
 }
+// Market stall, whole (it never collapses in place: a hit throws its
+// pieces, below).
+const PRODUCE = [0xe8401c, 0xf5c01a, 0x5cb23a, 0xf0781e, 0x7a3fb8];
+export function marketStall(g) {
+  const w = 3.4, d = 1.8;
+  stallTable(G(g, 0, 0.85, -0.1));
+  for (let i = 0; i < 5; i++) {
+    B(g, 0.6, 0.18, 0.5, 0xb98a55, -1.3 + i * 0.65, 0.93, -0.25);
+    for (let k = 0; k < 4; k++) ico(g, 0.1, PRODUCE[i], -1.42 + i * 0.65 + (k % 2) * 0.22, 1.16, -0.35 + Math.floor(k / 2) * 0.2);
+  }
+  for (const x of [-w / 2, w / 2]) for (const z of [-d / 2, d / 2]) B(g, 0.08, 2.4, 0.08, C.white, x, 0, z);
+  const aw = G(g, 0, 2.4, -0.1);
+  aw.rotation.x = 0.18;
+  stallAwning(aw);
+  stallBoard(G(g, 0, 2.6, -d / 2 - 0.35));
+}
+// Its pieces (each also a flyer kind of its own).
+export function stallAwning(g) {
+  const w = 3.4;
+  for (let i = 0; i < 6; i++) B(g, w / 6, 0.05, 2.4, i % 2 ? C.white : [C.red, C.blue, C.green][Math.floor(i / 2) % 3], -w / 2 + w / 12 + (i * w) / 6, 0, 0);
+  for (let i = 0; i < 6; i++) B(g, w / 6 - 0.04, 0.22, 0.03, i % 2 ? [C.red, C.blue, C.green][Math.floor(i / 2) % 3] : C.white, -w / 2 + w / 12 + (i * w) / 6, -0.2, 1.2);
+}
+export function stallTable(g) {
+  B(g, 3.4, 0.08, 1.44, 0xc9935a, 0, 0, 0);
+  for (const x of [-1.5, 1.5]) for (const z of [-0.6, 0.6]) B(g, 0.08, 0.85, 0.08, 0x9c6a3a, x, -0.85, z);
+  B(g, 3.2, 0.05, 0.05, 0x9c6a3a, 0, -0.5, 0.6);
+}
+export function stallPost(g) {
+  B(g, 0.08, 2.4, 0.08, C.white, 0, -1.2, 0);
+}
+export function stallBoard(g) {
+  B(g, 2.4, 0.4, 0.06, C.yellow, 0, 0, 0);
+  B(g, 1.8, 0.16, 0.02, C.red, 0, 0.12, -0.04);
+}
+export function produceBox(g) {
+  B(g, 0.6, 0.18, 0.5, 0xb98a55, 0, 0, 0);
+  for (let k = 0; k < 4; k++) ico(g, 0.1, PRODUCE[k], -0.12 + (k % 2) * 0.24, 0.24, -0.1 + Math.floor(k / 2) * 0.2);
+}
+export function parasolCanopy(g, a = 0xffffff, b = 0xa8a8a8) {
+  const canopy = add(g, new THREE.ConeGeometry(1.3, 0.5, 8), a, 0, 0, 0);
+  canopy.rotation.y = Math.PI / 8;
+  for (let i = 0; i < 8; i++) {
+    const ang = (i * Math.PI) / 4;
+    const rib = B(g, 0.05, 0.05, 1.32, b, Math.sin(ang) * 0.62, -0.05, Math.cos(ang) * 0.62, ang);
+    rib.rotation.x = 0.36;
+    B(g, 0.95, 0.14, 0.03, b, Math.sin(ang + Math.PI / 8) * 1.2, -0.39, Math.cos(ang + Math.PI / 8) * 1.2, ang + Math.PI / 8);
+  }
+}
+export function parasolPole(g) {
+  cyl(g, 0.3, 0.32, 0.12, C.dark, 0, -1.2, 0, 8);
+  cyl(g, 0.03, 0.03, 2.3, C.white, 0, -1.08, 0, 6);
+}
 export function fruit(g) {
   ico(g, 0.11, 0xffffff, 0, 0, 0);
 }
@@ -131,13 +183,32 @@ export function fruit(g) {
 // lying on its side), and specials.
 export const FLYERS = {
   chair: { build: (g) => chair(g, 0xffffff), tint: true, flipLift: 0.96, mass: 0.25, r: 0.35, side: 0.22 },
-  table: { build: (g) => roundTable(g), mass: 1.2, r: 0.5, side: 0.45, breakAt: 13, parts: ["tableTop", "tableBase"] },
+  table: { build: (g) => roundTable(g), mass: 1.0, r: 0.5, side: 0.45, breakAt: 8, parts: ["tableTop", "tableBase"] },
   tableTop: { build: tableTop, mass: 0.5, r: 0.45, side: 0.03, spawnOnly: true },
   tableBase: { build: tableBase, mass: 0.6, r: 0.3, side: 0.3, spawnOnly: true },
-  parasol: { build: (g) => parasol(g, 0xffffff, 0xa8a8a8), tint2: true, mass: 0.6, r: 0.4, side: 0.5 },
-  crateRed: { build: (g) => crate(g, 0xe8401c), mass: 0.7, r: 0.45, side: 0.3, bits: "fruit", bitN: 6 },
-  crateOrange: { build: (g) => crate(g, 0xf0781e), mass: 0.7, r: 0.45, side: 0.3, bits: "fruit", bitN: 6 },
-  crateGreen: { build: (g) => crate(g, 0x5cb23a), mass: 0.7, r: 0.45, side: 0.3, bits: "fruit", bitN: 6 },
+  // Parasols tip, spin and fly; a hard hit tears the canopy off the pole.
+  parasol: { build: (g) => parasol(g, 0xffffff, 0xa8a8a8), tint2: true, mass: 0.35, r: 0.5, side: 0.5, breakAt: 9, shatter: [["parasolCanopy", 0, 2.25, 0], ["parasolPole", 0, 1.2, 0]] },
+  parasolCanopy: { build: (g) => parasolCanopy(g), mass: 0.25, r: 0.9, side: 0.3, spawnOnly: true, tintFrom: true },
+  parasolPole: { build: parasolPole, mass: 0.45, r: 0.3, side: 0.1, spawnOnly: true },
+  crateRed: { build: (g) => crate(g, 0xe8401c), mass: 0.5, r: 0.45, side: 0.3, bits: "fruit", bitN: 6, bounces: 2 },
+  crateOrange: { build: (g) => crate(g, 0xf0781e), mass: 0.5, r: 0.45, side: 0.3, bits: "fruit", bitN: 6, bounces: 2 },
+  crateGreen: { build: (g) => crate(g, 0x5cb23a), mass: 0.5, r: 0.45, side: 0.3, bits: "fruit", bitN: 6, bounces: 2 },
+  // Market stall: any real hit throws it apart (pieces fly along the car's
+  // direction: the light awning far and tumbling, the heavy table tips).
+  stall: {
+    build: marketStall, mass: 3, r: 1.7, side: 0.5, breakAt: 3,
+    shatter: [
+      ["stallAwning", 0, 2.45, -0.1], ["stallTable", 0, 0.9, -0.1], ["stallBoard", 0, 2.6, -1.25],
+      ["stallPost", -1.7, 1.2, -0.9], ["stallPost", 1.7, 1.2, -0.9], ["stallPost", -1.7, 1.2, 0.9], ["stallPost", 1.7, 1.2, 0.9],
+      ["produceBox", -1.0, 1.0, -0.25], ["produceBox", 0.3, 1.0, -0.25], ["produceBox", 1.2, 1.0, -0.25],
+    ],
+    fruitN: 18,
+  },
+  stallAwning: { build: stallAwning, mass: 0.4, r: 1.6, side: 0.12, spawnOnly: true },
+  stallTable: { build: stallTable, mass: 1.6, r: 1.2, side: 0.5, spawnOnly: true, bounces: 1 },
+  stallBoard: { build: stallBoard, mass: 0.35, r: 0.8, side: 0.06, spawnOnly: true },
+  stallPost: { build: stallPost, mass: 0.3, r: 0.2, side: 0.08, spawnOnly: true, bounces: 2 },
+  produceBox: { build: produceBox, mass: 0.4, r: 0.35, side: 0.2, spawnOnly: true, bounces: 2, bits: "fruit", bitN: 4 },
   cargo: { build: (g) => cargoCrate(g, 0xffffff), tint: true, mass: 0.9, r: 0.6, side: 0.45 },
   bricks: { build: brickPallet, mass: 2.5, r: 0.65, side: 0.3, bits: "brick", bitN: 12 },
   pipe: { build: pipe, mass: 3.0, r: 0.8, side: 0.6, roll: true },
@@ -166,8 +237,9 @@ export class FlyerSystem {
     // Spawn pools (table halves, fruit, bricks): instances made up front,
     // hidden until used.
     this.pools = {};
-    for (const k of ["tableTop", "tableBase", "fruit", "brick"]) {
-      const cap = BITS[k]?.cap || 40;
+    const caps = { stallAwning: 12, stallTable: 12, stallBoard: 12, stallPost: 48, produceBox: 36, parasolCanopy: 24, parasolPole: 24 };
+    for (const k of ["tableTop", "tableBase", "fruit", "brick", ...Object.keys(caps)]) {
+      const cap = BITS[k]?.cap || caps[k] || 40;
       const g = geo(k);
       this.pools[k] = { ids: Array.from({ length: cap }, () => batch.instance(g, false)), cap, used: 0 };
     }
@@ -226,6 +298,24 @@ export class FlyerSystem {
   launch(sim, it, car, speed, nx, nz) {
     if (this.active.length >= 90) return; // the air is full: leave it
     const def = it.def;
+    if (def.breakAt && speed >= def.breakAt && def.shatter) {
+      // Pre-fractured: hidden, its pieces thrown along the hit (offsets in
+      // the piece's own frame), produce bursting out.
+      it.hidden = true;
+      this.pose(it);
+      this.stats.broken++;
+      const ry = it.spec.ry || 0, c = Math.cos(ry), s = Math.sin(ry);
+      for (const [kind, ox, oy, oz] of def.shatter) {
+        const piece = this.spawn(sim, kind, it.x + ox * c + oz * s, it.y + oy, it.z - ox * s + oz * c, car, speed, nx, nz, FLYERS[kind].mass, it.spec.y ?? 0.05);
+        if (piece) {
+          piece.q.setFromAxisAngle(UP, ry);
+          if (FLYERS[kind].tintFrom && it.spec.color != null) this.batch.color(piece.h, this.c.setHex(it.spec.color));
+        }
+      }
+      for (let i = 0; i < (def.fruitN || 0); i++) this.spawn(sim, "fruit", it.x + (Math.random() - 0.5) * 2.4, it.y + 1.1, it.z, car, speed * 0.8, nx, nz, 0.2, it.spec.y ?? 0.05);
+      sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: it.x, z: it.z, strength: Math.min(15, speed) });
+      return;
+    }
     if (def.breakAt && speed >= def.breakAt && def.parts) {
       // Breaks in two: the halves fly instead.
       it.hidden = true;
@@ -248,7 +338,7 @@ export class FlyerSystem {
     it.w = { axis: spinAxis, rate: (4 + 10 * r()) * base };
     it.state = "fly";
     it.hits++;
-    it.bounced = false;
+    it.bounced = 0;
     this.active.push(it);
     this.stats.launched++;
     if (it.hits === 1) sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: it.x, z: it.z, strength: Math.min(15, speed) * Math.min(1, def.mass + 0.3) });
@@ -268,9 +358,10 @@ export class FlyerSystem {
     it.vy = (2 + Math.random() * speed * 0.25) * base;
     it.w = { axis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(), rate: 6 + 10 * Math.random() };
     it.state = "fly";
-    it.bounced = false;
+    it.bounced = 0;
     this.active.push(it);
     this.stats.bits++;
+    return it;
   }
   update(sim, dt) {
     for (const p of [...this.pending])
@@ -292,9 +383,9 @@ export class FlyerSystem {
       it.q.premultiply(this.q2);
       const floor = (it.spec.y ?? it.baseY ?? 0.05) + (it.def.side ?? 0.1) * 0.5;
       if (it.y <= floor && it.vy < 0) {
-        if (!it.bounced && it.vy < -3) {
-          // One bounce, losing most energy.
-          it.bounced = true;
+        if (it.bounced < (it.def.bounces ?? 1) && it.vy < -3) {
+          // Bounces (light boxes and posts twice), losing most energy.
+          it.bounced++;
           it.vy = -it.vy * 0.3;
           it.vx *= 0.55;
           it.vz *= 0.55;

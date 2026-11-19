@@ -9,6 +9,7 @@ import { CONFIG } from "../../game/config.js";
 import { C, B, G, bake, pieceGeometry, bakedMaterial, parkBench, lampPost, binPair } from "./parts.js";
 import { buildGas } from "./gas.js";
 import { GasCollapse } from "./gas-collapse.js";
+import { Gantries } from "./gantries.js";
 import { buildCourt, fencePanel, hoop } from "./court.js";
 import { buildPark } from "./park.js";
 import { GAS, COURT, PARK, FOUNTAIN_R } from "./layout.js";
@@ -68,6 +69,7 @@ export class LocationsRuntime {
     this.renderer = renderer;
     this.gas = buildGas(scene);
     this.collapse = new GasCollapse(this.gas, { x: GAS.x, y: 0, z: GAS.z });
+    this.gantries = new Gantries(scene, layout.yards);
     this.court = buildCourt(scene);
     this.park = buildPark(scene);
     this.m = new THREE.Matrix4();
@@ -243,6 +245,7 @@ export class LocationsRuntime {
     g.glass.visible = true;
     g.glassBroken.visible = false;
     this.collapse.reset(sim);
+    this.gantries.reset(sim);
     const f = this.park.fountain;
     f.state = "intact";
     f.intact.visible = f.water.visible = true;
@@ -273,6 +276,7 @@ export class LocationsRuntime {
       this.touchItems(car, radius, speed);
       this.vehicles.touch(sim, car, radius, car === sim.player);
       this.storefronts.touch(sim, car, radius);
+      this.gantries.touch(sim, car, radius);
       this.flyers.touch(sim, car, radius, speed);
       if (near(GAS, 13)) this.touchGas(sim, car, radius, speed);
       if (near(PARK, 13)) this.touchFountain(sim, car, radius, speed);
@@ -538,6 +542,7 @@ export class LocationsRuntime {
     this.flyers.update(sim, dt);
     this.spinBrushes(now);
     this.collapse.step(this.sim, this.time);
+    this.gantries.step(this.sim, this.time);
     this.fxStep(now);
     this.waterStep(dt, now);
   }

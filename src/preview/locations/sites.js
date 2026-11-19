@@ -18,6 +18,7 @@
 // Local frame per segment: u along it (-9.5..9.5), v outward (-6.25 at the
 // road kerb, +6.25 at the city edge). Solid pieces stand at v >= 2.4 (or
 // are small posts), so the road side stays open the whole length.
+import { gantrySolids } from "./gantries.js";
 const hash = (x, z) => {
   let h = Math.imul(Math.round(x * 7) * 73856093 ^ Math.round(z * 7) * 19349663, 0x5bd1e995);
   h ^= h >>> 13;
@@ -99,8 +100,9 @@ export function sitePlan() {
       item("barrier", 0, -2.6, 0);
     } else if (kind === "depot") {
       box(-2.0, 4.8, 13.0, 2.8, "dock");
-      box(6.6, 5.9, 0.4, 0.4, "post");
-      box(9.2, 5.9, 0.4, 0.4, "post");
+      // The DEPOT gantry (topples out towards the city edge).
+      y.gantry = { posts: [-1.3, 1.3], cx: 7.9, lz: 5.9, h: 6.0, pw: 0.3, beam: { w: 3.0, h: 1.2, y: 5.0 }, postColor: 0xf5c01a, beamColor: 0xf0781e, sign: ["DEPOT", 2.8, 1.0, "#f0781e", "#ffffff"], lights: false, fallDir: 1 };
+      y.solids.push(...gantrySolids(y));
       veh("van", -6.4, 0.6, Math.PI, { color: 1 });
       veh("van", -1.4, 0.6, Math.PI, { color: 4 });
       // Cargo stacks (4 high, 3 high): hit one, the stack comes down.
@@ -119,8 +121,12 @@ export function sitePlan() {
       item("cone", 9.0, -5.0);
       item("bin", 8.6, 5.7, 0);
     } else if (kind === "market") {
-      for (const [u, v] of [[-4.2, -5.6], [4.2, -5.6]]) box(u, v, 0.3, 0.3, "post");
-      for (const u of [-6.0, 0, 6.0]) item("stall", u, 4.2, 0);
+      // The MARKET arch over the entrance (gantries.js: it can topple; it
+      // falls into the market, away from the road).
+      y.gantry = { posts: [-4.2, 4.2], cx: 0, lz: -5.6, h: 4.6, pw: 0.3, beam: { w: 9.0, h: 1.0, y: 4.4 }, postColor: 0xd62f2a, beamColor: 0xf5c01a, sign: ["MARKET", 8.4, 0.85, "#f5c01a", "#d62f2a"], lights: true, fallDir: 1 };
+      y.solids.push(...gantrySolids(y));
+      // Stalls are flyers: a hit throws them apart (furniture.js).
+      for (const u of [-6.0, 0, 6.0]) fly("stall", u, 4.2, 0);
       const crates = ["crateRed", "crateOrange", "crateGreen"];
       for (let k = 0; k < 9; k++) fly(crates[k % 3], -7.2 + k * 1.8, 2.3 + (k % 2) * 0.25, (hash(k, i) - 0.5) * 0.5);
       for (const u of [-3.0, 3.0]) {

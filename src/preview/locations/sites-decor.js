@@ -76,10 +76,7 @@ function depot(g) {
   for (let i = 0; i < 13; i++) B(d, 0.5, 0.06, 0.06, i % 2 ? C.dark : C.yellow, -6 + i, 1.2, -1.42);
   // Bay markings and the landmark DEPOT gantry (posts are solid).
   for (const u of [-8.8, -3.9, 1.0]) B(g, 0.12, 0.01, 6, C.lineYellow, u, T, 0.3);
-  const gt = G(g, 7.9, T, 5.9);
-  for (const x of [-1.3, 1.3]) B(gt, 0.3, 6.0, 0.3, C.yellow, x, 0, 0);
-  B(gt, 3.0, 1.2, 0.3, C.orange, 0, 5.0, 0);
-  signBoard(gt, "DEPOT", 2.8, 1.0, 0, 5.6, -0.16, Math.PI, "#f0781e", "#ffffff");
+  // (The DEPOT gantry is a separate breakable structure: gantries.js.)
 }
 function carwash(g) {
   slab(g, 0x4f8fb8);
@@ -114,12 +111,7 @@ function carwash(g) {
 function market(g) {
   slab(g, 0xd9b38c);
   for (let i = 0; i < 9; i++) B(g, 0.08, 0.01, 12, 0xc29b74, -8 + i * 2, T, 0);
-  // Landmark: arch over the entrance (posts solid), string lights.
-  const a = G(g, 0, T, -5.6);
-  for (const x of [-4.2, 4.2]) B(a, 0.3, 4.6, 0.3, C.red, x, 0, 0);
-  B(a, 9.0, 1.0, 0.3, C.yellow, 0, 4.4, 0);
-  signBoard(a, "MARKET", 8.4, 0.85, 0, 4.9, -0.16, Math.PI, "#f5c01a", "#d62f2a");
-  for (let i = 0; i < 12; i++) ico(g, 0.1, [C.red, C.yellow, C.blue, C.green][i % 4], -4 + i * 0.73, 3.6 - Math.sin((i / 11) * Math.PI) * 0.5, -5.6);
+  // (The MARKET arch is a separate breakable structure: gantries.js.)
 }
 function cafe(g) {
   slab(g, 0xb98a55);
