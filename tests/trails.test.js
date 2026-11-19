@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
-import { VehicleTrails, trailIntensity } from "../src/render/trails.js";
+import { VehicleTrails, trailIntensity, SkidMarks, SKID_CAPACITY, skidAmount } from "../src/render/trails.js";
 import { ChaseCamera } from "../src/render/camera.js";
 import { soundTargets } from "../src/audio/sound.js";
 test("rear particle and skid pools stay bounded, stop during briefing/pause and reset cleanly", () => {
@@ -12,10 +12,9 @@ test("rear particle and skid pools stay bounded, stop during briefing/pause and 
   assert.ok(trails.dust.every((p) => !p.mesh.visible));
   for (let i = 0; i < 1200; i++) trails.update(p, 1 / 60, true);
   assert.equal(trails.dust.length, 48);
-  assert.equal(trails.marks.length, 64);
-  assert.equal(scene.children.length, 112);
+  // 48 dust puffs + one instanced skid-mark mesh.
+  assert.equal(scene.children.length, 49);
   assert.ok(trails.dust.some((p) => p.mesh.visible && p.mesh.position.z > 0));
-  assert.ok(trails.marks.some((m) => m.mesh.visible));
   const ages = trails.dust.map((p) => p.age);
   trails.update(p, 0, true);
   assert.deepEqual(
@@ -23,7 +22,62 @@ test("rear particle and skid pools stay bounded, stop during briefing/pause and 
     ages,
   );
   trails.reset();
-  assert.ok(scene.children.every((m) => !m.visible));
+  assert.ok(trails.dust.every((p) => !p.mesh.visible));
+  assert.equal(trails.skids.mesh.count, 0);
+});
+
+// Drive a car for `seconds` with steering `turn` (the sim's own turn rate).
+function drive(marks, p, seconds, turn) {
+  for (let f = 0; f < seconds * 60; f++) {
+    p.turn = turn;
+    p.angle += turn * (1 / 60);
+    p.vx = -Math.sin(p.angle) * 24;
+    p.vz = -Math.cos(p.angle) * 24;
+    p.x += p.vx / 60;
+    p.z += p.vz / 60;
+    marks.update(p, true);
+  }
+}
+test("skid marks: only on a hard fast turn, from both rear tires, curving with the slide", () => {
+  const marks = new SkidMarks(new THREE.Scene());
+  const p = { x: 0, z: 0, angle: 0, vx: 0, vz: -24, turn: 0 };
+  drive(marks, p, 2, 0); // straight
+  assert.equal(marks.mesh.count, 0);
+  drive(marks, p, 2, 0.6); // gentle steering
+  assert.equal(skidAmount({ ...p, turn: 0.6 }), 0);
+  assert.equal(marks.mesh.count, 0);
+  drive(marks, p, 1.5, 1.75); // hard turn at speed
+  const n = marks.mesh.count;
+  assert.ok(n > 100, `${n} strips`);
+  // Both tires, about the same number each, along a curve (headings change).
+  const m = new THREE.Matrix4(), pos = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+  const headings = new Set();
+  for (let i = 0; i < n; i++) {
+    marks.mesh.getMatrixAt(i, m);
+    m.decompose(pos, q, s);
+    assert.ok(Math.abs(pos.y - 0.135) < 1e-6); // on the road surface
+    assert.ok(s.z > 0.3 && s.z < 0.6); // short strips, no stretched gaps
+    headings.add(Math.round(new THREE.Euler().setFromQuaternion(q).y * 10));
+  }
+  assert.ok(headings.size > 10, "the trail curves");
+  // Straight again: the trail stops, the marks stay.
+  drive(marks, p, 3, 0);
+  assert.equal(marks.mesh.count, n);
+});
+test("skid marks: bounded memory, oldest reused first, cleared on restart", () => {
+  const marks = new SkidMarks(new THREE.Scene(), 500);
+  const p = { x: 0, z: 0, angle: 0, vx: 0, vz: -24, turn: 0 };
+  drive(marks, p, 10, 1.75);
+  assert.equal(marks.mesh.count, 500);
+  assert.ok(marks.total > 500);
+  // The newest strip is where the car just was (the oldest were reused).
+  const m = new THREE.Matrix4(), pos = new THREE.Vector3();
+  marks.mesh.getMatrixAt((marks.next + 499) % 500, m);
+  pos.setFromMatrixPosition(m);
+  assert.ok(Math.hypot(pos.x - p.x, pos.z - p.z) < 3);
+  marks.reset();
+  assert.equal(marks.mesh.count, 0);
+  assert.equal(SKID_CAPACITY, 6000);
 });
 test("turn/slip intensifies both rear effects and skid sound without a drift control", () => {
   const p = { x: 0, z: 0, angle: 0, vx: 0, vz: -24, turn: 0, slip: 0 },

@@ -36,9 +36,9 @@ test("real camera tracks routed pursuit, eight-car fleet and bounded rear effect
       fleet: s.police.length,
       meshes: r.police.length,
       visibleDust: r.trails.dust.filter((p) => p.mesh.visible).length,
-      visibleSkids: r.trails.marks.filter((m) => m.mesh.visible).length,
+      visibleSkids: r.trails.skids.mesh.count,
       dustPool: r.trails.dust.length,
-      skidPool: r.trails.marks.length,
+      skidPool: r.trails.skids.capacity,
       health: s.health,
       wallContacts: s.player.wallContacts,
       wallDamage: s.stats.wallDamage,
@@ -61,7 +61,7 @@ test("real camera tracks routed pursuit, eight-car fleet and bounded rear effect
   ).toBeGreaterThan(0.35);
   expect(metrics.visibleDust).toBeGreaterThan(0);
   expect(metrics.dustPool).toBe(48);
-  expect(metrics.skidPool).toBe(64);
+  expect(metrics.skidPool).toBe(6000);
   await test.info().attach("actual-camera-metrics", {
     body: JSON.stringify(metrics, null, 2),
     contentType: "application/json",
