@@ -175,6 +175,21 @@ export function parasolPole(g) {
   cyl(g, 0.3, 0.32, 0.12, C.dark, 0, -1.2, 0, 8);
   cyl(g, 0.03, 0.03, 2.3, C.white, 0, -1.08, 0, 6);
 }
+// Gas depot pieces: a chain-link fence panel and a gas cylinder.
+export function depotFence(g) {
+  for (const x of [-1.2, 1.2]) B(g, 0.08, 1.9, 0.08, 0x8a8d93, x, 0, 0);
+  B(g, 2.4, 0.06, 0.06, 0x8a8d93, 0, 1.85, 0);
+  B(g, 2.4, 0.06, 0.06, 0x8a8d93, 0, 0.1, 0);
+  for (let i = 0; i < 9; i++) {
+    const w = B(g, 0.03, 1.75, 0.02, 0xb9bcc2, -1.1 + i * 0.275, 0.12, 0);
+    w.rotation.z = (i % 2 ? 1 : -1) * 0.3;
+  }
+}
+export function gasBottle(g) {
+  cyl(g, 0.17, 0.17, 1.1, 0xffffff, 0, 0, 0, 8);
+  cyl(g, 0.17, 0.17, 0.12, 0xdddddd, 0, 1.0, 0, 8);
+  cyl(g, 0.07, 0.07, 0.16, 0x8a8d93, 0, 1.1, 0, 6);
+}
 export function fruit(g) {
   ico(g, 0.11, 0xffffff, 0, 0, 0);
 }
@@ -204,6 +219,8 @@ export const FLYERS = {
     ],
     fruitN: 18,
   },
+  depotFence: { build: depotFence, mass: 0.5, r: 0.4, side: 0.08, panel: 2.4 },
+  gasBottle: { build: gasBottle, tint: true, mass: 0.35, r: 0.3, side: 0.34, bounces: 2 },
   stallAwning: { build: stallAwning, mass: 0.4, r: 1.6, side: 0.12, spawnOnly: true },
   stallTable: { build: stallTable, mass: 1.6, r: 1.2, side: 0.5, spawnOnly: true, bounces: 1 },
   stallBoard: { build: stallBoard, mass: 0.35, r: 0.8, side: 0.06, spawnOnly: true },

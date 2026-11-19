@@ -13,6 +13,7 @@
 import { createLayout } from "../../world/layout.js";
 
 import { GAS, COURT, PARK } from "./layout-consts.js";
+import { GASDEPOT, depotSolids, depotFlyers } from "./gasdepot.js";
 import { parkPlan } from "./plan.js";
 import { sitePlan } from "./sites.js";
 export { GAS, COURT, PARK };
@@ -35,7 +36,7 @@ const inBlock = (b, c) => Math.abs(b.x - c.x) < 10 && Math.abs(b.z - c.z) < 10;
 
 export function previewLayout() {
   const base = createLayout();
-  const buildings = base.buildings.filter((b) => !inBlock(b, GAS) && !inBlock(b, COURT));
+  const buildings = base.buildings.filter((b) => !inBlock(b, GAS) && !inBlock(b, COURT) && !inBlock(b, GASDEPOT));
   const parks = base.parks.filter((p) => !(p.x === PARK.x && p.z === PARK.z));
   const obstacles = base.obstacles.filter((o) => !inBlock(o, PARK));
   const solid = (c, x, z, w, d, kind) => obstacles.push({ x: c.x + x, z: c.z + z, w, d, kind });
@@ -54,7 +55,10 @@ export function previewLayout() {
   // Park features and outer-ring yards: only their small solid pieces
   // (statue plinths, site cabins, containers) are added to the layout.
   const features = parkPlan(parks);
+  // Gas storage depot (gasdepot.js): its solids, and its loose fence
+  // panels and gas cylinders as a group of flyers.
+  features.push({ kind: "gasdepot", items: [], vehicles: [], flyers: depotFlyers(), solids: depotSolids() });
   const yards = sitePlan();
   for (const f of [...features, ...yards]) obstacles.push(...f.solids);
-  return { buildings, parks, obstacles, features, yards, locations: { gas: GAS, court: COURT, park: PARK } };
+  return { buildings, parks, obstacles, features, yards, locations: { gas: GAS, court: COURT, park: PARK, gasDepot: GASDEPOT } };
 }
