@@ -106,7 +106,9 @@ for (const name of ["pinned-1100-evasive-11", "pinned-390-roads-9"])
     // moved under a metre, while the speedometer showed a speed.
     const before = log.filter((r) => r.countdown === null && !r.result);
     expect(before.length).toBeGreaterThan(5);
-    expect(Math.max(...before.map((r) => r.moved))).toBeLessThan(1);
+    // (Since the trapping fix the car tries to turn round after a second
+    // against something, so it may shuffle a little; it still gets nowhere.)
+    expect(Math.max(...before.map((r) => r.moved))).toBeLessThan(1.5);
     const counting = log.filter((r) => r.countdown !== null);
     expect(new Set(counting.map((r) => r.countdown))).toEqual(new Set(["3", "2", "1"]));
     // It counted down without restarting (game seconds).
