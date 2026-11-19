@@ -33,7 +33,10 @@ const REAR = 1.15,
   TRACK = 0.72,
   STEP = 0.32; // a new strip every 32 cm of travel
 export class SkidMarks {
-  constructor(scene, capacity = SKID_CAPACITY) {
+  // The budget is split into chunks of consecutive strips (a stretch of
+  // trail each) with their own bounds, so stretches off screen are culled
+  // and cost nothing; at most CHUNKS draw calls.
+  constructor(scene, capacity = SKID_CAPACITY, chunks = 8) {
     const geometry = new THREE.PlaneGeometry(1, 1);
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(0, 0, -0.5); // strip runs from its origin along -z
@@ -43,14 +46,18 @@ export class SkidMarks {
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
     });
-    this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
-    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.frustumCulled = false;
-    this.mesh.count = 0;
-    this.mesh.renderOrder = -1;
-    scene.add(this.mesh);
-    this.capacity = capacity;
+    this.per = Math.ceil(capacity / chunks);
+    this.capacity = this.per * chunks;
+    this.chunks = Array.from({ length: chunks }, () => {
+      const mesh = new THREE.InstancedMesh(geometry, material, this.per);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(this.per * 3), 3);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.count = 0;
+      mesh.renderOrder = -1;
+      mesh.boundingSphere = new THREE.Sphere();
+      scene.add(mesh);
+      return { mesh, box: new THREE.Box3(), dirty: false };
+    });
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
     this.v = new THREE.Vector3();
@@ -61,11 +68,19 @@ export class SkidMarks {
     this.dark = new THREE.Color(0x0b0b0d);
     this.reset();
   }
+  // Strips drawn (all chunks).
+  get count() {
+    return this.chunks.reduce((n, c) => n + c.mesh.count, 0);
+  }
   reset() {
     this.next = 0;
     this.total = 0;
     this.last = [null, null];
-    this.mesh.count = 0;
+    for (const c of this.chunks) {
+      c.mesh.count = 0;
+      c.mesh.visible = false;
+      c.box.makeEmpty();
+    }
   }
   // Rear tire contact points (left, right) of the car now.
   tires(p) {
@@ -84,7 +99,6 @@ export class SkidMarks {
       return;
     }
     const points = this.tires(player);
-    let changed = false;
     points.forEach((pt, i) => {
       const prev = this.last[i];
       if (!prev) {
@@ -100,23 +114,35 @@ export class SkidMarks {
       }
       this.add(prev, dx, dz, d, amount);
       this.last[i] = pt;
-      changed = true;
     });
-    if (changed) {
-      this.mesh.instanceMatrix.needsUpdate = true;
-      this.mesh.instanceColor.needsUpdate = true;
-    }
+    this.flush();
   }
   add(from, dx, dz, d, amount) {
     const i = this.next;
     this.next = (this.next + 1) % this.capacity;
     this.total++;
+    const chunk = this.chunks[Math.floor(i / this.per)], j = i % this.per;
+    // Reusing a chunk from its start: its old stretch is replaced.
+    if (j === 0 && this.total > this.capacity) chunk.box.makeEmpty();
     // Overlap a little so a curve has no gaps between strips.
     this.q.setFromAxisAngle(this.up, Math.atan2(-dx, -dz));
     this.m.compose(this.v.set(from.x, ROAD_Y, from.z), this.q, this.s.set(0.32, 1, d + 0.06));
-    this.mesh.setMatrixAt(i, this.m);
-    this.mesh.setColorAt(i, this.c.copy(this.light).lerp(this.dark, 0.45 + 0.55 * amount));
-    this.mesh.count = Math.min(this.total, this.capacity);
+    chunk.mesh.setMatrixAt(j, this.m);
+    chunk.mesh.setColorAt(j, this.c.copy(this.light).lerp(this.dark, 0.45 + 0.55 * amount));
+    chunk.mesh.count = Math.max(chunk.mesh.count, j + 1);
+    chunk.box.expandByPoint(this.v);
+    chunk.dirty = true;
+  }
+  flush() {
+    for (const c of this.chunks) {
+      if (!c.dirty) continue;
+      c.dirty = false;
+      c.mesh.instanceMatrix.needsUpdate = true;
+      c.mesh.instanceColor.needsUpdate = true;
+      c.box.getBoundingSphere(c.mesh.boundingSphere);
+      c.mesh.boundingSphere.radius += 1.5;
+      c.mesh.visible = c.mesh.count > 0;
+    }
   }
 }
 

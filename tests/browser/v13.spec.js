@@ -36,7 +36,7 @@ test("real camera tracks routed pursuit, eight-car fleet and bounded rear effect
       fleet: s.police.length,
       meshes: r.police.length,
       visibleDust: r.trails.dust.filter((p) => p.mesh.visible).length,
-      visibleSkids: r.trails.skids.mesh.count,
+      visibleSkids: r.trails.skids.count,
       dustPool: r.trails.dust.length,
       skidPool: r.trails.skids.capacity,
       health: s.health,
