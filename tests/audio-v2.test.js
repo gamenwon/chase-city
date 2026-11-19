@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Simulation } from "../src/game/simulation.js";
 import { createLayout } from "../src/world/layout.js";
-import { SoundSystem, soundTargets } from "../src/audio/sound.js";
+import { SoundSystem, soundTargets, MUSIC } from "../src/audio/sound.js";
 
 function screech(holdSeconds, warm = 2) {
   const s = new Simulation(createLayout(), { reinforcements: false, barricades: false });
@@ -50,4 +50,65 @@ test("gas-station explosions use the big explosion; car explosions the ordinary 
   ] };
   s.update(sim);
   assert.deepEqual(played, ["explosion", "bigExplosion"]);
+});
+
+test("music: loaded only after a user gesture, loops exactly, quieter when not playing, muted with everything", async () => {
+  const param = (v = 0) => ({
+    value: v,
+    setTargetAtTime(x) { this.value = x; },
+    setValueAtTime(x) { this.value = x; },
+    cancelScheduledValues() {},
+  });
+  const node = () => ({ gain: param(), connect() {}, disconnect() {} });
+  const sources = [];
+  const ctx = {
+    state: "running",
+    currentTime: 0,
+    sampleRate: 44100,
+    destination: {},
+    resume: () => Promise.resolve(),
+    createGain: node,
+    createDynamicsCompressor: () => ({ threshold: param(), knee: param(), ratio: param(), attack: param(), release: param(), connect() {} }),
+    createBuffer: (ch, len, sr) => ({ getChannelData: () => new Float32Array(len), sampleRate: sr }),
+    createOscillator: () => ({ type: "", frequency: param(), connect() {}, start() {} }),
+    createBiquadFilter: () => ({ type: "", frequency: param(), Q: param(), connect() {} }),
+    createBufferSource: () => {
+      const s = { connect() {}, start(when, offset) { s.offset = offset; }, playbackRate: param(1) };
+      sources.push(s);
+      return s;
+    },
+    decodeAudioData: () => {
+      const data = new Float32Array(44100 * 77);
+      data.fill(0.2, 1105); // 1105 samples of encoder padding, then music
+      return Promise.resolve({ duration: data.length / 44100, sampleRate: 44100, getChannelData: () => data });
+    },
+  };
+  let fetched = 0;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => { fetched++; return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) }; };
+  try {
+    const s = new SoundSystem(() => ctx);
+    assert.equal(fetched, 0); // nothing before a gesture
+    await s.unlock();
+    for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+    assert.equal(fetched, 1);
+    assert.equal(s.music.state, "playing");
+    const src = s.music.source;
+    assert.equal(src.loop, true);
+    assert.ok(Math.abs(src.loopStart - 1105 / 44100) < 1e-9);
+    assert.ok(Math.abs(src.loopEnd - src.loopStart - MUSIC.loopSeconds) < 1e-9);
+    assert.equal(s.music.gain.gain.value, MUSIC.idle); // not running yet
+    s.setRunning(true);
+    assert.equal(s.music.gain.gain.value, MUSIC.playing);
+    assert.ok(MUSIC.playing < 0.3);
+    s.duck(0.6, 0.6);
+    assert.ok(s.music.gain.gain.value <= MUSIC.playing); // dips, then recovers
+    s.setMuted(true);
+    assert.equal(s.master.gain.value, 0); // music goes through the master
+    await s.unlock(); // a second gesture never loads or starts it twice
+    assert.equal(fetched, 1);
+    assert.equal(sources.filter((x) => x.loop).length, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

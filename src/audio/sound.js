@@ -23,7 +23,19 @@ export function soundTargets(sim) {
     skidHz: 980 + speed * 14 + clamp(turnLoad, 0, 2.5) * 90,
   };
 }
-// All sounds are synthesized locally. No samples, network assets or autoplay.
+// Background music: "Getaway Club", an original composition made for this
+// game (scripts/music/compose.mjs renders it; docs/audio-assets.md). The
+// file is loaded on the first user gesture (never autoplayed), loops
+// sample-exactly, goes through the master gain (so mute silences it) and
+// sits under the gameplay sounds: lower still while paused or on a menu,
+// dipped under explosions.
+export const MUSIC = {
+  url: "audio/chase-city-bgm.mp3",
+  loopSeconds: 76.8, // 48 bars at 150 BPM
+  playing: 0.26,
+  idle: 0.1,
+};
+// Sound effects are synthesized locally; the music is the only file.
 export class SoundSystem {
   constructor(
     factory = () => {
@@ -42,6 +54,7 @@ export class SoundSystem {
     this.lastCity = 0;
     this.cooldowns = {};
     this.lastTargets = null;
+    this.music = { state: "none", source: null, gain: null };
   }
   unlock() {
     try {
@@ -56,7 +69,14 @@ export class SoundSystem {
       }
       // Called directly within START/resume/mute user gestures, including Safari.
       return Promise.resolve(this.context.resume())
-        .then(() => true)
+        .then(() => {
+          try {
+            this.startMusic();
+          } catch {
+            this.music.state = "failed";
+          }
+          return true;
+        })
         .catch(() => {
           this.available = false;
           return false;
@@ -78,6 +98,11 @@ export class SoundSystem {
     this.compressor.release.value = 0.2;
     this.compressor.connect(this.master);
     this.master.connect(c.destination);
+    // Music bus: straight to the master (not squeezed by the effects'
+    // compressor, which would pump it under every crash).
+    this.music.gain = c.createGain();
+    this.music.gain.gain.value = 0;
+    this.music.gain.connect(this.master);
     this.noise = c.createBuffer(1, c.sampleRate, c.sampleRate);
     const data = this.noise.getChannelData(0);
     let n = 12345;
@@ -207,8 +232,61 @@ export class SoundSystem {
     if (this.master) this.parameter(this.master.gain, value ? 0 : 0.45, 0.015);
     if (value) this.stopVoices();
   }
+  // Fetch, decode and start the music loop once (after a user gesture).
+  startMusic() {
+    const m = this.music;
+    if (!this.context || !m.gain || m.state !== "none" || typeof fetch !== "function") return;
+    m.state = "loading";
+    const c = this.context;
+    const base = globalThis.document?.baseURI ?? globalThis.location?.href;
+    const url = base ? new URL(MUSIC.url, base).href : MUSIC.url;
+    Promise.resolve()
+      .then(() => fetch(url))
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
+      .then((data) => new Promise((ok, fail) => {
+        // Old Safari only has the callback form.
+        const p = c.decodeAudioData(data, ok, fail);
+        if (p?.then) p.then(ok, fail);
+      }))
+      .then((buffer) => {
+        const source = c.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        // Skip the encoder's leading padding: the track starts on a hit.
+        const ch = buffer.getChannelData(0);
+        let first = 0;
+        while (first < Math.min(ch.length, 8192) && Math.abs(ch[first]) < 1e-4) first++;
+        source.loopStart = first / buffer.sampleRate;
+        source.loopEnd = Math.min(buffer.duration, source.loopStart + MUSIC.loopSeconds);
+        source.connect(m.gain);
+        source.start(0, source.loopStart);
+        m.source = source;
+        m.state = "playing";
+        this.musicLevel();
+      })
+      .catch(() => {
+        m.state = "failed"; // the game carries on without music
+      });
+  }
+  // Music level for the current state (fades, never jumps).
+  musicLevel(time = 0.6) {
+    const m = this.music;
+    if (!m.gain || !this.context) return;
+    this.parameter(m.gain.gain, this.running ? MUSIC.playing : MUSIC.idle, time);
+  }
+  // Briefly lower the music under a big sound.
+  duck(depth = 0.45, hold = 0.25) {
+    const m = this.music;
+    if (!m.gain || m.state !== "playing" || !this.running) return;
+    const g = m.gain.gain, now = this.context.currentTime;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.setTargetAtTime(MUSIC.playing * (1 - depth), now, 0.04);
+    g.setTargetAtTime(MUSIC.playing, now + hold, 0.5);
+  }
   setRunning(value) {
     this.running = value;
+    this.musicLevel(value ? 0.8 : 0.3);
     if (!value && this.context) {
       for (const loop of Object.values(this.loops || {})) {
         try {
@@ -235,7 +313,11 @@ export class SoundSystem {
     }
   }
   voice(kind, strength = 1, frequency = 200, delay = 0) {
-    if (kind === "bigExplosion") return this.bigExplosion(strength, delay);
+    if (kind === "explosion") this.duck(0.35, 0.2);
+    if (kind === "bigExplosion") {
+      this.duck(0.6, 0.6);
+      return this.bigExplosion(strength, delay);
+    }
     if (
       !this.context ||
       this.muted ||
