@@ -16,6 +16,7 @@ import { GAS, COURT, PARK } from "./layout-consts.js";
 import { GASDEPOT, depotSolids, depotFlyers } from "./gasdepot.js";
 import { parkPlan } from "./plan.js";
 import { sitePlan } from "./sites.js";
+import { streetFlyers } from "./street.js";
 export { GAS, COURT, PARK };
 
 // Gas station plan (block-local metres; x east, z south).
@@ -58,6 +59,9 @@ export function previewLayout() {
   // Gas storage depot (gasdepot.js): its solids, and its loose fence
   // panels and gas cylinders as a group of flyers.
   features.push({ kind: "gasdepot", items: [], vehicles: [], flyers: depotFlyers(), solids: depotSolids() });
+  // Shop-front clutter on the shopping streets (sandwich boards, racks,
+  // pots, newspaper boxes): loose flyers, never solid.
+  features.push({ kind: "street", items: [], vehicles: [], flyers: streetFlyers(buildings, { parks }), solids: [] });
   const yards = sitePlan();
   for (const f of [...features, ...yards]) obstacles.push(...f.solids);
   return { buildings, parks, obstacles, features, yards, locations: { gas: GAS, court: COURT, park: PARK, gasDepot: GASDEPOT } };

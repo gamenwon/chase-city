@@ -8,6 +8,7 @@
 // Instanced per kind and 60 m map cell (culled off screen).
 import * as THREE from "three";
 import { C, B, G, cyl, ico, add, pieceGeometry, bakedMaterial } from "./parts.js";
+import { SMALL_FLYERS, SMALL_BITS, SMALL_CAPS } from "./smallprops.js";
 
 // ------------------------------------------------------------- models --
 export function chair(g, color = C.red) {
@@ -234,10 +235,12 @@ export const FLYERS = {
   siteFence: { build: siteFence, mass: 0.8, r: 0.3, side: 0.1, panel: 2.4 },
   lightTower: { build: lightTower, mass: 1.6, r: 0.9, side: 0.6 },
   cctv: { build: cctv, mass: 0.7, r: 0.3, side: 0.15 },
+  ...SMALL_FLYERS,
 };
 export const BITS = {
   fruit: { build: fruit, cap: 160, tint: true },
   brick: { build: brick, cap: 160 },
+  ...SMALL_BITS,
 };
 const FRUIT = [0xe8401c, 0xf5c01a, 0x5cb23a, 0xf0781e].map((c) => new THREE.Color(c));
 const UP = new THREE.Vector3(0, 1, 0);
@@ -254,8 +257,8 @@ export class FlyerSystem {
     // Spawn pools (table halves, fruit, bricks): instances made up front,
     // hidden until used.
     this.pools = {};
-    const caps = { stallAwning: 12, stallTable: 12, stallBoard: 12, stallPost: 48, produceBox: 36, parasolCanopy: 24, parasolPole: 24 };
-    for (const k of ["tableTop", "tableBase", "fruit", "brick", ...Object.keys(caps)]) {
+    const caps = { stallAwning: 12, stallTable: 12, stallBoard: 12, stallPost: 48, produceBox: 36, parasolCanopy: 24, parasolPole: 24, ...SMALL_CAPS };
+    for (const k of ["tableTop", "tableBase", ...Object.keys(BITS), ...Object.keys(caps)]) {
       const cap = BITS[k]?.cap || caps[k] || 40;
       const g = geo(k);
       this.pools[k] = { ids: Array.from({ length: cap }, () => batch.instance(g, false)), cap, used: 0 };
@@ -330,6 +333,16 @@ export class FlyerSystem {
         }
       }
       for (let i = 0; i < (def.fruitN || 0); i++) this.spawn(sim, "fruit", it.x + (Math.random() - 0.5) * 2.4, it.y + 1.1, it.z, car, speed * 0.8, nx, nz, 0.2, it.spec.y ?? 0.05);
+      this.sprayBits(sim, it, car, speed, nx, nz);
+      sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: it.x, z: it.z, strength: Math.min(15, speed) });
+      return;
+    }
+    if (def.breakAt && speed >= def.breakAt && def.hideOnBreak) {
+      // Smashed where it stood (a pot): only its bits fly.
+      it.hidden = true;
+      this.pose(it);
+      this.stats.broken++;
+      this.sprayBits(sim, it, car, speed, nx, nz);
       sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: it.x, z: it.z, strength: Math.min(15, speed) });
       return;
     }
@@ -360,13 +373,18 @@ export class FlyerSystem {
     this.stats.launched++;
     if (it.hits === 1) sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: it.x, z: it.z, strength: Math.min(15, speed) * Math.min(1, def.mass + 0.3) });
   }
+  sprayBits(sim, it, car, speed, nx, nz) {
+    const def = it.def, y0 = it.spec.y ?? 0.05;
+    if (def.bits) for (let i = 0; i < def.bitN; i++) this.spawn(sim, def.bits, it.x + (Math.random() - 0.5) * 0.6, it.y + 0.6, it.z + (Math.random() - 0.5) * 0.6, car, speed * 0.8, nx, nz, 0.3, y0);
+    if (def.bitsAlso) for (let i = 0; i < def.bitsAlsoN; i++) this.spawn(sim, def.bitsAlso, it.x, it.y + 0.8, it.z, car, speed * 0.7, nx, nz, 0.3, y0);
+  }
   // A loose piece (table half, fruit, brick) from a pool.
   spawn(sim, kind, x, y, z, car, speed, nx, nz, mass, baseY = 0.05) {
     const pool = this.pools[kind];
     if (!pool || pool.used >= pool.cap || this.active.length >= 140) return;
     const h = pool.ids[pool.used++];
     this.batch.visible(h, true);
-    if (kind === "fruit") this.batch.color(h, FRUIT[pool.used % 4]);
+    if (kind === "fruit" || BITS[kind]?.tint) this.batch.color(h, FRUIT[pool.used % 4]);
     const it = { spec: { kind, y: baseY }, def: FLYERS[kind] || { mass, side: 0.06 }, h, x, y, z, q: new THREE.Quaternion(), hits: 3, state: "rest" };
     const base = Math.min(1.6, 1 / Math.sqrt(mass));
     const a = Math.random() * Math.PI * 2;

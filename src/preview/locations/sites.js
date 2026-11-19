@@ -82,6 +82,13 @@ export function sitePlan() {
       item("booth", 8.6, 1.4, Math.PI / 2);
       item("cone", -2.0, -0.6);
       item("cone", 4.0, -0.6);
+      // Shopping carts left in the aisle, a pay station and P signs.
+      fly("shoppingCart", 1.0, -1.4, 0.7);
+      fly("shoppingCart", 6.2, -2.6, -0.4);
+      if (i % 2) fly("shoppingCart", -4.8, -3.0, 2.2);
+      fly("ticketMachine", 7.6, 5.4, Math.PI);
+      fly("parkingSign", -6.0, 5.6, Math.PI);
+      fly("parkingSign", 3.0, 5.6, Math.PI);
     } else if (kind === "construction") {
       box(-5.0, 4.7, 7.0, 2.8, "foundation");
       box(5.6, 4.8, 5.0, 2.4, "cabin");
@@ -98,6 +105,10 @@ export function sitePlan() {
       item("cone", -4.2, -5.0);
       item("cone", 4.2, -5.0);
       item("barrier", 0, -2.6, 0);
+      // Work bench, a strapped plank stack and a generator by the cabin.
+      fly("toolTable", -0.4, 0.9, 0.15);
+      fly("plankStack", 5.6, -1.6, 0.05);
+      fly("generator", 9.0, 1.2, 0.3);
     } else if (kind === "depot") {
       box(-2.0, 4.8, 13.0, 2.8, "dock");
       // The DEPOT gantry (topples out towards the city edge).
@@ -120,6 +131,11 @@ export function sitePlan() {
       item("cone", -9.0, -5.0);
       item("cone", 9.0, -5.0);
       item("bin", 8.6, 5.7, 0);
+      // Sign at the entrance, supply shelves, a vacuum post and buckets.
+      fly("washSign", -7.8, -3.8, 0.3);
+      fly("supplyRack", 8.4, 3.2, -Math.PI / 2);
+      fly("vacuum", -8.4, 3.0, 0);
+      for (const [u, v, c] of [[-7.6, 1.2, 0], [7.4, 0.6, 2], [7.9, 1.1, 5]]) fly("bucket", u, v, 0, { color: COLORS[c] });
     } else if (kind === "market") {
       // The MARKET arch over the entrance (gantries.js: it can topple; it
       // falls into the market, away from the road).
@@ -133,6 +149,10 @@ export function sitePlan() {
         fly("table", u, 0.0, 0);
         fly("parasol", u + 0.9, 0.6, 0, { color: COLORS[(i + (u > 0 ? 3 : 0)) % 8] });
       }
+      // A vendor cart and goods racks by the stalls.
+      fly("vendorCart", -8.2, 0.4, 0.4);
+      fly("displayRack", 8.4, 2.0, -0.3);
+      fly("displayRack", -3.0, 1.3, 0.2);
     } else if (kind === "cafe") {
       box(0, 4.8, 6.0, 2.6, "cafe");
       y.flyers.push(...cafeClusters(f, i, [[-6.4, 0.6], [-1.6, -0.6], [3.4, 0.4], [7.2, 1.6]], Y));
