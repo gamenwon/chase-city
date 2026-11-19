@@ -21,6 +21,7 @@
 //
 // Order on the select screen is not here: see catalog.js.
 import { crossedExit } from "./escape.js";
+import { createTarget, TARGET } from "./target.js";
 
 const SURVIVAL_SECONDS = 60;
 
@@ -104,6 +105,41 @@ export const MISSIONS = Object.freeze({
     },
     hud: (sim) =>
       `수거 ${sim.mission.progress} / 5 · 남은 ${Math.max(0, Math.ceil(timeLeft(sim)))}초`,
+  }),
+
+  // TARGET HUNT: the player is the hunter. One fleeing target car, no
+  // police, no clock (first version: chase quality first). Ram it until
+  // it is destroyed.
+  targetHunt: Object.freeze({
+    id: "targetHunt",
+    type: "hunt",
+    title: "타깃 헌트",
+    objective: "도망치는 타깃 차량을 추격해 들이받아 파괴하세요. 세게 부딪힐수록 큰 피해를 줍니다.",
+    mapId: "downtown",
+    durationClass: "short",
+    timeLimit: null,
+    target: 100,
+    reward: Object.freeze({ type: "credits", amount: 600 }),
+    rules: Object.freeze({ police: false }),
+    failOn: Object.freeze(["destroyed"]),
+    continueOn: Object.freeze(["destroyed"]),
+    progressLabel: "타깃 손상",
+    unit: "%",
+    progress: (sim) => (sim.target ? Math.round(TARGET.health - sim.target.health) : 0),
+    setup(sim) {
+      sim.target = createTarget(sim);
+    },
+    update(sim) {
+      const t = sim.target;
+      if (t?.state === "wrecked" && sim.elapsed - t.wreckedAt >= TARGET.winDelay) completeMission(sim);
+    },
+    hud: (sim) => {
+      const t = sim.target;
+      if (!t) return "";
+      if (t.state === "wrecked") return "타깃 파괴!";
+      const d = Math.round(Math.hypot(t.x - sim.player.x, t.z - sim.player.z));
+      return `타깃 내구도 ${Math.ceil(t.health)}% · ${d} m`;
+    },
   }),
 });
 

@@ -73,6 +73,7 @@ export class Interface {
         : 0,
     );
     e["mission-progress"].textContent = sim.mission.definition.hud(sim);
+    this.targetBar(sim);
     // Arrest countdown: shown the moment the arrest timer runs (cordon
     // closed, or police cars holding the car stuck), whole seconds left.
     const counting = sim.started && !sim.result && sim.arrest > 0;
@@ -102,6 +103,39 @@ export class Interface {
       document.querySelector("#escape-distance").textContent =
         `${Math.ceil(escapeView.distance)} m`;
       document.querySelector("#escape-name").textContent = escapeView.name;
+    }
+  }
+  // TARGET HUNT: the target's durability as a bar under the mission card
+  // (red, shrinking, flashes on a hit). Built once, hidden otherwise.
+  targetBar(sim) {
+    const t = sim.target;
+    let box = this.targetBox;
+    if (!t) {
+      if (box) box.hidden = true;
+      return;
+    }
+    if (!box) {
+      box = this.targetBox = document.createElement("div");
+      box.id = "target-hud";
+      box.innerHTML = '<span>TARGET</span><div class="bar"><i></i></div>';
+      document.getElementById("mission-hud").append(box);
+      const style = document.createElement("style");
+      style.textContent = `#target-hud{margin-top:7px;display:flex;align-items:center;gap:8px}
+#target-hud span{font:700 9px monospace;letter-spacing:2px;color:#ff6b7a}
+#target-hud .bar{flex:1;min-width:110px;height:8px;background:#ffffff26;border:1px solid #ff4b5c;border-radius:2px;overflow:hidden}
+#target-hud i{display:block;height:100%;background:linear-gradient(90deg,#ff4b5c,#ffb03a);transition:width .15s}
+#target-hud.hit .bar{box-shadow:0 0 0 2px #fff6}`;
+      document.head.append(style);
+      this.targetFill = box.querySelector("i");
+      this.lastTargetHits = 0;
+    }
+    box.hidden = false;
+    this.targetFill.style.width = `${Math.max(0, t.health)}%`;
+    if (t.hits !== this.lastTargetHits) {
+      this.lastTargetHits = t.hits;
+      box.classList.add("hit");
+      clearTimeout(this.hitTimer);
+      this.hitTimer = setTimeout(() => box.classList.remove("hit"), 160);
     }
   }
   setWallet(amount) {

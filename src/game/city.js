@@ -1231,6 +1231,8 @@ export function updateCity(sim, dt) {
       hitProps(sim, city, c, CONFIG.policeRadius, false, 0.5);
   for (const t of city.traffic)
     if (!t.parked && t.state !== "wreck") hitProps(sim, city, t, 1.3, false);
+  // TARGET HUNT: the fleeing car crashes through street furniture too.
+  if (sim.target?.state === "fleeing") hitProps(sim, city, sim.target, 1.25, false, 0.7);
   updateProps(sim, city, dt);
   updatePedestrians(sim, city, dt);
   updateTraffic(sim, city, dt);

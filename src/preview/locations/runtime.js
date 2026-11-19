@@ -259,6 +259,8 @@ export class LocationsRuntime {
     if (sim.runNumber !== this.run) this.reset(sim);
     this.time = sim.elapsed;
     const cars = [sim.player, ...sim.police.filter((c) => c.state === "active")];
+    // TARGET HUNT: the fleeing car smashes through the locations too.
+    if (sim.target?.state === "fleeing") cars.push(sim.target);
     for (const car of cars) {
       const sp = Math.hypot(car.vx || 0, car.vz || 0);
       const before = this.speeds.get(car) ?? sp;

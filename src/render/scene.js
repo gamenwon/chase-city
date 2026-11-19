@@ -11,6 +11,7 @@ import { ExplosionEffects } from "./explosions.js";
 import { BonnetCamera } from "./pip.js";
 import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
+import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
 import { K, buildingGroup, coloredGeometry, playerCar, policeCar, parkBench, bakeStatic } from "./kit.js";
@@ -186,6 +187,7 @@ export class CityRenderer {
     this.officers = new OfficerRenderer(this.scene);
     this.cityLife = new CityLifeRenderer(this.scene);
     this.pickups = new PickupRenderer(this.scene);
+    this.targetView = new TargetRenderer(this.scene);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -301,6 +303,7 @@ export class CityRenderer {
     // Smoke that hides the player or a nearby police car turns see-through.
     this.effects.setViewers(this.camera.position, [
       p,
+      ...(sim.target && sim.target.state !== "wrecked" ? [sim.target] : []),
       ...sim.police.filter(
         (c) => c.state === "active" && Math.abs(c.x - p.x) < 45 && Math.abs(c.z - p.z) < 45,
       ),
@@ -313,6 +316,7 @@ export class CityRenderer {
     this.player.updateMatrixWorld(true);
     this.roadEvents.update(sim, this.camera);
     this.pickups.update(sim, this.camera);
+    this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
     const spawnCameraView = spawnView(this.camera);
     for (const c of sim.police)
       if (c.spawnProof && c.state === "active") {
@@ -356,7 +360,7 @@ export class CityRenderer {
   }
   // V2.0: the on-screen arrow (escape gate, or the mission's next item).
   get guidanceView() {
-    return this.roadEvents.view || this.pickups.view;
+    return this.roadEvents.view || this.pickups.view || this.targetView.view;
   }
   setPip(enabled) {
     this.pipEnabled = enabled;
@@ -428,6 +432,7 @@ export class CityRenderer {
     this.officers.reset();
     this.cityLife.reset();
     this.pickups.reset();
+    this.targetView.reset();
     this.cameraRig.reset();
     this.trails.reset();
     this.resetMetrics();

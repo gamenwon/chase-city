@@ -11,6 +11,7 @@ import { createMission, updateMission, getMission } from "./missions.js";
 import { getVehicle } from "./vehicles.js";
 import { createTally, recordCityEvent } from "./tally.js";
 import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.js";
+import { updateTarget, resolveTargetContact } from "./target.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget, standingPostsNear, PROPS } from "./city.js";
@@ -82,6 +83,7 @@ export class Simulation {
     this.tally = createTally();
     this.pin = createPin();
     this.pickups = [];
+    this.target = null; // TARGET HUNT: the fleeing car (target.js)
     this.cameraRig.reset();
     this.cameraRig.update({ x: 0, z: 8 }, 0);
     this.spawnEvents = [];
@@ -893,6 +895,11 @@ export class Simulation {
     for (const c of this.police)
       if (c.state === "active" && c.health <= 0) this.explodePolice(c);
     this.resolvePlayerPolice();
+    // TARGET HUNT: the fleeing car drives, and the player can ram it.
+    if (this.target) {
+      updateTarget(this, dt);
+      resolveTargetContact(this);
+    }
     for (const c of [p, ...this.police.filter((c) => c.state === "active")]) {
       const before = { x: c.x, z: c.z };
       const hit = this.constrain(

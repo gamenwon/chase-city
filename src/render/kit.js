@@ -374,6 +374,24 @@ export function policeCar() {
   out.userData.blue = blue;
   return out;
 }
+// TARGET HUNT target: a bright yellow getaway sedan with two black racing
+// stripes over the bonnet, roof and boot, black bumpers and a roof rack
+// with bags, so it reads at once from the chase camera.
+export function targetCar() {
+  const s = sedanShell(K.yellow, { cabin: K.yellow, frame: K.trim, bumper: K.trim, mirror: K.trim, rim: 0x2a292e });
+  const g = s.g;
+  for (const x of [-0.28, 0.28]) {
+    B(g, 0.24, 0.014, 1.05, K.trim, x, s.belt + 0.005, -1.55);
+    B(g, 0.24, 0.014, 0.95, K.trim, x, s.roof + 0.01, 0.3);
+    B(g, 0.24, 0.014, 0.8, K.trim, x, s.belt + 0.005, 1.7);
+  }
+  const rack = G(g, 0, s.roof + 0.02, 0.3);
+  for (const z of [-0.4, 0.4]) B(rack, 1.3, 0.05, 0.06, K.trim, 0, 0.05, z);
+  B(rack, 0.62, 0.3, 0.55, 0x3a6b3a, -0.25, 0.1, 0);
+  B(rack, 0.42, 0.24, 0.45, 0x6b4a2a, 0.33, 0.1, -0.05);
+  bakeVehicle(g);
+  return scaled(g);
+}
 // Civilian sedan as one coloured geometry: the body is white so an
 // instance colour paints it; glass, tyres and trim stay dark.
 export function civilianCarGeometry() {
