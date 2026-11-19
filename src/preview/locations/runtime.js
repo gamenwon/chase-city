@@ -18,6 +18,7 @@ import * as P from "./props.js";
 import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
 import { siteDecor } from "./sites-decor.js";
+import { PERIMETER, perimeterBuilding } from "./perimeter.js";
 import { Storefronts } from "./storefronts.js";
 import { PropBatch, PropInstances } from "./batch.js";
 
@@ -97,11 +98,18 @@ export class LocationsRuntime {
       for (const it of f.items) if (it.kind === "statue") P.plinth(G(decor, it.x, it.y, it.z, it.ry));
       if (decor.children.length) scene.add(bake(decor));
     }
-    for (const y of layout.yards || []) {
+    (layout.yards || []).forEach((y, i) => {
       const decor = new THREE.Group();
       siteDecor(decor, y);
       scene.add(bake(decor));
-    }
+      // A building behind some of the outer sites (scenery past the city
+      // edge: not solid, nothing on any route).
+      if (PERIMETER[i] && y.kind !== "corner") {
+        const pg = new THREE.Group();
+        perimeterBuilding(PERIMETER[i], i * 7 + 3)(G(pg, y.x, 0, y.z, y.ry));
+        scene.add(bake(pg));
+      }
+    });
     // Instanced copies are grouped by 60 m map cell, each group with real
     // bounds, so only the cells on screen (and in the shadow camera) are
     // drawn. Broken / wrecked variants get a copy only once something
