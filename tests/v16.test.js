@@ -40,7 +40,9 @@ test("normal START and legal steering lead real AI to 100 percent arrest with no
     r.timeline.some(
       (p) =>
         p.trapped &&
-        p.nearby >= 3 &&
+        // V2.6: barricades stay, so a cordon of two cars against one can
+        // already hold the player.
+        p.nearby >= 2 &&
         p.nearby <= 4 &&
         p.groundSpeed > 3 &&
         p.arrest > 0,

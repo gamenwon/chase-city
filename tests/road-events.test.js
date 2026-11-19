@@ -209,7 +209,7 @@ test("a real vehicle impulse into a barrier applies obstacle damage in the same 
   assert.ok(s.stats.barricadeDamage > 0);
   assert.ok(s.police[0].health < 100);
 });
-test("passed and expired roadblocks are removed from both physics and pathfinding", () => {
+test("barricades stay in physics and pathfinding until restart, passed or not (V2.6)", () => {
   const s = create();
   s.police = [];
   s.reinforcementsEnabled = false;
@@ -221,13 +221,17 @@ test("passed and expired roadblocks are removed from both physics and pathfindin
     [],
     1,
   );
-  Object.assign(b, { born: 0, expires: 14, passedAt: null });
+  Object.assign(b, { born: 0, expires: Infinity, passedAt: null });
   s.barricades = [b];
   s.refreshNavigation();
   s.barricadesEnabled = true;
-  s.elapsed = 14;
-  s.update(0.016, {});
-  assert.ok(!s.barricades.includes(b));
+  s.elapsed = 40;
+  Object.assign(s.player, { x: b.x + b.forward.x * 30, z: b.z + b.forward.z * 30 });
+  for (let i = 0; i < 30; i++) s.update(0.016, {});
+  assert.ok(s.barricades.includes(b));
+  assert.ok(s.navigation.solids.includes(b));
+  s.reset();
+  assert.equal(s.barricades.length, 0);
   assert.ok(!s.navigation.solids.includes(b));
 });
 

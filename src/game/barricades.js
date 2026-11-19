@@ -87,7 +87,10 @@ export function updateBarricades(sim) {
       if (b) {
         Object.assign(b, {
           born: sim.elapsed,
-          expires: sim.elapsed + 14,
+          // Barricades stay until restart (the routes close down one by
+          // one); each is only placed where a detour around it, and
+          // around every earlier one, still exists.
+          expires: Infinity,
           passedAt: null,
         });
         sim.barricades.push(b);
@@ -108,15 +111,6 @@ export function updateBarricades(sim) {
       (sim.player.z - b.road.z) * b.forward.z;
     if (passed > 8 && distance(b, sim.player) > 14 && b.passedAt === null)
       b.passedAt = sim.elapsed;
-  }
-  const keep = sim.barricades.filter(
-    (b) =>
-      sim.elapsed < b.expires &&
-      (b.passedAt === null || sim.elapsed - b.passedAt < 3),
-  );
-  if (keep.length !== sim.barricades.length) {
-    sim.barricades = keep;
-    changed = true;
   }
   if (changed) sim.refreshNavigation();
 }
