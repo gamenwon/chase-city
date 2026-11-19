@@ -17,6 +17,7 @@ import {
 } from "../src/render/wrecks.js";
 import { ExplosionEffects, explosionScale, smokeSeconds, chunkCount, SEE_THROUGH } from "../src/render/explosions.js";
 import { ChaseCamera } from "../src/render/camera.js";
+import { updateBlasts } from "../src/game/blast.js";
 
 const empty = () => {
   const s = new Simulation(
@@ -138,42 +139,30 @@ test("far from the player, oncoming officers keep right; near it, crashes stay p
   assert.equal(c.overtaking, false);
 });
 
-test("chain reactions are staged link by link and lose energy at each step", () => {
+test("chain reactions go link by link with short varied delays, and stop at a healthy car", () => {
   const s = empty();
   Object.assign(s.player, { x: 80, z: 80 });
-  // Five cars in a row, 9 units apart: each blast only reaches the next car.
-  s.police = [0, 9, 18, 27, 36].map((x, i) =>
-    Object.assign(makePolice(i), { x, z: 0, health: [100, 0, 0, 0, 40][i] }),
+  // Five cars in a row, 5 m apart: damaged ones carry the chain, the healthy
+  // car at the end is thrown but survives.
+  s.police = [0, 5, 10, 15, 20].map((x, i) =>
+    Object.assign(makePolice(i), { x, z: 0, health: [100, 25, 25, 25, 100][i] }),
   );
-  // V1.8: blasts alone never wreck a car; cars 1-3 were wrecked in the same
-  // pile-up (health 0) and go up one link at a time, the damaged car at the
-  // end of the row is thrown but survives.
   s.explodePolice(s.police[0]);
+  const went = [];
+  for (let i = 0; i < 5 * 60; i++) {
+    s.elapsed += 1 / 60;
+    updateBlasts(s);
+    for (const [k, c] of s.police.entries()) if (k > 0 && c.state === "wreck" && !went.some((w) => w.k === k)) went.push({ k, t: s.elapsed });
+  }
+  assert.deepEqual(s.police.map((c) => c.state), ["wreck", "wreck", "wreck", "wreck", "active"]);
+  assert.deepEqual(went.map((w) => w.k), [1, 2, 3]);
+  const gaps = went.map((w, i) => w.t - (i ? went[i - 1].t : 0));
+  for (const g of gaps.slice(1)) assert.ok(g >= 0.2 && g <= 0.8, `gap ${g}`);
   const events = s.events.filter((e) => e.type === "explosion");
-  // Blast energy falls off per link: the chain runs down the row of damaged
-  // cars and dies out before the last one.
   assert.equal(events.length, 4);
-  assert.deepEqual(
-    s.police.map((c) => c.state),
-    ["wreck", "wreck", "wreck", "wreck", "active"],
-  );
-  assert.deepEqual(
-    events.map((e) => e.delay),
-    [0, 1, 2, 3].map((k) => CONFIG.chainStepSeconds * k),
-  );
-  assert.ok(events.every((e) => e.chainRoot === events[0].id));
-  // Each wreck lands, and each officer starts its crash animation, with its
-  // own staged explosion.
-  assert.deepEqual(
-    s.wrecks.map((w) => w.born),
-    events.map((e) => e.time + e.delay),
-  );
-  assert.deepEqual(
-    s.police.slice(0, 4).map((c) => c.wreckAge),
-    events.map((e) => 0 - e.delay),
-  );
+  // Each link is a deeper chain step (drawn a little bigger).
+  assert.deepEqual(events.map((e) => e.chainDepth), [0, 1, 2, 3]);
 });
-
 test("the crash animation ends exactly in the persistent wreck pose", () => {
   const start = wreckPose(0),
     end = wreckPose(CONFIG.wreckSeconds),

@@ -9,7 +9,7 @@ import { CONFIG } from "../../game/config.js";
 import { C, B, G, bake, pieceGeometry, bakedMaterial, parkBench, lampPost, binPair } from "./parts.js";
 import { buildGas } from "./gas.js";
 import { GasCollapse } from "./gas-collapse.js";
-import { Gantries } from "./gantries.js";
+import { Gantries, gantryWorld } from "./gantries.js";
 import { GasDepot, GASDEPOT } from "./gasdepot.js";
 import { buildCourt, fencePanel, hoop } from "./court.js";
 import { buildPark } from "./park.js";
@@ -208,6 +208,8 @@ export class LocationsRuntime {
     });
     // Gas storage depot: tanks, pipes and their chain-reaction blast.
     this.depot = new GasDepot(scene, this);
+    // The shared explosion system (game/blast.js) reaches the locations too.
+    sim.blastListeners = [(s, e, R, k, later, depth) => this.blast(s, e, R, k, later, depth)];
     this.stats = { islands: 0, fountain: 0, policeWrecked: 0, knocked: 0, broken: 0, pushed: 0, wrecked: 0 };
     this.reset(sim);
   }
@@ -294,6 +296,45 @@ export class LocationsRuntime {
         this.pending.splice(this.pending.indexOf(p), 1);
         p.run();
       }
+  }
+  // An explosion (any: a police car, a parked car, a pump, a tank, the
+  // target): parked vehicles damaged and set off in a chain, loose
+  // furniture thrown out, breakable props knocked over, fuel pumps set
+  // off, overhead gantries toppled, shop windows blown in.
+  blast(sim, e, R, s, later, depth) {
+    const jitter = () => 0.25 + Math.random() * 0.55;
+    this.vehicles.blast(sim, e.x, e.z, R, s, later, jitter);
+    for (const it of this.flyers.items) {
+      if (it.state === "fly" || it.hidden || it.hits >= 3) continue;
+      const dx = it.x - e.x, dz = it.z - e.z, d = Math.hypot(dx, dz);
+      if (d >= R || d < 1e-6) continue;
+      const k = 1 - d / R, sp = 20 * k * Math.sqrt(s);
+      if (sp < 3) continue;
+      this.flyers.launch(sim, it, { vx: (dx / d) * sp, vz: (dz / d) * sp }, sp, dx / d, dz / d);
+    }
+    for (const it of this.items) {
+      if (it.state !== "stand") continue;
+      const dx = it.spec.x - e.x, dz = it.spec.z - e.z, d = Math.hypot(dx, dz);
+      if (d >= R * 0.6 || d < 1e-6) continue;
+      it.broken = !!it.bh;
+      this.knock(it, dx / d, dz / d);
+    }
+    for (const isl of this.gas.islands)
+      if (isl.state === "intact" && Math.hypot(isl.x - e.x, isl.z - e.z) < 4 + 2 * s && e.cause !== "gas")
+        later(jitter(), () => this.explodeIsland(sim, isl));
+    for (const a of this.gantries.list) {
+      if (a.state !== "up") continue;
+      a.gt.posts.forEach((px, i) => {
+        if (a.state !== "up") return;
+        const w = gantryWorld(a.y, a.gt.cx + px, a.gt.lz);
+        if (Math.hypot(w.x - e.x, w.z - e.z) < R * 0.55) this.gantries.topple(sim, a, i, { x: e.x, z: e.z, vx: 0, vz: 0 });
+      });
+    }
+    for (const f of this.storefronts.faces) {
+      if (f.broken) continue;
+      const wx = f.b.x + f.nx * 3.6, wz = f.b.z + f.nz * 3.6;
+      if (Math.hypot(wx - e.x, wz - e.z) < R * 0.55) this.storefronts.breakFace(sim, f, 8 + 6 * s);
+    }
   }
   touchGas(sim, car, radius, speed) {
     for (const isl of this.gas.islands) {

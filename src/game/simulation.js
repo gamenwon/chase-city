@@ -12,6 +12,7 @@ import { getVehicle } from "./vehicles.js";
 import { createTally, recordCityEvent } from "./tally.js";
 import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.js";
 import { updateTarget, resolveTargetContact } from "./target.js";
+import { updateBlasts } from "./blast.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget, standingPostsNear, PROPS } from "./city.js";
@@ -89,6 +90,7 @@ export class Simulation {
     this.pin = createPin();
     this.pickups = [];
     this.target = null; // TARGET HUNT: the fleeing car (target.js)
+    this.blastQueue = []; // chain links waiting to go off (blast.js)
     this.cameraRig.reset();
     this.cameraRig.update({ x: 0, z: 8 }, 0);
     this.spawnEvents = [];
@@ -342,87 +344,43 @@ export class Simulation {
   }
   explodePolice(car) {
     if (car.state !== "active") return;
-    // Chain reactions are resolved immediately (physics, damage, wrecks), but
-    // each step of the chain is staged CONFIG.chainStepSeconds later on screen
-    // and in audio so a 2-3 car chain reads as a sequence, not one flash.
-    // Blast energy also falls off per chain step, so a chain needs genuinely
-    // damaged neighbours to continue instead of wiping out a whole pack.
-    const queue = [{ car, depth: 0 }];
-    const chained = new Set();
-    let root = null;
-    while (queue.length) {
-      const { car: c, depth } = queue.shift();
-      if (c.state !== "active") continue;
-      this.stats.explosions++;
-      if (chained.has(c)) this.stats.chainExplosions++;
-      const crashSpeed = Math.hypot(c.vx, c.vz);
-      const delay = depth * CONFIG.chainStepSeconds;
-      addWreck(this, c, delay);
-      c.state = "wreck";
-      c.health = 0;
-      c.wreckAge = 0 - delay;
-      c.vx = 0;
-      c.vz = 0;
-      const event = {
-        id: ++this.eventId,
-        type: "explosion",
-        cause: c.lastDamageCause || "unknown",
-        mode: c.mode || "pursuit",
-        crashSpeed,
-        x: c.x,
-        z: c.z,
-        angle: c.angle,
-        time: this.elapsed,
-        delay,
-        chainDepth: depth,
-        playerX: this.player.x,
-        playerZ: this.player.z,
-      };
-      root ??= event.id;
-      event.chainRoot = root;
-      this.events.push(event);
-      if (this.events.length > 64) this.events.shift();
-      // Existing wrecks caught in the blast flare up again on screen.
-      for (const w of this.wrecks)
-        if (
-          w.born < this.elapsed + delay &&
-          Math.hypot(w.x - c.x, w.z - c.z) < CONFIG.explosionRadius
-        )
-          w.flaredAt = this.elapsed + delay;
-      const energy = Math.pow(CONFIG.chainFalloff, depth);
-      for (const other of this.police) {
-        if (other === c || other.state !== "active") continue;
-        const dx = other.x - c.x,
-          dz = other.z - c.z,
-          d = Math.hypot(dx, dz);
-        if (d >= CONFIG.explosionRadius) continue;
-        const strength = 1 - d / CONFIG.explosionRadius;
-        const beforeHealth = other.health;
-        const protectedCordon =
-          other.health > 0 &&
-          (other.role === "contain" || other.role === "block") &&
-          Math.hypot(other.vx, other.vz) <= 8 &&
-          Math.hypot(other.x - this.player.x, other.z - this.player.z) < 12;
-        const blastDamage = protectedCordon
-          ? Math.min(6, CONFIG.explosionDamage * strength * 0.1)
-          : CONFIG.explosionDamage * strength * energy;
-        // A blast shakes and damages neighbours but cannot wreck a car on its
-        // own: only real collisions do (cars already wrecked in the same
-        // crash still go up with it).
-        other.health =
-          other.health <= 0 ? 0 : Math.max(1, other.health - blastDamage);
-        const impulse = protectedCordon ? 1.5 : 12;
-        other.vx += (d ? dx / d : 1) * strength * impulse;
-        other.vz += (d ? dz / d : 0) * strength * impulse;
-        if (other.health <= 0) {
-          if (beforeHealth > 0) {
-            chained.add(other);
-            other.lastDamageCause = "blast";
-          }
-          queue.push({ car: other, depth: depth + 1 });
-        }
-      }
-    }
+    // V2.5: one car goes up; what its blast does to everything around it
+    // (other police cars, traffic, props, parked cars...) is the shared
+    // explosion system's job (blast.js), with short varied delays between
+    // the links of a chain.
+    const c = car;
+    const depth = c.blastDepth || 0;
+    this.stats.explosions++;
+    if (c.lastDamageCause === "blast") this.stats.chainExplosions++;
+    const crashSpeed = Math.hypot(c.vx, c.vz);
+    addWreck(this, c, 0);
+    c.state = "wreck";
+    c.health = 0;
+    c.wreckAge = 0;
+    c.vx = 0;
+    c.vz = 0;
+    const event = {
+      id: ++this.eventId,
+      type: "explosion",
+      cause: c.lastDamageCause || "unknown",
+      mode: c.mode || "pursuit",
+      crashSpeed,
+      x: c.x,
+      z: c.z,
+      angle: c.angle,
+      time: this.elapsed,
+      delay: 0,
+      chainDepth: depth,
+      playerX: this.player.x,
+      playerZ: this.player.z,
+    };
+    event.chainRoot = event.id;
+    this.events.push(event);
+    if (this.events.length > 64) this.events.shift();
+    // Existing wrecks caught in the blast flare up again on screen.
+    for (const w of this.wrecks)
+      if (w.born < this.elapsed && Math.hypot(w.x - c.x, w.z - c.z) < CONFIG.explosionRadius)
+        w.flaredAt = this.elapsed;
     this.refreshNavigation();
   }
   // V2.0 continue (after a rewarded ad): undo a failure once per run and
@@ -929,6 +887,8 @@ export class Simulation {
     if (this.city) updateCity(this, dt);
     for (const c of this.police)
       if (c.state === "active" && c.health <= 0) this.explodePolice(c);
+    // Explosions damage, shove and set off what is around them (blast.js).
+    updateBlasts(this);
     const groundSpeed =
       Math.hypot(p.x - this.previousPlayer.x, p.z - this.previousPlayer.z) / dt;
     p.groundSpeed = groundSpeed;

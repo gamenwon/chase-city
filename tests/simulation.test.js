@@ -9,6 +9,7 @@ import {
   policeContact,
 } from "../src/game/police.js";
 import { createLayout, resolveBuilding } from "../src/world/layout.js";
+import { updateBlasts } from "../src/game/blast.js";
 const none = { left: false, right: false };
 const create = (layout = { buildings: [] }) => {
   const sim = new Simulation(layout, {
@@ -153,42 +154,30 @@ test("actual simulation contacts reduce durability, then explode after a second 
   assert.ok(s.police.every((c) => c.state === "wreck"));
   assert.equal(s.events.length, 2);
 });
-test("blast impulses and weakened neighbors produce bounded chain reactions", () => {
+test("blast impulses and weakened neighbors produce bounded chain reactions (V2.5 shared blast)", () => {
   const s = create();
   s.police = [0, 4, 8, 30].map((x, i) =>
-    Object.assign(makePolice(i), {
-      x,
-      z: 0,
-      // V1.8: car 1 was wrecked in the same crash (0 health); car 2 is badly
-      // damaged but untouched by any car.
-      health: i === 1 ? 0 : i === 2 ? 30 : 100,
-    }),
+    Object.assign(makePolice(i), { x, z: 0, health: i === 1 ? 20 : 100 }),
   );
   s.explodePolice(s.police[0]);
-  // The car wrecked in the crash goes up with it; the blast alone wrecks
-  // nobody else, however damaged.
-  assert.deepEqual(
-    s.police.map((c) => c.state),
-    ["wreck", "wreck", "active", "active"],
-  );
-  assert.ok(s.police[2].health >= 1);
-  assert.equal(s.events.length, 2);
+  // Only the car itself goes up at once; the blast is applied when it goes off.
+  assert.deepEqual(s.police.map((c) => c.state), ["wreck", "active", "active", "active"]);
+  updateBlasts(s);
+  // The damaged car 4 m away is destroyed and goes up a moment later; the
+  // healthy one 8 m away is hurt and shoved but survives; 30 m away: untouched.
+  assert.equal(s.police[1].health, 0);
+  assert.ok(s.police[2].health > 0 && s.police[2].health < 100);
+  assert.ok(s.police[2].vx > 0);
+  assert.equal(s.police[3].health, 100);
+  for (let i = 0; i < 60; i++) {
+    s.elapsed += 1 / 60;
+    updateBlasts(s);
+  }
+  assert.deepEqual(s.police.map((c) => c.state), ["wreck", "wreck", "active", "active"]);
+  assert.equal(s.events.filter((e) => e.type === "explosion").length, 2);
+  // A wreck never explodes again.
   s.explodePolice(s.police[0]);
-  assert.equal(s.events.length, 2);
-  const s2 = create();
-  s2.police = [
-    Object.assign(makePolice(0), { x: 0, z: 0 }),
-    Object.assign(makePolice(1), { x: 9, z: 0 }),
-  ];
-  s2.explodePolice(s2.police[0]);
-  assert.ok(s2.police[1].vx > 0);
-  assert.ok(s2.police[1].health < 100);
-  // V1.8: an undamaged neighbour right next to a blast survives it; only
-  // already-damaged cars carry a chain on.
-  const s3 = create();
-  s3.police = [0, 4].map((x, i) => Object.assign(makePolice(i), { x, z: 0 }));
-  s3.explodePolice(s3.police[0]);
-  assert.equal(s3.police[1].state, "active");
+  assert.equal(s.events.filter((e) => e.type === "explosion").length, 2);
 });
 test("wrecks stop chasing and respawn on roads away from player after delay", () => {
   const s = create();

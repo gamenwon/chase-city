@@ -300,6 +300,45 @@ function breakProp(sim, city, prop, car, impact) {
   });
 }
 
+// An explosion at (x, z) of radius R and strength s (blast.js): street
+// props within reach are thrown or broken (in the blast's direction; big
+// trees only shake), civilian cars are damaged and shoved, wrecked ones
+// slide. Returns the civilian cars it destroyed (they may go up).
+export function blastCity(sim, city, x, z, R, s) {
+  for (const prop of nearbyProps(city, x, z, R)) {
+    if (prop.state !== "stand") continue;
+    const dx = prop.x - x, dz = prop.z - z, d = Math.hypot(dx, dz);
+    if (d >= R * 0.8 || d < 1e-6) continue;
+    const k = 1 - d / (R * 0.8);
+    const impact = 22 * k * Math.sqrt(s);
+    const spec = PROPS[prop.kind];
+    const push = { vx: (dx / d) * impact, vz: (dz / d) * impact };
+    if (impact >= spec.breakAt) breakProp(sim, city, prop, push, impact);
+    else {
+      prop.wobble = Math.min(1, prop.wobble + impact / 8);
+      prop.dirty = true;
+      city.moving.add(prop);
+    }
+  }
+  const wrecked = [];
+  for (const t of city.traffic) {
+    const dx = t.x - x, dz = t.z - z, d = Math.hypot(dx, dz);
+    if (d >= R || d < 1e-6) continue;
+    const k = 1 - d / R;
+    const push = 11 * k * Math.sqrt(s) / (t.parked || t.state === "wreck" ? 1.4 : 1);
+    t.vx = (t.vx || 0) + (dx / d) * push;
+    t.vz = (t.vz || 0) + (dz / d) * push;
+    if (t.state === "wreck") continue;
+    if (t.state === "drive") {
+      t.state = "yield";
+      t.timer = 2.5;
+    }
+    damageTraffic(sim, city, t, 22 * k * s, false);
+    if (t.state === "wreck") wrecked.push(t);
+  }
+  return wrecked;
+}
+
 // Standing props that stop a car (big trees, and posts below their break
 // speed): the player's movement treats them like walls when it looks for a
 // way to slide off (simulation.js drivePlayer).

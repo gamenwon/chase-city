@@ -9,6 +9,7 @@ import { WreckRenderer } from "../src/render/wrecks.js";
 import { CONFIG } from "../src/game/config.js";
 import { inspectEnclosure } from "../src/game/arrest.js";
 import { reproduceCordon } from "../scripts/reproduce-v16.js";
+import { updateBlasts } from "../src/game/blast.js";
 const empty = () => {
   const s = new Simulation(
     { buildings: [], obstacles: [] },
@@ -94,40 +95,21 @@ test("a low-speed arrest cordon survives nearby blast chains; high-speed damaged
   const s = empty();
   Object.assign(s.player, { x: 0, z: 0, contained: true });
   const source = Object.assign(makePolice(0), { x: 0, z: 5 });
-  const captor = Object.assign(makePolice(1), {
-    x: 2,
-    z: 3,
-    role: "contain",
-    health: 2,
-    vx: 0,
-    vz: 0,
-  });
-  const pursuit = Object.assign(makePolice(2), {
-    x: -2,
-    z: 5,
-    health: 2,
-    role: "pursuit",
-    vx: 20,
-    vz: 0,
-  });
-  const alreadyDestroyed = Object.assign(makePolice(3), {
-    x: 0,
-    z: 7,
-    role: "contain",
-    health: 0,
-    vx: 0,
-    vz: 0,
-  });
-  s.police = [source, captor, pursuit, alreadyDestroyed];
+  const captor = Object.assign(makePolice(1), { x: 2, z: 3, role: "contain", health: 45, vx: 0, vz: 0 });
+  const pursuit = Object.assign(makePolice(2), { x: -2, z: 5, health: 30, role: "pursuit", vx: 20, vz: 0 });
+  s.police = [source, captor, pursuit];
   s.explodePolice(source);
+  updateBlasts(s);
+  // The braced cordon car takes a knock but holds; the damaged pursuer is
+  // destroyed and goes up a moment later.
+  assert.ok(captor.health > 0);
+  assert.equal(pursuit.health, 0);
+  for (let i = 0; i < 60; i++) {
+    s.elapsed += 1 / 60;
+    updateBlasts(s);
+  }
   assert.equal(captor.state, "active");
-  assert.ok(captor.health >= 1);
-  // V1.8: a blast alone never wrecks a car, however damaged; only a car
-  // already wrecked in the same crash goes up with it.
-  assert.equal(pursuit.state, "active");
-  assert.equal(pursuit.health, 1);
-  assert.ok(pursuit.vx < 19, "but it is thrown by the blast");
-  assert.equal(alreadyDestroyed.state, "wreck");
+  assert.equal(pursuit.state, "wreck");
 });
 test("real repeated collision wrecks remain independent of respawn and keep IDs/positions for 30 and 60 seconds", () => {
   const s = empty();

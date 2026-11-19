@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { blastStrength } from "../game/blast.js";
 
 // Fragments that have landed are moved into a few InstancedMeshes so every
 // piece of debris from the run stays on the road until RESTART at the cost of
@@ -59,10 +60,9 @@ export class DebrisField {
 // 2.6, a major blast (a building, a tanker) 3.4. Chain reactions grow a
 // little with each link (more fuel).
 export function explosionScale(event) {
-  if (event.major) return 3.4;
-  if (event.cause === "gas") return 2.6;
-  return 1.4 + Math.min(event.chainDepth || 0, 3) * 0.15;
+  return blastStrength(event);
 }
+
 
 // Chunks thrown by an explosion of this scale (all land and stay).
 export const chunkCount = (scale) => Math.round(20 * Math.pow(scale, 0.9));

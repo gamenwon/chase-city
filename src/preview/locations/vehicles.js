@@ -288,6 +288,28 @@ export class VehicleSystem {
       }
     }
   }
+  // An explosion nearby (blast.js): damage by distance, strength and the
+  // vehicle's mass, a shove (heavy ones hardly move); a vehicle it wrecks
+  // goes up a moment later (later = the blast system's delay queue), once.
+  blast(sim, x, z, R, s, later, delay) {
+    for (const v of this.list) {
+      const dx = v.x - x, dz = v.z - z, d = Math.hypot(dx, dz);
+      if (d >= R || d < 1e-6 || v.stage === 2) continue;
+      const k = 1 - d / R, m = v.def.mass;
+      v.dmg += 40 * k * s;
+      const push = (11 * k * Math.sqrt(s)) / Math.sqrt(m);
+      v.vx += (dx / d) * push;
+      v.vz += (dz / d) * push;
+      v.spin += (Math.random() - 0.5) * push * 0.5;
+      v.moving = true;
+      const dentAt = 6 * Math.sqrt(m) + 2, wreckAt = 15 * Math.sqrt(m) + 3;
+      if (v.stage === 0 && v.dmg >= dentAt) this.setStage(v, 1);
+      if (v.stage >= 0 && v.stage < 2 && v.dmg >= wreckAt) {
+        this.setStage(v, 2);
+        later(delay(), () => this.hooks.boom?.(sim, v));
+      }
+    }
+  }
   // Body circles along a vehicle (same as the car collision shape).
   circles(v) {
     const ax = Math.sin(v.ry), az = Math.cos(v.ry);
