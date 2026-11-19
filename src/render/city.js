@@ -26,6 +26,14 @@ const PROP_PARTS = {
     { geo: "box", size: [0.12, 0.1, 1.2], at: [0, 4.35, 0.55], color: 0x2a292e },
     { geo: "box", size: [0.42, 0.16, 0.5], at: [0, 4.3, 1.1], color: 0xffe08a, emissive: 0xffc850 },
   ],
+  hydrant: [
+    { geo: "box", size: [0.42, 0.08, 0.42], at: [0, 0.04, 0], color: 0x9a1c18 },
+    { geo: "box", size: [0.3, 0.62, 0.3], at: [0, 0.39, 0], color: 0xd62f2a },
+    { geo: "box", size: [0.36, 0.08, 0.36], at: [0, 0.72, 0], color: 0xb92420 },
+    { geo: "box", size: [0.22, 0.14, 0.22], at: [0, 0.83, 0], color: 0xd62f2a },
+    { geo: "box", size: [0.56, 0.11, 0.11], at: [0, 0.5, 0], color: 0xf5c01a },
+    { geo: "box", size: [0.11, 0.11, 0.2], at: [0, 0.5, 0.18], color: 0xf5c01a },
+  ],
   tree: [
     { geo: "box", size: [0.3, 1.6, 0.3], at: [0, 0.8, 0], color: 0x7a4a2a },
     { geo: "ico", size: [1.15, 1.4, 1.15], at: [0, 2.3, 0], color: 0x3da04a },
@@ -165,13 +173,13 @@ export class CityLifeRenderer {
       tilt = (p.kind === "trash" ? 1 : 0.98) * (Math.PI / 2) * easeOut(p.fall);
     if (p.state === "tumble")
       tilt = p.fall * Math.PI * 2 * (p.spin > 0 ? 1 : -1);
-    if (p.state === "down" && p.kind === "trash") tilt = Math.PI / 2;
+    if (p.state === "down" && (p.kind === "trash" || p.kind === "hydrant")) tilt = Math.PI / 2;
     // Rotate about X (toward +z), then yaw so +z points along fallDir.
     this.e.set(tilt, p.state === "stand" ? p.angle : p.fallDir, 0, "YXZ");
     this.q.setFromEuler(this.e);
     this.v.set(
       p.x,
-      p.y + (p.state === "down" && p.kind === "trash" ? 0.45 : 0),
+      p.y + (p.state === "down" && p.kind === "trash" ? 0.45 : p.state === "down" && p.kind === "hydrant" ? 0.2 : 0),
       p.z,
     );
     this.s.set(1, 1, 1);
@@ -368,6 +376,7 @@ export class CityLifeRenderer {
         else if (e.kind === "lamp" || e.kind === "sign")
           this.burst(e.x, e.z, 8, 0xffd84a, 5, 5);
         else if (e.kind === "trash") this.burst(e.x, e.z, 10, 0xd8d0b8, 4, 4);
+        else if (e.kind === "hydrant") this.burst(e.x, e.z, 10, 0x9fd8ff, 6, 4);
         if (e.action === "land") this.burst(e.x, e.z, 6, 0xb9a98a, 2, 1.5);
       } else if (e.type === "traffic" && e.action !== "honk") {
         this.burst(e.x, e.z, 10, 0xc9d3d6, 4, 3);

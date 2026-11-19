@@ -345,11 +345,15 @@ export function playerCar() {
   return scaled(g);
 }
 export function policeCar() {
-  const s = sedanShell(K.trim, { cabin: K.white, frame: K.trim, bumper: K.trim, mirror: K.trim, rim: 0x9da1a8 });
+  const s = sedanShell(K.trim, { cabin: K.white, frame: K.white, bumper: K.trim, mirror: K.trim, rim: 0x9da1a8 });
   const g = s.g;
+  // Classic black-and-white patrol car: black hood, trunk and lower body,
+  // white doors (front and rear, full height to the window line) and a
+  // white roof (the cabin), so it reads as police from far away.
   for (const side of [-1, 1]) {
-    B(g, 0.012, s.h - 0.06, 1.85, K.white, side * (s.W / 2 + 0.004), s.clear + 0.04, 0.17);
-    const star = add(g, new THREE.CylinderGeometry(0.17, 0.17, 0.02, 5), K.yellow, side * (s.W / 2 + 0.02), s.belt - 0.28, -0.3);
+    B(g, 0.07, s.h - 0.02, 1.95, K.white, side * (s.W / 2 + 0.035), s.clear + 0.02, 0.175);
+    B(g, 0.05, 0.1, 1.95, K.white, side * (s.W / 2 + 0.02), s.belt - 0.06, 0.175);
+    const star = add(g, new THREE.CylinderGeometry(0.17, 0.17, 0.02, 5), K.yellow, side * (s.W / 2 + 0.08), s.belt - 0.28, -0.3);
     star.rotation.z = Math.PI / 2;
   }
   const lb = G(g, 0, s.roof + 0.04, 0.15);

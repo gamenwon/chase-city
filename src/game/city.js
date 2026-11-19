@@ -21,6 +21,9 @@ export const PROPS = {
   lamp: { r: 0.3, breakAt: 9, solid: true },
   tree: { r: 0.4, breakAt: 11, solid: true },
   bigTree: { r: 0.75, breakAt: Infinity, solid: true },
+  // Fire hydrant: knocked loose by any real hit (it never stops the car);
+  // a water jet then shoots up from the broken pipe until restart.
+  hydrant: { r: 0.3, breakAt: 4, solid: false },
 };
 
 // Per-device budget. Phones (the main platform) get fewer actors; the frame
@@ -96,10 +99,21 @@ export function cityProps(layout) {
           if (blockExists(m + 15, n + side * 15))
             add(kind, m + o, n + side * SIDEWALK, Math.PI / 2);
         });
+
       }
   for (const p of layout.parks)
     for (const dx of [-6, 6])
       for (const dz of [-6, 6]) add("bigTree", p.x + dx, p.z + dz, 0);
+  // Fire hydrants on about a third of the sidewalk stretches, between the
+  // lamp and the bin (added last: the other props keep their ids).
+  for (const n of LINES)
+    for (const m of LINES.slice(0, -1))
+      for (const side of [-1, 1]) {
+        const hh = Math.abs((n / 30) * 5 + (m / 30) * 3 + (side > 0 ? 1 : 0));
+        if (hh % 3 !== 1) continue;
+        if (blockExists(n + side * 15, m + 15)) add("hydrant", n + side * SIDEWALK, m + 12, 0);
+        if (blockExists(m + 15, n + side * 15)) add("hydrant", m + 12, n + side * SIDEWALK, Math.PI / 2);
+      }
   return props;
 }
 
@@ -162,6 +176,7 @@ export function createCity(layout, options = {}) {
     traffic: [],
     parking: parking.map((p, i) => ({ ...p, id: i, car: null })),
     litter: [],
+    jets: [], // broken hydrants spraying water (until restart)
     events: [],
     eventId: 0,
     nextId: 1,
@@ -258,7 +273,20 @@ function breakProp(sim, city, prop, car, impact) {
     prop.fallDir = alongZ ? (sign > 0 ? 0 : Math.PI) : sign * (Math.PI / 2);
   }
   city.stats.propsBroken++;
-  if (prop.kind === "trash") {
+  if (prop.kind === "hydrant") {
+    // Knocked loose and thrown a little; the broken pipe left behind
+    // shoots water up from now until restart (one jet per hydrant).
+    prop.state = "tumble";
+    prop.vx = car.vx * 0.5 + (city.random() - 0.5) * 2;
+    prop.vz = car.vz * 0.5 + (city.random() - 0.5) * 2;
+    prop.vy = 2 + impact * 0.1;
+    prop.spin = (city.random() - 0.5) * 10;
+    if (!prop.jet) {
+      prop.jet = true;
+      city.jets.push({ x: prop.x, z: prop.z, born: sim.elapsed, id: prop.id });
+      city.stats.hydrants = (city.stats.hydrants || 0) + 1;
+    }
+  } else if (prop.kind === "trash") {
     prop.state = "tumble";
     prop.vx = car.vx * 0.9 + (city.random() - 0.5) * 3;
     prop.vz = car.vz * 0.9 + (city.random() - 0.5) * 3;

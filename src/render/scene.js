@@ -12,6 +12,7 @@ import { BonnetCamera } from "./pip.js";
 import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
 import { NightLights, NIGHT } from "./night.js";
+import { WaterJets } from "./water.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -205,6 +206,7 @@ export class CityRenderer {
     this.cityLife = new CityLifeRenderer(this.scene);
     this.pickups = new PickupRenderer(this.scene);
     this.targetView = new TargetRenderer(this.scene);
+    this.water = new WaterJets(this.scene);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -334,6 +336,7 @@ export class CityRenderer {
     this.roadEvents.update(sim, this.camera);
     this.pickups.update(sim, this.camera);
     this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
+    this.water.update(sim.city, sim.elapsed, this.camera);
     const spawnCameraView = spawnView(this.camera);
     for (const c of sim.police)
       if (c.spawnProof && c.state === "active") {
@@ -490,6 +493,7 @@ export class CityRenderer {
     this.cityLife.reset();
     this.pickups.reset();
     this.targetView.reset();
+    this.water.reset();
     this.cameraRig.reset();
     this.trails.reset();
     this.resetMetrics();
