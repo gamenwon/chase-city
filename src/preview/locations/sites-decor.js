@@ -171,6 +171,11 @@ export function siteDecor(root, y) {
     B(g, half * 2, 0.6, 0.12, C.white, 0, 7.6, -0.24);
     B(g, half * 1.2, 0.5, 0.12, C.white, -0.4, 6.9, -0.24);
     B(g, half * 2 + 2.4, 0.15, 1.0, C.metal, 0, 6.2, -0.6);
+    // Planted base closing off the corner behind the legs (solid).
+    const sx = Math.sign(y.x), sz = Math.sign(y.z);
+    const base = G(root, y.x + sx * 4.3, 0.03, y.z + sz * 4.3, 0);
+    B(base, 3.4, 0.55, 3.4, 0xbfb6a6, 0, 0, 0);
+    B(base, 3.0, 0.5, 3.0, 0x4f9a3e, 0, 0.55, 0);
     return;
   }
   const g = G(root, y.x, 0.03, y.z, y.ry);

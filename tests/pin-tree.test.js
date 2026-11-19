@@ -73,12 +73,19 @@ for (const cfg of [
     assert.ok(away > 15, `the car got away from the tree (${away.toFixed(1)} m)`);
   });
 
-test("stuck on a big tree with no police at all: never arrested", () => {
+test("stuck on a big tree with no police at all: never arrested there", () => {
   const s = liveScene({ treeIndex: 3, heading: 3.1, seed: 22 });
   s.police = [];
-  play(s, 10);
-  assert.equal(s.result, null);
-  assert.equal(s.arrest, 0);
+  const start = { x: s.player.x, z: s.player.z };
+  // (The car now slides off the tree and drives on; reinforcements may
+  // catch it later somewhere else, which is not this case.)
+  for (let f = 0; f < 10 * 60 && !s.result; f++) {
+    s.health = 100;
+    s.update(1 / 60, {});
+    if (Math.hypot(s.player.x - start.x, s.player.z - start.z) < 8)
+      assert.equal(s.arrest, 0, "no countdown at the tree");
+  }
+  assert.ok(s.result === null || Math.hypot(s.player.x - start.x, s.player.z - start.z) > 8);
 });
 
 test("the escape check uses the game's tree size and lets lamps fall at the game's break speed", () => {

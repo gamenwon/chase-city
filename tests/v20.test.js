@@ -163,6 +163,9 @@ test("destruction record from the real game: knock over a trash can and a tree",
       vx: 0,
       vz: side * speed,
       speed,
+      // (teleported: drop any turn-round still under way from the last hit)
+      postEscape: null,
+      wallStuck: null,
     });
     s.previousPlayer = { x: s.player.x, z: s.player.z };
     run(s, 1.2);

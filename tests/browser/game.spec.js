@@ -221,7 +221,7 @@ test("real building materials fade and restore; chain explosions render debris/f
     () => {
       const { sim, renderer } = window.__CHASE__;
       if (
-        renderer.effects.active.length === 3 &&
+        renderer.effects.columns.length === 3 &&
         sim.police[0].wreckAge >= 0.3 &&
         renderer.police.some((mesh) => mesh.position.y > 0)
       ) {
@@ -237,17 +237,17 @@ test("real building materials fade and restore; chain explosions render debris/f
     const { sim, renderer } = window.__CHASE__;
     return {
       wrecks: sim.police.filter((c) => c.state === "wreck").length,
-      kinds: [
-        ...new Set(renderer.effects.active[0].parts.map((p) => p.kind)),
-      ].sort(),
+      // Fire, smoke and flying chunks all live (one instanced pool each).
+      counts: renderer.effects.counts,
       launched: renderer.police.some((m) => m.position.y > 0),
-      count: renderer.effects.active[0].group.children.length,
     };
   });
   expect(effects.wrecks).toBe(3);
-  expect(effects.kinds).toEqual(["debris", "flame", "smoke"]);
+  expect(effects.counts.fire).toBeGreaterThan(30);
+  expect(effects.counts.smoke).toBeGreaterThan(20);
+  expect(effects.counts.chunks + effects.counts.debris).toBeGreaterThan(30);
+  expect(effects.counts.columns).toBe(3);
   expect(effects.launched).toBe(true);
-  expect(effects.count).toBeGreaterThan(30);
   await page.screenshot({
     path: `test-results/v1.1-${info.project.name}-explosions.png`,
     style: "#overlay{visibility:hidden}",

@@ -168,14 +168,16 @@ export class CityRenderer {
     this.occlusion = new BuildingOcclusion(this.buildings);
     // Every explosion that goes off near the player shakes the camera; the
     // links of a chain reaction each add their own kick.
-    this.effects = new ExplosionEffects(this.scene, (event) => {
+    // Bigger blasts (a fuel island, a major one) hit harder and further.
+    this.effects = new ExplosionEffects(this.scene, (event, scale = 1) => {
       const distance = Math.hypot(
         event.x - this.cameraRig.follow.x,
         event.z - this.cameraRig.follow.z,
       );
       const kick =
-        Math.max(0, 1 - distance / 50) *
-        (0.45 + 0.15 * (event.chainDepth || 0));
+        Math.max(0, 1 - distance / (50 * Math.sqrt(scale))) *
+        (0.45 + 0.15 * Math.min(event.chainDepth || 0, 2)) *
+        Math.min(1.8, Math.pow(scale, 0.7));
       if (kick > 0) this.cameraRig.kick(kick);
     });
     this.trails = new VehicleTrails(this.scene);

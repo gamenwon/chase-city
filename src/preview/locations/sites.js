@@ -152,6 +152,9 @@ export function sitePlan() {
       // Billboard legs on the outer corner, across the diagonal.
       y.legs = [[x + sx * 4.2, z + sz * 1.6], [x + sx * 1.6, z + sz * 4.2]];
       for (const [lx, lz] of y.legs) y.solids.push({ x: lx, z: lz, w: 0.6, d: 0.6, kind: "post" });
+      // The corner behind the legs is closed off (a low planted base under
+      // the board): a car squeezing in there could not turn back out.
+      y.solids.push({ x: x + sx * 4.3, z: z + sz * 4.3, w: 3.4, d: 3.4, kind: "billboard-base" });
       y.items.push({ kind: "bench", x: x - sx * 3.0, z: z + sz * 1.2, y: 0.05, ry: Math.atan2(sx, 0) });
       y.items.push({ kind: "planter", x: x + sx * 1.2, z: z - sz * 3.4, y: 0.05, ry: Math.PI / 2 });
       y.flyers.push(...cafeClusters({ at: (u, v) => ({ x: x - sx * 2.6 + u, z: z - sz * 2.6 + v }) }, 31 + sx + sz * 2, [[0, 0]], 0.05));

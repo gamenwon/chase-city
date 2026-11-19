@@ -4,12 +4,13 @@ import { RoadNavigation } from "./navigation.js";
 import { resolveBuilding } from "../world/layout.js";
 import { inspectEnclosure } from "./arrest.js";
 import { addWreck, updateWrecks } from "./wrecks.js";
+import { spawnView, inspectSpawn } from "./spawning.js";
 import { chooseExit, constrainToWorld } from "./escape.js";
 import { updateBarricades } from "./barricades.js";
 import { createMission, updateMission, getMission } from "./missions.js";
 import { getVehicle } from "./vehicles.js";
 import { createTally, recordCityEvent } from "./tally.js";
-import { createPin, updatePin } from "./pin.js";
+import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget, standingPostsNear, PROPS } from "./city.js";
@@ -311,7 +312,21 @@ export class Simulation {
               tx = -tx;
               tz = -tz;
             }
-            body.escapeAngle = Math.atan2(-tx, -tz);
+            const tangent = Math.atan2(-tx, -tz);
+            // Sliding along a wall into something at both ends (a short
+            // pocket between columns or posts): after the slide has turned
+            // back twice in a few seconds, turn away from the wall instead.
+            const prev = body.escapeAngle;
+            if (prev !== undefined && Math.abs(angleDelta(tangent, prev)) > 2)
+              body.escapeFlips = [
+                ...(body.escapeFlips || []).filter((at) => this.elapsed - at < 3),
+                this.elapsed,
+              ];
+            body.escapeAngle =
+              (body.escapeFlips || []).filter((at) => this.elapsed - at < 3)
+                .length >= 2
+                ? Math.atan2(-ux, -uz)
+                : tangent;
           }
         }
       }
@@ -475,6 +490,43 @@ export class Simulation {
     }
     return null;
   }
+  // Headings (of those given) the player car could drive 4 m along from
+  // here without hitting a building, wall, standing post or police car.
+  clearHeadings(p, directions, reach = 8) {
+    const slideSolids = this.nearSolids(p.x, p.z, reach * 0.5 + CONFIG.radius);
+    const posts = this.city ? standingPostsNear(this.city, p.x, p.z, reach * 0.5 + CONFIG.radius) : [];
+    // Police cars in the way block a slide too (one braced in a
+    // roadblock does not give way).
+    const cops = this.police.filter(
+      (c) => c.state === "active" && Math.hypot(c.x - p.x, c.z - p.z) < reach * 0.5 + CONFIG.radius + CONFIG.policeRadius,
+    );
+    return directions.filter((a) => {
+      for (let step = 1; step <= reach; step++) {
+        const pose = {
+          x: p.x - Math.sin(a) * step * 0.5,
+          z: p.z - Math.cos(a) * step * 0.5,
+        };
+        if (
+          !this.navigation.allowed(pose) ||
+          slideSolids.some((b) =>
+            resolveBuilding({ ...pose }, b, CONFIG.radius - 0.01),
+          ) ||
+          posts.some(
+            (q) =>
+              Math.hypot(q.x - pose.x, q.z - pose.z) <
+              CONFIG.radius + PROPS[q.kind].r - 0.01,
+          ) ||
+          cops.some(
+            (c) =>
+              Math.hypot(c.x - pose.x, c.z - pose.z) <
+              CONFIG.radius + CONFIG.policeRadius - 0.3,
+          )
+        )
+          return false;
+      }
+      return true;
+    });
+  }
   drivePlayer(dt, input) {
     const p = this.player;
     const steering = (input.left ? 1 : 0) - (input.right ? 1 : 0);
@@ -503,6 +555,27 @@ export class Simulation {
       }
     }
     const hitWall = this.move(p, dt);
+    // Pressed against walls or posts for over a second without getting
+    // anywhere (a pocket the sideways slide only shuttles about in): turn
+    // round towards the most open way out and commit to it.
+    if ((hitWall || post) && !p.postEscape && !steering) {
+      const a = p.wallStuck;
+      if (!a || Math.hypot(p.x - a.x, p.z - a.z) > 2.5)
+        p.wallStuck = { x: p.x, z: p.z, at: this.elapsed };
+      else if (this.elapsed - a.at > 1.2) {
+        const all = Array.from({ length: 24 }, (_, i) => p.angle + Math.PI + (i / 24) * Math.PI * 2);
+        const open = this.clearHeadings(p, all, 12);
+        if (open.length) {
+          // Of the open ways, the one that turns least away from straight back.
+          const heading = open.sort(
+            (x, y) => Math.abs(angleDelta(x, p.angle + Math.PI)) - Math.abs(angleDelta(y, p.angle + Math.PI)),
+          )[0];
+          p.postEscape = { heading, until: this.elapsed + 1.1 };
+        }
+        p.wallStuck = { x: p.x, z: p.z, at: this.elapsed };
+      }
+    } else if (!hitWall && !post && p.wallStuck && Math.hypot(p.x - p.wallStuck.x, p.z - p.wallStuck.z) > 2.5)
+      p.wallStuck = null;
     if (hitWall || post) {
       if (hitWall) p.wallContacts++;
       if (p.lastObstacleKind === "barricade") {
@@ -513,6 +586,14 @@ export class Simulation {
       if (hitWall && this.elapsed - (p.lastWallSound || -1) > 0.5) {
         this.recordImpact(p, p.lastImpact, "player-wall");
         p.lastWallSound = this.elapsed;
+      }
+      // Sliding along a wall while still facing into it (the slide keeps
+      // the car above the head-on speed, so the branch below would not
+      // turn it): turn the nose along the slide instead of crabbing.
+      if (hitWall && !post && !steering && p.escapeAngle !== undefined &&
+          Math.hypot(p.vx, p.vz) >= 5) {
+        const off = angleDelta(p.escapeAngle, p.angle);
+        if (Math.abs(off) > 0.3) p.angle += clamp(off, -3 * dt, 3 * dt);
       }
       // Preserve tangential movement. When head-on, smoothly choose a wall
       // tangent so auto-forward driving never locks the car against a facade.
@@ -531,41 +612,7 @@ export class Simulation {
             (_, i) => p.angle + (i / 16) * Math.PI * 2,
           ),
         ];
-        // Only boxes within reach of the 4 m slide test can block it (same
-        // answer as testing every solid, far cheaper).
-        const slideSolids = this.nearSolids(p.x, p.z, 4 + CONFIG.radius);
-        const posts = this.city ? standingPostsNear(this.city, p.x, p.z, 4 + CONFIG.radius) : [];
-        // Police cars in the way block a slide too (one braced in a
-        // roadblock does not give way).
-        const cops = this.police.filter(
-          (c) => c.state === "active" && Math.hypot(c.x - p.x, c.z - p.z) < 4 + CONFIG.radius + CONFIG.policeRadius,
-        );
-        const free = directions.filter((a) => {
-          for (let step = 1; step <= 8; step++) {
-            const pose = {
-              x: p.x - Math.sin(a) * step * 0.5,
-              z: p.z - Math.cos(a) * step * 0.5,
-            };
-            if (
-              !this.navigation.allowed(pose) ||
-              slideSolids.some((b) =>
-                resolveBuilding({ ...pose }, b, CONFIG.radius - 0.01),
-              ) ||
-              posts.some(
-                (q) =>
-                  Math.hypot(q.x - pose.x, q.z - pose.z) <
-                  CONFIG.radius + PROPS[q.kind].r - 0.01,
-              ) ||
-              cops.some(
-                (c) =>
-                  Math.hypot(c.x - pose.x, c.z - pose.z) <
-                  CONFIG.radius + CONFIG.policeRadius - 0.3,
-              )
-            )
-              return false;
-          }
-          return true;
-        });
+        const free = this.clearHeadings(p, directions);
         if (free.length) {
           const heading = free.sort(
             (a, b) =>
@@ -793,6 +840,28 @@ export class Simulation {
         c.vz *= 0.75;
       } else c.stuck = Math.max(0, c.stuck - dt * 0.5);
       if (c.stuck > 2.5) c.stuck = 0;
+      // Boxed in for good away from the chase (wrecks all round it, say):
+      // after 6 s without getting anywhere, and only while it is off
+      // screen, the car is recalled and comes back in from a fresh spawn.
+      const anchor = c.recallAnchor;
+      if (
+        c.blockState === "hold" ||
+        Math.hypot(c.x - p.x, c.z - p.z) < 25 ||
+        !anchor ||
+        Math.hypot(c.x - anchor.x, c.z - anchor.z) > 1
+      )
+        c.recallAnchor = { x: c.x, z: c.z, at: this.elapsed };
+      else if (this.elapsed - anchor.at > 6) {
+        const view = spawnView(this.cameraRig.camera);
+        const hidden = view && inspectSpawn(view, c, c.angle).outside;
+        const spawn = hidden && this.navigation.spawn(p, this.police, c.id, c.generation + 1, this.cameraRig.camera);
+        if (spawn) {
+          this.police[i] = Object.assign(makePolice(c.id, c.generation + 1), spawn);
+          this.police[i].spawnedAt = this.elapsed;
+          this.stats.policeRecalls = (this.stats.policeRecalls || 0) + 1;
+          this.spawnEvents.push({ time: this.elapsed, kind: "recall", ...spawn });
+        } else c.recallAnchor = { x: c.x, z: c.z, at: this.elapsed - 5 };
+      }
     }
     // Contacts use the same fixed simulation step as vehicle movement.
     for (let i = 0; i < this.police.length; i++)
@@ -907,8 +976,12 @@ export class Simulation {
     // V2.0: also arrested when police cars hold the car physically stuck
     // with no way out (pin.js), not only inside a complete parked cordon.
     updatePin(this, dt);
-    const sealed =
-      (this.enclosure.trapped && near.length >= 2) || this.pin.trapped;
+    // The geometric cordon check must be confirmed by a real escape probe:
+    // a gap the car can actually steer out of is not an arrest.
+    let cordon = this.enclosure.trapped && near.length >= 2;
+    if (cordon) cordon = cordonVerdict(this) !== "escape";
+    else clearCordonVerdict(this);
+    const sealed = cordon || this.pin.trapped;
     this.captureOpenTime = sealed ? 0 : this.captureOpenTime + dt;
     const holding =
       sealed ||

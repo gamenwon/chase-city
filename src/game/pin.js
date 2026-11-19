@@ -40,6 +40,7 @@ export const PIN = Object.freeze({
   TOUCH_SECONDS: 1, // touched a police car this recently...
   HOLD_GAP: 2, // ...or one stands this close to the car body (m)
   WRECK_GAP: 1, // a police wreck this close to the body helps hold it (m)
+  LONE_SECONDS: 3.5, // a single police car holding needs this long a stop
   WRECK_SCENE: 14, // boxed in by wrecks: live police within this range hold it
   ESCAPE_DISTANCE: 2.5, // moved this far from the pin point = got away
   PROBE_EVERY: 0.5, // at most one probe started per this many seconds
@@ -208,6 +209,49 @@ function advance(run, budget, seconds = PIN.PROBE_SECONDS, clear = PIN.PROBE_CLE
     if (run.best >= clear) return true;
   }
   return run.f >= steps;
+}
+
+// The parked-cordon arrest (simulation.js, inspectEnclosure) judges the
+// gaps between police cars geometrically. Before it can arrest, the same
+// escape probe as above (real player physics on a copy, police frozen)
+// must agree: "escape" when a steering gets the car PROBE_CLEAR away,
+// "sealed" when none does, null while it is still being worked out (spread
+// over frames like the pin probe). Asked again when the car has moved or
+// the answer is RECONFIRM_EVERY old.
+const cordonJobs = new WeakMap();
+export function cordonVerdict(sim) {
+  const p = sim.player;
+  let c = sim.pin.cordon;
+  if (
+    !c ||
+    Math.hypot(p.x - c.x, p.z - c.z) > PIN.STILL_DISTANCE ||
+    (c.verdict && sim.elapsed - c.at > PIN.RECONFIRM_EVERY)
+  ) {
+    c = sim.pin.cordon = { x: p.x, z: p.z, at: sim.elapsed, verdict: null, next: 0, best: 0 };
+    PIN_STATS.probes++;
+  }
+  if (c.verdict) return c.verdict;
+  let job = cordonJobs.get(c);
+  if (!job) cordonJobs.set(c, (job = { world: probeWorld(sim), run: null }));
+  let budget = STEP_BUDGET;
+  while (budget > 0) {
+    if (!job.run) job.run = newRun(job.world, sim, POLICIES[c.next++], true);
+    const before = job.run.f;
+    const finished = advance(job.run, budget);
+    budget -= job.run.f - before + (finished ? 1 : 0);
+    if (!finished) return null;
+    c.best = Math.max(c.best, job.run.best);
+    job.run = null;
+    if (c.best >= PIN.PROBE_CLEAR || c.next >= POLICIES.length) {
+      c.verdict = c.best >= PIN.PROBE_CLEAR ? "escape" : "sealed";
+      c.at = sim.elapsed;
+      return c.verdict;
+    }
+  }
+  return null;
+}
+export function clearCordonVerdict(sim) {
+  sim.pin.cordon = null;
 }
 
 // All escape steerings at once (tests and tools). Returns { escaped, best }.
@@ -414,6 +458,7 @@ export function updatePin(sim, dt) {
   const still =
     sim.elapsed - oldest.time >= PIN.STILL_SECONDS - 1e-9 &&
     Math.hypot(p.x - oldest.x, p.z - oldest.z) < PIN.STILL_DISTANCE;
+  pin.stillFor = still ? (pin.stillFor || 0) + dt : 0;
   let near = still ? holdingPolice(sim) : [];
   const wrecks = still ? wrecksHolding(sim) : [];
   let held =
@@ -431,7 +476,15 @@ export function updatePin(sim, dt) {
       held = true;
     }
   }
-  if (!still || !near.length || near.length + wrecks.length < PIN.MIN_NEAR || !held) {
+  // One police car pressed against the car can be enough when walls do
+  // the rest (a car backed into a corner, the police across the only way
+  // out): only after a longer stop, and the probe below must still show
+  // that there is no way out, and that without the police there would be.
+  const lone =
+    near.length === 1 &&
+    sim.elapsed - (p.policeContactAt ?? -Infinity) <= PIN.TOUCH_SECONDS &&
+    pin.stillFor >= PIN.LONE_SECONDS;
+  if (!still || !near.length || (near.length + wrecks.length < PIN.MIN_NEAR && !lone) || !held) {
     pin.candidateFor = 0;
     pin.probe = null;
     pin.reason = !still ? "moving" : "not-held-by-police";

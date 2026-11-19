@@ -15,7 +15,7 @@ import {
   WRECK_LIFT,
   WRECK_ROLL,
 } from "../src/render/wrecks.js";
-import { ExplosionEffects } from "../src/render/explosions.js";
+import { ExplosionEffects, explosionScale, smokeSeconds, chunkCount } from "../src/render/explosions.js";
 import { ChaseCamera } from "../src/render/camera.js";
 
 const empty = () => {
@@ -218,32 +218,28 @@ test("the crash animation ends exactly in the persistent wreck pose", () => {
 test("explosion fragments land and stay until RESTART; staged links wait their turn", () => {
   const scene = new THREE.Scene(),
     started = [],
-    fx = new ExplosionEffects(scene, (e) => started.push(e.id));
+    fx = new ExplosionEffects(scene, (e, s) => started.push([e.id, s]));
   const events = [
     { id: 1, type: "explosion", x: 0, z: 0, time: 10, delay: 0, chainDepth: 0 },
-    {
-      id: 2,
-      type: "explosion",
-      x: 4,
-      z: 0,
-      time: 10,
-      delay: 0.22,
-      chainDepth: 1,
-    },
+    { id: 2, type: "explosion", x: 4, z: 0, time: 10, delay: 0.22, chainDepth: 1 },
   ];
   fx.update(events, 10.1);
-  assert.deepEqual(started, [1]);
-  assert.equal(fx.active.length, 2);
-  assert.equal(fx.active[1].group.visible, false);
+  assert.deepEqual(started.map((s) => s[0]), [1]);
+  assert.equal(fx.pending.length, 1); // the staged link waits its turn
   fx.update(events, 10.3);
-  assert.deepEqual(started, [1, 2]);
+  assert.deepEqual(started.map((s) => s[0]), [1, 2]);
   // The later chain link is bigger.
-  assert.ok(fx.active[1].group.scale.x > fx.active[0].group.scale.x);
-  for (let t = 10.3; t < 16; t += 0.1) fx.update(events, t);
-  assert.equal(fx.active.length, 0);
-  assert.equal(fx.debris.total, 36);
+  assert.ok(started[1][1] > started[0][1]);
+  const thrown = chunkCount(started[0][1]) + chunkCount(started[1][1]);
+  for (let t = 10.3; t < 16; t += 0.05) fx.update(events, t);
+  assert.equal(fx.counts.chunks, 0);
+  assert.equal(fx.counts.fire, 0);
+  assert.equal(fx.debris.total, thrown);
   for (const mesh of fx.debris.meshes) assert.ok(scene.children.includes(mesh));
-  // Grows past its initial capacity without losing fragments.
+  // The smoke columns are still rising after the fire is out.
+  assert.equal(fx.counts.columns, 2);
+  assert.ok(fx.counts.smoke > 10);
+  // Many at once: no fragment is lost (a full pool lands its oldest).
   const many = Array.from({ length: 60 }, (_, i) => ({
     id: 3 + i,
     type: "explosion",
@@ -252,12 +248,24 @@ test("explosion fragments land and stay until RESTART; staged links wait their t
     time: 20,
     delay: 0,
   }));
-  fx.update(many, 20);
-  fx.update(many, 25);
-  assert.equal(fx.debris.total, 36 + 60 * 18);
+  for (let t = 20; t < 25; t += 0.05) fx.update(many, t);
+  assert.equal(fx.debris.total, thrown + 60 * chunkCount(explosionScale(many[0])));
+  // Budgets hold however many blasts there are.
+  assert.ok(fx.counts.smoke <= 1600 && fx.counts.fire <= 900);
   fx.reset();
   assert.equal(fx.debris.total, 0);
+  assert.equal(fx.counts.columns, 0);
+  assert.equal(fx.counts.smoke, 0);
   assert.ok(fx.debris.meshes.every((m) => m.count === 0));
+});
+
+test("explosion sizes: car < fuel island < major, smoke lasts accordingly", () => {
+  const car = explosionScale({ type: "explosion" });
+  const gas = explosionScale({ type: "explosion", cause: "gas", chainDepth: 3 });
+  const major = explosionScale({ type: "explosion", major: true });
+  assert.ok(car < gas && gas < major);
+  assert.ok(smokeSeconds(car) < smokeSeconds(gas) && smokeSeconds(gas) < smokeSeconds(major));
+  assert.ok(smokeSeconds(gas) >= 30);
 });
 
 test("camera shake only applies to the drawn frame and decays", () => {

@@ -55,17 +55,93 @@ export class DebrisField {
   }
 }
 
-// Time for a fragment launched upward at vy (from y = 1) to land at y = 0.2.
-const landing = (vy) => (vy + Math.sqrt(vy * vy + 28.8)) / 18;
+// How big an explosion is: a police or parked car 1.4, a fuel pump island
+// 2.6, a major blast (a building, a tanker) 3.4. Chain reactions grow a
+// little with each link (more fuel).
+export function explosionScale(event) {
+  if (event.major) return 3.4;
+  if (event.cause === "gas") return 2.6;
+  return 1.4 + Math.min(event.chainDepth || 0, 3) * 0.15;
+}
+
+// Chunks thrown by an explosion of this scale (all land and stay).
+export const chunkCount = (scale) => Math.round(20 * Math.pow(scale, 0.9));
+
+// How long the smoke column of an explosion keeps rising (s).
+export function smokeSeconds(scale) {
+  return scale >= 3.2 ? 70 : scale >= 2.2 ? 45 : 14;
+}
+
+// Fire colour over a puff's life: white-yellow core, yellow, orange, red,
+// then soot (the fireball rolls up into the smoke).
+const FIRE_RAMP = [
+  [0, new THREE.Color(0xfffdf0)],
+  [0.1, new THREE.Color(0xffec6a)],
+  [0.26, new THREE.Color(0xffa424)],
+  [0.46, new THREE.Color(0xff5e18)],
+  [0.66, new THREE.Color(0xc4301a)],
+  [0.84, new THREE.Color(0x4a2620)],
+  [1, new THREE.Color(0x262224)],
+];
+function ramp(stops, f, out) {
+  for (let i = 1; i < stops.length; i++)
+    if (f <= stops[i][0]) {
+      const [a, ca] = stops[i - 1],
+        [b, cb] = stops[i];
+      return out.copy(ca).lerp(cb, (f - a) / (b - a));
+    }
+  return out.copy(stops[stops.length - 1][1]);
+}
+
+// One InstancedMesh holding every live particle of one kind; particles are
+// plain objects updated on the CPU, written out each frame (one draw call
+// per pool however many explosions are going on).
+class Pool {
+  constructor(scene, geometry, material, capacity) {
+    this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
+    this.mesh.frustumCulled = false;
+    this.mesh.count = 0;
+    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(
+      new Float32Array(capacity * 3),
+      3,
+    );
+    this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(this.mesh);
+    this.capacity = capacity;
+    this.items = [];
+  }
+  add(p) {
+    // Full: the oldest particle gives way (never more than the budget).
+    if (this.items.length >= this.capacity) this.evict(this.items.shift());
+    this.items.push(p);
+    return p;
+  }
+  evict() {}
+  clear() {
+    this.items.length = 0;
+    this.mesh.count = 0;
+  }
+}
+
+const dummy = new THREE.Object3D();
+const tint = new THREE.Color();
+const tint2 = new THREE.Color();
 
 export class ExplosionEffects {
   constructor(scene, onStart = null) {
     this.scene = scene;
     this.onStart = onStart;
-    this.active = [];
     this.lastEvent = 0;
+    this.lastTime = null;
+    this.pending = [];
+    this.columns = []; // smoke (and fire) emitters left by each blast
+    this.rings = [];
+    // Angular low-poly shapes throughout: fire and smoke are faceted
+    // icosahedra and dodecahedra, debris is boxes and wedges.
     this.chunkGeometry = new THREE.BoxGeometry(0.4, 0.35, 0.55);
-    this.puffGeometry = new THREE.IcosahedronGeometry(1, 0);
+    const puff = new THREE.IcosahedronGeometry(1, 0);
+    const smokePuff = new THREE.DodecahedronGeometry(1, 0);
     this.chunkMaterials = [0x2a292e, 0xd62f2a, 0xff8a1a].map(
       (color) => new THREE.MeshStandardMaterial({ color }),
     );
@@ -74,105 +150,215 @@ export class ExplosionEffects {
       this.chunkGeometry,
       this.chunkMaterials,
     );
-    this.matrix = new THREE.Matrix4();
-  }
-  spawn(event) {
-    const group = new THREE.Group();
-    group.position.set(event.x, 0, event.z);
-    // Later links of a chain reaction are bigger: the fire has more fuel.
-    const depth = event.chainDepth || 0,
-      size = 1 + Math.min(depth, 3) * 0.22;
-    group.scale.setScalar(size);
-    group.visible = false;
-    this.scene.add(group);
-    const flameMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff6a1a,
-      transparent: true,
-      depthWrite: false,
-    });
-    const smokeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x2a282d,
-      transparent: true,
-      depthWrite: false,
-    });
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1, 0.07, 4, 32),
-      new THREE.MeshBasicMaterial({
-        color: 0xffb347,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false,
-      }),
+    // Fire: unlit so it reads as light, opaque so it costs no sorting.
+    this.fire = new Pool(
+      scene,
+      puff,
+      new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      900,
     );
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.28;
-    group.add(ring);
-    const core = new THREE.Mesh(
-      this.puffGeometry,
+    // Flash and glow: additive (fades by darkening the colour).
+    this.glow = new Pool(
+      scene,
+      puff,
       new THREE.MeshBasicMaterial({
-        color: 0xffe14a,
+        color: 0xffffff,
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       }),
+      96,
     );
-    core.position.y = 1.6;
-    group.add(core);
-    const parts = [];
-    for (let i = 0; i < 18; i++) {
-      const angle = i * 2.399 + event.id,
-        force = 3 + (i % 5) * 1.3;
-      const mesh = new THREE.Mesh(
-        this.chunkGeometry,
-        this.chunkMaterials[i % 3],
-      );
-      mesh.castShadow = true;
-      group.add(mesh);
-      const vy = 5 + (i % 6);
-      parts.push({
-        mesh,
-        kind: "debris",
-        material: i % 3,
-        vx: Math.sin(angle) * force,
-        vz: Math.cos(angle) * force,
-        vy,
-        land: landing(vy),
+    // Smoke: lit, faceted, dark; opaque chunky plumes.
+    this.smoke = new Pool(
+      scene,
+      smokePuff,
+      new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }),
+      1600,
+    );
+    // Flying chunks (land into the debris field above).
+    this.chunks = new Pool(
+      scene,
+      this.chunkGeometry,
+      new THREE.MeshStandardMaterial({ color: 0xffffff }),
+      500,
+    );
+    this.chunks.mesh.castShadow = true;
+    // A chunk pushed out of a full pool lands where it is (debris is never
+    // lost, only its flight cut short).
+    this.chunks.evict = (p) => {
+      dummy.position.set(p.x, 0.2, p.z);
+      dummy.rotation.set(p.rx, p.ry, p.rz);
+      dummy.scale.setScalar(p.scale);
+      dummy.updateMatrix();
+      this.debris.add(p.material, this.matrix.copy(dummy.matrix));
+    };
+    this.ringGeometry = new THREE.TorusGeometry(1, 0.09, 3, 24);
+    this.matrix = new THREE.Matrix4();
+    this.seed = 1;
+  }
+  rand() {
+    // Deterministic per effect (screenshots repeat), cheap.
+    this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+    return this.seed / 4294967296;
+  }
+  // Live particles (performance overlay / tests).
+  get counts() {
+    return {
+      fire: this.fire.items.length,
+      glow: this.glow.items.length,
+      smoke: this.smoke.items.length,
+      chunks: this.chunks.items.length,
+      columns: this.columns.length,
+      debris: this.debris.total,
+    };
+  }
+  spawn(event) {
+    this.pending.push({ event, at: event.time + (event.delay || 0) });
+  }
+  start(event, now) {
+    const s = explosionScale(event);
+    this.seed = (event.id * 2654435761) >>> 0 || 1;
+    const R = () => this.rand();
+    const x = event.x,
+      z = event.z;
+    this.onStart?.(event, s);
+    // 1. Flash: a bright white-yellow core and a ground glow, a fraction of
+    // a second.
+    this.glow.add({ kind: "flash", x, y: 1.4 * s, z, born: now, life: 0.16, size: 2.6 * s, color: 0xfff6d8 });
+    this.glow.add({ kind: "flash", x, y: 1.8 * s, z, born: now, life: 0.32, size: 3.2 * s, color: 0xb05a14 });
+    this.glow.add({ kind: "flash", x, y: 0.3, z, born: now, life: 0.3, size: 3.6 * s, flat: true, color: 0x8a3a10 });
+    // 2. Fireball: angular puffs thrown up and out, cooling from white
+    // through orange and red into soot.
+    const nFire = Math.round(30 * s);
+    for (let i = 0; i < nFire; i++) {
+      // The first third is the core: slower, held white-yellow longer.
+      const hot = i < nFire / 3;
+      const a = R() * Math.PI * 2,
+        up = 0.35 + R() * 0.65,
+        sp = (hot ? 1.5 + R() * 2.5 : 3 + R() * 6) * Math.sqrt(s);
+      this.fire.add({
+        hot,
+        x: x + Math.sin(a) * R() * 0.8 * s,
+        y: 0.6 + R() * 0.8 * s,
+        z: z + Math.cos(a) * R() * 0.8 * s,
+        vx: Math.sin(a) * sp * (1 - up * 0.6),
+        vy: sp * up + 2,
+        vz: Math.cos(a) * sp * (1 - up * 0.6),
+        born: now + R() * 0.12,
+        life: 1.5 + R() * 1.2 + s * 0.25,
+        s0: (0.6 + R() * 0.5) * Math.sqrt(s),
+        s1: (1.6 + R() * 1.5) * Math.sqrt(s),
+        drag: 2.2,
+        lift: 3.5,
+        rx: R() * 6,
+        ry: R() * 6,
+        spin: (R() - 0.5) * 3,
       });
     }
-    for (let i = 0; i < 10; i++) {
-      const mesh = new THREE.Mesh(this.puffGeometry, flameMaterial);
-      group.add(mesh);
-      parts.push({
-        mesh,
-        kind: "flame",
-        vx: Math.sin(i * 2.4) * 1.7,
-        vz: Math.cos(i * 2.4) * 1.7,
-        vy: 2 + i * 0.3,
+    // Embers: small bright bits on high arcs.
+    const nEmber = Math.round(14 * s);
+    for (let i = 0; i < nEmber; i++) {
+      const a = R() * Math.PI * 2,
+        sp = 6 + R() * 9;
+      this.fire.add({
+        x, y: 1, z,
+        vx: Math.sin(a) * sp, vy: 7 + R() * 9, vz: Math.cos(a) * sp,
+        born: now, life: 1.2 + R() * 1.0,
+        s0: 0.16, s1: 0.1, drag: 0.3, lift: -14,
+        rx: R() * 6, ry: R() * 6, spin: 8, ember: true,
       });
     }
-    for (let i = 0; i < 12; i++) {
-      const mesh = new THREE.Mesh(this.puffGeometry, smokeMaterial);
-      group.add(mesh);
-      parts.push({
-        mesh,
-        kind: "smoke",
-        vx: Math.sin(i * 2.4) * 1.3,
-        vz: Math.cos(i * 2.4) * 1.3,
-        vy: 2.6 + i * 0.2,
+    // 3. Shockwave: a fast flat ring and a dust ring rolling outwards.
+    this.rings.push({ x, z, born: now, life: 0.38, radius: 9 * s, mesh: null });
+    const nDust = Math.round(14 * Math.sqrt(s));
+    for (let i = 0; i < nDust; i++) {
+      const a = (i / nDust) * Math.PI * 2 + R() * 0.3,
+        sp = (8 + R() * 5) * Math.sqrt(s);
+      this.smoke.add({
+        x: x + Math.sin(a) * 1.2, y: 0.4, z: z + Math.cos(a) * 1.2,
+        vx: Math.sin(a) * sp, vy: 0.4, vz: Math.cos(a) * sp,
+        born: now, life: 1.6 + R() * 0.8,
+        s0: 0.6 * Math.sqrt(s), s1: 1.6 * Math.sqrt(s), drag: 3.2, lift: 0,
+        c0: 0x8d8478, c1: 0x6f6a64, rx: R() * 6, ry: R() * 6, spin: 1,
       });
     }
-    this.active.push({
-      event,
-      group,
-      ring,
-      core,
-      parts,
-      // Staged chain reactions start when their own link is reached.
-      time: event.time + (event.delay || 0),
-      started: false,
-      flameMaterial,
-      smokeMaterial,
+    // 4. Chunks: up and out, spinning; they land and stay (debris field).
+    const nChunk = chunkCount(s);
+    for (let i = 0; i < nChunk; i++) {
+      const a = R() * Math.PI * 2,
+        sp = (4 + R() * 7) * Math.pow(s, 0.45),
+        vy = 6 + R() * 8 * Math.pow(s, 0.4);
+      const kind = i % 3;
+      this.chunks.add({
+        x: x + Math.sin(a) * 0.5, y: 1, z: z + Math.cos(a) * 0.5,
+        vx: Math.sin(a) * sp, vy, vz: Math.cos(a) * sp,
+        born: now, material: kind,
+        color: [0x2a292e, 0xd62f2a, 0xff8a1a][kind],
+        scale: 0.8 + R() * (0.5 + s * 0.35),
+        rx: R() * 6, ry: R() * 6, rz: R() * 6,
+        wx: (R() - 0.5) * 12, wy: (R() - 0.5) * 12,
+      });
+    }
+    // 5. Smoke column: thick dark plumes keep rolling up long after the
+    // fire (a car 14 s, a fuel island 45 s, a major blast over a minute),
+    // with flames licking at the base for the first part.
+    const seconds = smokeSeconds(s);
+    this.columns.push({
+      x, z, s, born: now, until: now + seconds,
+      fireUntil: now + (s >= 2.2 ? 12 : 4),
+      acc: 0, fireAcc: 0,
     });
+  }
+  emitColumns(now, dt) {
+    const R = () => Math.random();
+    for (const c of [...this.columns]) {
+      if (now > c.until) {
+        this.columns.splice(this.columns.indexOf(c), 1);
+        continue;
+      }
+      const age = now - c.born,
+        left = (c.until - now) / (c.until - c.born);
+      // Dense at first, thinning out towards the end.
+      const rate = (3 + 7 * Math.sqrt(c.s)) * (0.35 + 0.65 * Math.min(1, left * 1.6)) * (age < 1.2 ? 2 : 1);
+      c.acc += rate * dt;
+      while (c.acc >= 1) {
+        c.acc -= 1;
+        const r = 0.4 + 0.5 * c.s;
+        const a = R() * Math.PI * 2;
+        this.smoke.add({
+          x: c.x + Math.sin(a) * R() * r,
+          y: 0.8 + R() * 0.6,
+          z: c.z + Math.cos(a) * R() * r,
+          vx: (R() - 0.5) * 0.8 + 0.6, // light breeze
+          vy: 2.4 + R() * 1.6 + c.s * 0.5,
+          vz: (R() - 0.5) * 0.8 + 0.3,
+          born: now,
+          life: 4.5 + R() * 2.5 + c.s,
+          s0: (0.7 + R() * 0.4) * Math.sqrt(c.s),
+          s1: (2.2 + R() * 1.2) * Math.sqrt(c.s),
+          drag: 0.4, lift: 0.3,
+          c0: 0x1e1c1f, c1: 0x4b484d,
+          rx: R() * 6, ry: R() * 6, spin: (R() - 0.5) * 0.6,
+        });
+      }
+      if (now < c.fireUntil) {
+        c.fireAcc += (6 + 6 * c.s) * dt;
+        while (c.fireAcc >= 1) {
+          c.fireAcc -= 1;
+          const a = R() * Math.PI * 2,
+            r = R() * (0.5 + 0.6 * c.s);
+          this.fire.add({
+            x: c.x + Math.sin(a) * r, y: 0.4, z: c.z + Math.cos(a) * r,
+            vx: (R() - 0.5) * 0.6, vy: 2 + R() * 2, vz: (R() - 0.5) * 0.6,
+            born: now, life: 0.6 + R() * 0.5,
+            s0: (0.4 + R() * 0.3) * Math.sqrt(c.s), s1: 0.15,
+            drag: 1, lift: 2, rx: R() * 6, ry: R() * 6, spin: 2,
+            start: 0.18, // already past the white-hot core
+          });
+        }
+      }
+    }
   }
   update(events, time) {
     for (const event of events)
@@ -180,76 +366,192 @@ export class ExplosionEffects {
         this.spawn(event);
         this.lastEvent = event.id;
       }
-    for (const effect of [...this.active]) {
-      const t = time - effect.time;
-      if (t < 0) continue;
-      if (!effect.started) {
-        effect.started = true;
-        effect.group.visible = true;
-        this.onStart?.(effect.event);
+    const dt =
+      this.lastTime === null ? 0 : Math.min(0.05, Math.max(0, time - this.lastTime));
+    this.lastTime = time;
+    for (const p of [...this.pending])
+      if (time >= p.at) {
+        this.pending.splice(this.pending.indexOf(p), 1);
+        this.start(p.event, time);
       }
-      if (t > 4) {
-        this.settle(effect);
-        this.remove(effect);
+    if (dt > 0) this.emitColumns(time, dt);
+    this.stepFire(time, dt);
+    this.stepGlow(time);
+    this.stepSmoke(time, dt);
+    this.stepChunks(time, dt);
+    this.stepRings(time);
+  }
+  stepFire(now, dt) {
+    const pool = this.fire,
+      mesh = pool.mesh;
+    let n = 0;
+    const keep = [];
+    for (const p of pool.items) {
+      const t = now - p.born;
+      if (t > p.life) continue;
+      keep.push(p);
+      if (t < 0) continue;
+      const k = Math.exp(-p.drag * dt);
+      p.vx *= k;
+      p.vz *= k;
+      p.vy = p.vy * k + p.lift * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      if (p.ember && p.y < 0.1) p.life = 0;
+      const f = Math.min(1, (p.start || 0) + t / p.life);
+      // Swell fast, then shrink as it cools.
+      const grow = Math.min(1, t / 0.25);
+      const size = (p.s0 + (p.s1 - p.s0) * grow) * (f > 0.7 ? 1 - (f - 0.7) / 0.3 * 0.8 : 1);
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.rotation.set(p.rx + t * p.spin, p.ry + t * p.spin * 0.7, 0);
+      dummy.scale.setScalar(Math.max(0.01, size));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(n, dummy.matrix);
+      ramp(FIRE_RAMP, p.ember ? Math.min(f, 0.4) : p.hot ? Math.pow(f, 1.5) : f, tint);
+      mesh.setColorAt(n, tint);
+      n++;
+    }
+    pool.items = keep;
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.instanceColor.needsUpdate = true;
+  }
+  stepGlow(now) {
+    const pool = this.glow,
+      mesh = pool.mesh;
+    let n = 0;
+    pool.items = pool.items.filter((p) => now - p.born <= p.life);
+    for (const p of pool.items) {
+      const t = now - p.born,
+        f = t / p.life;
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.rotation.set(0, 0, 0);
+      const size = p.size * (0.6 + 0.6 * Math.sin(Math.min(1, f * 2.5) * Math.PI * 0.5));
+      if (p.flat) dummy.scale.set(size, 0.15, size);
+      else dummy.scale.setScalar(size);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(n, dummy.matrix);
+      tint.set(p.color).multiplyScalar(Math.max(0, 1 - f * f));
+      mesh.setColorAt(n, tint);
+      n++;
+    }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }
+  stepSmoke(now, dt) {
+    const pool = this.smoke,
+      mesh = pool.mesh;
+    let n = 0;
+    const keep = [];
+    for (const p of pool.items) {
+      const t = now - p.born;
+      if (t > p.life) continue;
+      keep.push(p);
+      if (t < 0) continue;
+      const k = Math.exp(-p.drag * dt);
+      p.vx *= k;
+      p.vz *= k;
+      p.vy = p.vy * Math.exp(-0.15 * dt) + p.lift * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      const f = t / p.life;
+      // Billow out, then shrink away at the top (no transparency needed).
+      const size =
+        (p.s0 + (p.s1 - p.s0) * Math.min(1, f * 1.8)) *
+        (f > 0.75 ? 1 - (f - 0.75) / 0.25 : 1);
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.rotation.set(p.rx + t * p.spin, p.ry + t * p.spin * 0.6, 0);
+      dummy.scale.setScalar(Math.max(0.01, size));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(n, dummy.matrix);
+      tint.set(p.c0).lerp(tint2.set(p.c1), Math.min(1, f * 1.3));
+      mesh.setColorAt(n, tint);
+      n++;
+    }
+    pool.items = keep;
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }
+  stepChunks(now, dt) {
+    const pool = this.chunks,
+      mesh = pool.mesh;
+    let n = 0;
+    const keep = [];
+    for (const p of pool.items) {
+      if (now < p.born) {
+        keep.push(p);
         continue;
       }
-      effect.ring.scale.setScalar(1 + t * 12);
-      effect.ring.material.opacity = Math.max(0, 0.9 - t * 1.8);
-      effect.ring.visible = t < 0.5;
-      effect.core.visible = t < 0.7;
-      effect.core.scale.setScalar(
-        1 + Math.sin(Math.min(t / 0.7, 1) * Math.PI) * 2.4,
-      );
-      effect.core.material.opacity = Math.max(0, 1 - t / 0.7);
-      effect.flameMaterial.opacity = Math.max(0, 1 - t / 2);
-      effect.smokeMaterial.opacity = Math.max(0, 0.65 * (1 - t / 4));
-      for (const p of effect.parts) {
-        if (p.kind === "debris") {
-          // Fragments fly, then land and stop: they are not faded out.
-          const h = Math.min(t, p.land);
-          p.mesh.position.set(
-            p.vx * h,
-            Math.max(0.2, 1 + p.vy * h - 9 * h * h),
-            p.vz * h,
-          );
-          p.mesh.rotation.set(h * 3, h * 4, h * 2);
-        } else if (p.kind === "flame") {
-          p.mesh.visible = t < 2;
-          p.mesh.position.set(p.vx * t, 1 + p.vy * t, p.vz * t);
-          p.mesh.scale.setScalar(
-            1.2 + Math.sin(Math.min(t, 1) * Math.PI) * 1.7,
-          );
-        } else {
-          p.mesh.position.set(p.vx * t, 1 + p.vy * t, p.vz * t);
-          p.mesh.scale.setScalar(0.45 + t * 0.9);
-        }
+      p.vy -= 18 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      p.rx += p.wx * dt;
+      p.ry += p.wy * dt;
+      dummy.position.set(p.x, Math.max(0.2, p.y), p.z);
+      dummy.rotation.set(p.rx, p.ry, p.rz);
+      dummy.scale.setScalar(p.scale);
+      dummy.updateMatrix();
+      if (p.y <= 0.2 && p.vy < 0) {
+        // Landed: it stays where it fell until restart.
+        this.debris.add(p.material, this.matrix.copy(dummy.matrix));
+        continue;
       }
+      keep.push(p);
+      mesh.setMatrixAt(n, dummy.matrix);
+      mesh.setColorAt(n, tint.set(p.color));
+      n++;
+    }
+    pool.items = keep;
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }
+  stepRings(now) {
+    for (const r of [...this.rings]) {
+      const t = now - r.born;
+      if (!r.mesh) {
+        r.mesh = new THREE.Mesh(
+          this.ringGeometry,
+          new THREE.MeshBasicMaterial({
+            color: 0xffd08a,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          }),
+        );
+        r.mesh.rotation.x = -Math.PI / 2;
+        r.mesh.position.set(r.x, 0.35, r.z);
+        this.scene.add(r.mesh);
+      }
+      if (t > r.life) {
+        this.scene.remove(r.mesh);
+        r.mesh.material.dispose();
+        this.rings.splice(this.rings.indexOf(r), 1);
+        continue;
+      }
+      const f = t / r.life;
+      r.mesh.scale.set(1 + r.radius * Math.sqrt(f), 1 + r.radius * Math.sqrt(f), 1 + 6 * f);
+      r.mesh.material.opacity = 1 - f;
     }
   }
-  // Hand the landed fragments over to the permanent debris field.
-  settle(effect) {
-    effect.group.updateMatrixWorld(true);
-    for (const p of effect.parts)
-      if (p.kind === "debris") {
-        const h = p.land;
-        p.mesh.position.set(p.vx * h, 0.2, p.vz * h);
-        p.mesh.rotation.set(h * 3, h * 4, h * 2);
-        p.mesh.updateMatrixWorld(true);
-        this.debris.add(p.material, this.matrix.copy(p.mesh.matrixWorld));
-      }
-  }
-  remove(effect) {
-    this.scene.remove(effect.group);
-    effect.core.material.dispose();
-    effect.ring.geometry.dispose();
-    effect.ring.material.dispose();
-    effect.flameMaterial.dispose();
-    effect.smokeMaterial.dispose();
-    this.active.splice(this.active.indexOf(effect), 1);
-  }
   reset() {
-    for (const effect of [...this.active]) this.remove(effect);
+    for (const r of this.rings) {
+      if (r.mesh) {
+        this.scene.remove(r.mesh);
+        r.mesh.material.dispose();
+      }
+    }
+    this.rings = [];
+    this.pending = [];
+    this.columns = [];
+    for (const pool of [this.fire, this.glow, this.smoke, this.chunks]) pool.clear();
     this.debris.reset();
     this.lastEvent = 0;
+    this.lastTime = null;
   }
 }
