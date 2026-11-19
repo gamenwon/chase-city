@@ -3,7 +3,7 @@
 // A run is stuck if the car moved less than 2 m over the last 3 s of 8.
 import { Simulation } from "../src/game/simulation.js";
 import { previewLayout } from "../src/preview/locations/layout.js";
-import { createLayout } from "../src/world/layout.js";
+import { createLayout, resolveBuilding } from "../src/world/layout.js";
 import { random } from "./autoplay.js";
 const base = createLayout(), layout = previewLayout();
 const extra = layout.obstacles.filter((b) => !base.obstacles.some((o) => o.x === b.x && o.z === b.z && o.w === b.w && o.d === b.d));
@@ -16,6 +16,8 @@ for (const b of extra) for (const heading of [0, Math.PI / 2, Math.PI, -Math.PI 
   const back = Math.max(b.w, b.d) / 2 + 8;
   Object.assign(s.player, { x: b.x - fx * back, z: b.z - fz * back, angle: heading, speed: 20, vx: fx * 20, vz: fz * 20 });
   if (!s.navigation.allowed({ x: s.player.x, z: s.player.z })) continue;
+  // (A start inside another solid is no test.)
+  if (s.nearSolids(s.player.x, s.player.z, 3).some((o) => resolveBuilding({ x: s.player.x, z: s.player.z }, o, 1.2))) continue;
   s.previousPlayer = { x: s.player.x, z: s.player.z };
   const start = { x: s.player.x, z: s.player.z }; let away = 0;
   let mark = null;

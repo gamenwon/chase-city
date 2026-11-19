@@ -19,7 +19,7 @@ async function collectAll(page) {
   });
 }
 
-test("mission select: both missions listed in catalog order; choosing one changes briefing, HUD and rules", async ({
+test("mission select: all missions listed in catalog order; choosing one changes briefing, HUD and rules", async ({
   page,
 }, info) => {
   await open(page);
@@ -28,9 +28,10 @@ test("mission select: both missions listed in catalog order; choosing one change
   await page.locator("#open-select").click();
   await expect(page.locator("#mission-select")).toBeVisible();
   const cards = page.locator(".mission-card");
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toContainText("도시 탈출");
   await expect(cards.nth(1)).toContainText("택배 수거");
+  await expect(cards.nth(2)).toContainText("타깃 헌트");
   await expect(cards.nth(1)).toContainText("제한 시간 80초");
   await page.screenshot({ path: `${OUT}/${info.project.name}-select.png` });
   await page.locator('[data-mission="parcels"]').click();
