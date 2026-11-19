@@ -41,14 +41,8 @@ function island(g, wrecked) {
   for (const ex of [-1, 1]) {
     for (let i = 0; i < 4; i++) B(g, 0.6, 0.3, 0.3, i % 2 ? C.trim : C.yellow, ex * 3.05, 0, -0.45 + i * 0.3);
     // Column on a stone plinth with a red sleeve.
+    // (The column itself is a separate piece: see columnPiece.)
     B(g, 0.8, 0.5, 0.8, wrecked ? 0x6d6a66 : C.stone, ex * 2.45, 0.3, 0);
-    if (!wrecked) {
-      B(g, 0.45, 4.0, 0.45, 0xdfe3e8, ex * 2.45, 0.8, 0);
-      B(g, 0.5, 0.45, 0.5, C.red, ex * 2.45, 1.6, 0);
-    } else {
-      const stub = B(g, 0.45, 1.6, 0.45, 0x8a8d93, ex * 2.45, 0.8, 0);
-      stub.rotation.z = ex * 0.35;
-    }
     for (const bz of [-0.42, 0.42]) {
       const bol = cyl(g, 0.09, 0.09, 0.9, C.yellow, ex * 3.15, 0.3, bz, 6);
       if (wrecked) {
@@ -84,6 +78,85 @@ function canopyDeck(g, plan) {
   band(0.14, 0.16, C.yellow, 0.42);
   for (let i = -2; i <= 2; i++)
     for (const lz of [-2.4, 0, 2.4]) B(g, 1.0, 0.04, 0.5, 0xfff4cf, i * 2.1, -0.04, lz);
+}
+// Canopy column: steel post with a red sleeve, origin at its base so it
+// can buckle and lean over.
+function columnPiece(g) {
+  B(g, 0.45, 4.0, 0.45, 0xdfe3e8, 0, 0, 0);
+  B(g, 0.5, 0.45, 0.5, C.red, 0, 0.8, 0);
+  // A bent cap plate that stays on when it falls.
+  B(g, 0.6, 0.08, 0.6, 0x9a9da3, 0, 3.92, 0);
+}
+// The canopy deck pre-fractured into 3 x 2 slabs (ix west..east, iz
+// north..south). Each carries its share of deck, ceiling, lights and the
+// fascia on its outer edges, plus torn rebar and broken concrete on its
+// inner edges (hidden in the gaps while the deck is whole).
+export const SLABS = { nx: 3, nz: 2 };
+function canopySlab(g, plan, ix, iz) {
+  const sw = plan.w / SLABS.nx,
+    sd = plan.d / SLABS.nz;
+  const x0 = -plan.w / 2 + ix * sw, z0 = -plan.d / 2 + iz * sd;
+  const cx = x0 + sw / 2, cz = z0 + sd / 2; // slab centre in deck space
+  B(g, sw - 0.03, 0.3, sd - 0.03, C.white, 0, 0, 0);
+  B(g, sw - 0.3, 0.1, sd - 0.3, 0x8a8781, 0, 0.3, 0);
+  const band = (h, out, c, y) => {
+    if (iz === SLABS.nz - 1) B(g, sw + (ix === 0 || ix === SLABS.nx - 1 ? out : 0), h, out, c, ix === 0 ? -out / 2 : ix === SLABS.nx - 1 ? out / 2 : 0, y, sd / 2 + out / 2);
+    if (iz === 0) B(g, sw + (ix === 0 || ix === SLABS.nx - 1 ? out : 0), h, out, c, ix === 0 ? -out / 2 : ix === SLABS.nx - 1 ? out / 2 : 0, y, -sd / 2 - out / 2);
+    if (ix === SLABS.nx - 1) B(g, out, h, sd, c, sw / 2 + out / 2, y, 0);
+    if (ix === 0) B(g, out, h, sd, c, -sw / 2 - out / 2, y, 0);
+  };
+  band(1.0, 0.12, C.red, -0.3);
+  band(0.14, 0.16, C.yellow, 0.42);
+  for (let i = -2; i <= 2; i++)
+    for (const lz of [-2.4, 0, 2.4]) {
+      const lx = i * 2.1;
+      if (lx >= x0 + 0.5 && lx < x0 + sw - 0.5 && lz >= z0 + 0.25 && lz < z0 + sd - 0.25)
+        B(g, 1.0, 0.04, 0.5, 0xfff4cf, lx - cx, -0.04, lz - cz);
+    }
+  // Broken inner edges: jagged concrete teeth and rebar ends.
+  const inner = [];
+  if (ix > 0) inner.push(["x", -1]);
+  if (ix < SLABS.nx - 1) inner.push(["x", 1]);
+  if (iz > 0) inner.push(["z", -1]);
+  if (iz < SLABS.nz - 1) inner.push(["z", 1]);
+  for (const [axis, s] of inner) {
+    const len = axis === "x" ? sd : sw;
+    for (let k = 0; k < 4; k++) {
+      const u = -len / 2 + (k + 0.5) * (len / 4);
+      const tooth = axis === "x" ? B(g, 0.12, 0.22, 0.5, 0xb8b4ac, s * (sw / 2 - 0.08), 0.04, u) : B(g, 0.5, 0.22, 0.12, 0xb8b4ac, u, 0.04, s * (sd / 2 - 0.08));
+      tooth.rotation.y = (k % 2 ? 1 : -1) * 0.3;
+      const bar = axis === "x" ? B(g, 0.3, 0.03, 0.03, 0x6b4a3a, s * (sw / 2 - 0.02), 0.15, u + 0.3) : B(g, 0.03, 0.03, 0.3, 0x6b4a3a, u + 0.3, 0.15, s * (sd / 2 - 0.02));
+      bar.rotation.z = 0.3;
+    }
+  }
+}
+// What the blast leaves on the forecourt and the shop: soot up the shop
+// front, a torn-off parapet corner and its chunks, glass shards, canopy
+// light panels and fascia pieces, a buckled fuel-cap ring.
+function wreckScatter(g, plan, mp) {
+  const sx = mp.x, sz = mp.z + mp.d / 2;
+  // Soot plumes up the shop front and over the band.
+  for (const [x, w, h] of [[-4.6, 2.2, 3.6], [-1.2, 3.0, 4.4], [2.6, 2.4, 3.2], [5.0, 1.6, 2.6]])
+    B(g, w, h, 0.02, 0x232025, sx + x, 0.45, sz + 0.2);
+  // Parapet corner torn off (dark gap) and its blocks on the ground.
+  B(g, 2.2, 0.5, 0.6, 0x3a3538, sx - 5.0, mp.h + 0.7, sz - 0.25);
+  for (const [x, z, r] of [[-5.6, 1.4, 0.4], [-4.4, 2.2, 1.1], [-6.2, 2.6, 2.0], [-3.8, 1.2, 0.7]]) {
+    const b = B(g, 0.9, 0.35, 0.5, C.white, sx + x, 0.02, sz + z);
+    b.rotation.set(0.15, r, 0.2);
+  }
+  // Glass shards fanned out in front of the shop.
+  for (let i = 0; i < 26; i++) {
+    const a = (i * 2.399) % (Math.PI * 2), d = 0.6 + ((i * 7) % 11) * 0.35;
+    const s = B(g, 0.22 + (i % 3) * 0.08, 0.02, 0.16, i % 4 ? C.glass : 0xdfeaf0, sx - 0.5 + Math.sin(a) * d * 1.8, 0.02, sz + 0.6 + Math.abs(Math.cos(a)) * d);
+    s.rotation.y = a;
+  }
+  // Canopy light panels and fascia bits round the islands.
+  for (let i = 0; i < 16; i++) {
+    const a = i * 1.7, d = 4 + (i % 5) * 1.1;
+    const c = [0xfff4cf, C.red, C.yellow, 0x8a8781][i % 4];
+    const b = B(g, 0.9, 0.06, 0.45, c, plan.x + Math.sin(a) * d * 1.1, 0.02, plan.z + Math.cos(a) * d * 0.9);
+    b.rotation.set(0.1 * (i % 3), a, 0.08 * (i % 2));
+  }
 }
 function mart(g, plan) {
   const { w, d, h } = plan;
@@ -178,7 +251,7 @@ export function buildGas(scene) {
   }
   const mp = GAS_PLAN.mart;
   mart(G(s, mp.x, TOP, mp.z), mp);
-  signBoard(s, "24 MART", 5, 0.7, mp.x - 0.5, TOP + mp.h + 0.45, mp.z + mp.d / 2 + 0.12, 0, "#d62f2a", "#ffffff");
+
   // Price pylon: plinth, posts, brand head, price rows (both faces).
   const py = GAS_PLAN.pylon;
   const pylon = G(s, py.x, TOP, py.z, 0);
@@ -207,20 +280,50 @@ export function buildGas(scene) {
     return { k, x: GAS.x + ip.x, z: GAS.z + ip.z, local: ip, intact, wrecked, state: "intact" };
   });
   const cp = GAS_PLAN.canopy;
-  // The deck hangs from a pivot on its north or south edge so it can slump
-  // toward whichever island blew up.
-  const deck = pieceMesh((g) => canopyDeck(g, cp));
-  const pivot = new THREE.Group();
-  pivot.position.set(cp.x, TOP + cp.h + 0.3, cp.z);
-  pivot.add(deck);
-  root.add(pivot);
-  // Canopy signs ride on the pivot with the deck (their boards are baked
-  // into one mesh, their faces into one atlas).
-  const signs = new THREE.Group();
-  signBoard(signs, "GAS • 24H", 5.0, 0.56, 0, -0.22, cp.d / 2 + 0.2, 0, "#d62f2a", "#ffffff");
-  signBoard(signs, "GAS", 2.4, 0.56, -cp.w / 2 - 0.2, -0.22, 0, -Math.PI / 2, "#d62f2a", "#ffe14a");
-  pivot.add(bake(signs));
-  const canopySigns = signs;
+  // Pre-fractured canopy: six slabs, four columns (see gas-collapse.js for
+  // how they come down). Each piece keeps its home pose.
+  const deckY = TOP + cp.h + 0.3;
+  const sw = cp.w / SLABS.nx, sd = cp.d / SLABS.nz;
+  const slabs = [];
+  for (let iz = 0; iz < SLABS.nz; iz++)
+    for (let ix = 0; ix < SLABS.nx; ix++) {
+      const holder = new THREE.Group();
+      const m = pieceMesh((g) => canopySlab(g, cp, ix, iz));
+      holder.add(m);
+      holder.position.set(cp.x - cp.w / 2 + (ix + 0.5) * sw, deckY, cp.z - cp.d / 2 + (iz + 0.5) * sd);
+      root.add(holder);
+      slabs.push({ ix, iz, mesh: holder, home: { x: holder.position.x, y: deckY, z: holder.position.z } });
+    }
+  // Canopy signs ride on the slabs they hang from.
+  const front = slabs.find((s) => s.ix === 1 && s.iz === SLABS.nz - 1);
+  const frontSign = new THREE.Group();
+  signBoard(frontSign, "GAS • 24H", 5.0, 0.56, 0, -0.22, sd / 2 + 0.2, 0, "#d62f2a", "#ffffff");
+  front.mesh.add(bake(frontSign));
+  const west = slabs.find((s) => s.ix === 0 && s.iz === SLABS.nz - 1);
+  const westSign = new THREE.Group();
+  signBoard(westSign, "GAS", 2.4, 0.56, -sw / 2 - 0.2, -0.22, -sd / 2 + 1.3, -Math.PI / 2, "#d62f2a", "#ffe14a");
+  west.mesh.add(bake(westSign));
+  const columns = [];
+  for (const isl of islands)
+    for (const ex of [-1, 1]) {
+      const m = pieceMesh(columnPiece);
+      const x = isl.local.x + ex * 2.45, z = isl.local.z;
+      m.position.set(x, TOP + 0.8, z);
+      root.add(m);
+      columns.push({ island: isl.k, ex, mesh: m, home: { x, y: TOP + 0.8, z } });
+    }
+  // The shop's sign is its own piece (it tears loose and hangs).
+  const martSign = new THREE.Group();
+  signBoard(martSign, "24 MART", 5, 0.7, 0, 0, 0, 0, "#d62f2a", "#ffffff");
+  const martSignMesh = bake(martSign);
+  const signHolder = new THREE.Group();
+  signHolder.add(martSignMesh);
+  signHolder.position.set(mp.x - 0.5, TOP + mp.h + 0.45, mp.z + mp.d / 2 + 0.12);
+  root.add(signHolder);
+  const scatter = pieceMesh((g) => wreckScatter(g, cp, mp));
+  scatter.position.y = TOP;
+  scatter.visible = false;
+  root.add(scatter);
   const glass = storefrontGlass(false);
   const glassBroken = storefrontGlass(true);
   for (const m of [glass, glassBroken]) {
@@ -233,5 +336,9 @@ export function buildGas(scene) {
     { x: GAS.x + 6.8, z: GAS.z + 0.6, ry: 0 },
     { x: GAS.x - 8.0, z: GAS.z - 1.6, ry: Math.PI / 2 },
   ];
-  return { root, islands, canopy: { pivot, deck, plan: cp, signs: canopySigns, tilt: 0 }, glass, glassBroken, bins };
+  return {
+    root, islands, glass, glassBroken, bins, scatter,
+    canopy: { plan: cp, slabs, columns, deckY },
+    martSign: { mesh: signHolder, home: { x: signHolder.position.x, y: signHolder.position.y, z: signHolder.position.z } },
+  };
 }

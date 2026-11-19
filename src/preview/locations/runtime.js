@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { CONFIG } from "../../game/config.js";
 import { C, B, G, bake, pieceGeometry, bakedMaterial, parkBench, lampPost, binPair } from "./parts.js";
 import { buildGas } from "./gas.js";
+import { GasCollapse } from "./gas-collapse.js";
 import { buildCourt, fencePanel, hoop } from "./court.js";
 import { buildPark } from "./park.js";
 import { GAS, COURT, PARK, FOUNTAIN_R } from "./layout.js";
@@ -66,6 +67,7 @@ export class LocationsRuntime {
     this.scene = scene;
     this.renderer = renderer;
     this.gas = buildGas(scene);
+    this.collapse = new GasCollapse(this.gas, { x: GAS.x, y: 0, z: GAS.z });
     this.court = buildCourt(scene);
     this.park = buildPark(scene);
     this.m = new THREE.Matrix4();
@@ -240,9 +242,7 @@ export class LocationsRuntime {
     }
     g.glass.visible = true;
     g.glassBroken.visible = false;
-    g.canopy.target = { rx: 0, rz: 0, dy: 0 };
-    g.canopy.now = { rx: 0, rz: 0, dy: 0 };
-    this.canopyPose();
+    this.collapse.reset(sim);
     const f = this.park.fountain;
     f.state = "intact";
     f.intact.visible = f.water.visible = true;
@@ -302,7 +302,6 @@ export class LocationsRuntime {
     // at its largest size, plus a fuel fireball and a smoke column.
     sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "gas", x: isl.x, z: isl.z, angle: 0, time: sim.elapsed, delay: 0, chainDepth: 3, playerX: sim.player.x, playerZ: sim.player.z });
     if (sim.events.length > 64) sim.events.shift();
-    this.fx.push({ kind: "burst", x: isl.x, z: isl.z, born: sim.elapsed, size: 1.6 });
     for (const px of [-1.3, 1.3]) this.fx.push({ kind: "burn", x: isl.x + px, z: isl.z + (Math.random() - 0.5) * 0.4, born: sim.elapsed + 0.4, size: 0.75 });
     // Pump heads and panels thrown out; they land and stay.
     for (let i = 0; i < 2; i++) this.throwChunk(0, isl.x + (i ? 1.3 : -1.3), isl.z, 7 + i * 2, i * 3.1 + Math.random());
@@ -333,13 +332,25 @@ export class LocationsRuntime {
     // Shop glass blown in; the canopy slumps toward the blast.
     this.gas.glass.visible = false;
     this.gas.glassBroken.visible = true;
-    const wrecked = this.gas.islands.filter((i) => i.state === "wrecked").length;
-    const cv = this.gas.canopy;
-    if (wrecked >= 2) cv.target = { rx: 0, rz: 0.06, dy: -2.4 };
-    else {
-      const sign = isl.k === 0 ? -1 : 1; // north island: north edge down
-      const th = Math.asin(2.5 / cv.plan.d);
-      cv.target = { rx: sign * th, rz: 0.04, dy: -(cv.plan.d / 2) * Math.sin(th) };
+    // Structural collapse (gas-collapse.js): columns buckle, the slabs over
+    // this island come down, the shop sign tears loose. With both islands
+    // gone the whole canopy is down: a third, major blast as the fuel under
+    // it goes up, and fires on the wreckage that keep burning.
+    const full = this.collapse.collapse(sim, isl.k, sim.elapsed);
+    const cp = this.gas.canopy.plan;
+    for (const [dx, dz, size] of [[-3.2, 0, 0.9], [3.4, 0.4, 0.8], [0.4, -0.6, 0.7]])
+      this.fx.push({ kind: "burn", x: GAS.x + cp.x + dx, z: isl.z + dz, y: TOP + 1.1, born: sim.elapsed + 1.1, size });
+    if (full) {
+      this.stats.canopyDown = 1;
+      this.pending.push({
+        at: sim.elapsed + 0.9,
+        run: () => {
+          sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "gas", major: true, x: GAS.x + cp.x, z: GAS.z + cp.z, angle: 0, time: sim.elapsed, delay: 0, chainDepth: 3, playerX: sim.player.x, playerZ: sim.player.z });
+          if (sim.events.length > 64) sim.events.shift();
+          const mp = this.gas.martSign.home;
+          for (const dx of [-4, 0, 4]) this.fx.push({ kind: "burn", x: GAS.x + mp.x + dx, z: GAS.z + mp.z + 0.6, y: TOP, born: sim.elapsed + 0.4, size: 0.85 });
+        },
+      });
     }
     // The other island goes up a moment later.
     for (const other of this.gas.islands)
@@ -524,7 +535,7 @@ export class LocationsRuntime {
     this.vehicles.update(sim, dt);
     this.flyers.update(sim, dt);
     this.spinBrushes(now);
-    this.canopyStep(dt);
+    this.collapse.step(this.sim, this.time);
     this.fxStep(now);
     this.waterStep(dt, now);
   }
@@ -557,24 +568,6 @@ export class LocationsRuntime {
   ballPose(b, i) {
     this.m.makeTranslation(b.x, b.y, b.z);
     this.ballMesh.setMatrixAt(i, this.m);
-  }
-  canopyPose() {
-    const cv = this.gas.canopy;
-    cv.pivot.rotation.set(cv.now.rx, 0, cv.now.rz);
-    cv.pivot.position.y = TOP + cv.plan.h + 0.3 + cv.now.dy;
-  }
-  canopyStep(dt) {
-    const cv = this.gas.canopy;
-    const k = 1 - Math.exp(-dt * 6);
-    let moved = false;
-    for (const key of ["rx", "rz", "dy"]) {
-      const d = cv.target[key] - cv.now[key];
-      if (Math.abs(d) > 1e-4) {
-        cv.now[key] += d * k;
-        moved = true;
-      }
-    }
-    if (moved) this.canopyPose();
   }
   fxStep(now) {
     // Fire and smoke puffs, rebuilt each frame from the few live sources.

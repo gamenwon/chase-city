@@ -320,7 +320,12 @@ export class ExplosionEffects {
       const age = now - c.born,
         left = (c.until - now) / (c.until - c.born);
       // Dense at first, thinning out towards the end.
-      const rate = (3 + 7 * Math.sqrt(c.s)) * (0.35 + 0.65 * Math.min(1, left * 1.6)) * (age < 1.2 ? 2 : 1);
+      // A heavy burst of smoke for the first seconds, then a steady thinner
+      // column (so it never blots out the street from the chase camera).
+      const rate =
+        age < 2.5
+          ? 3 + 7 * Math.sqrt(c.s)
+          : (1.2 + 2.2 * Math.sqrt(c.s)) * (0.4 + 0.6 * Math.min(1, left * 1.6));
       c.acc += rate * dt;
       while (c.acc >= 1) {
         c.acc -= 1;
@@ -334,9 +339,9 @@ export class ExplosionEffects {
           vy: 2.4 + R() * 1.6 + c.s * 0.5,
           vz: (R() - 0.5) * 0.8 + 0.3,
           born: now,
-          life: 4.5 + R() * 2.5 + c.s,
-          s0: (0.7 + R() * 0.4) * Math.sqrt(c.s),
-          s1: (2.2 + R() * 1.2) * Math.sqrt(c.s),
+          life: 4 + R() * 2 + c.s * 0.5,
+          s0: (0.6 + R() * 0.35) * Math.sqrt(c.s),
+          s1: (age < 2.5 ? 2 + R() * 1.1 : 1.3 + R() * 0.7) * Math.sqrt(c.s),
           drag: 0.4, lift: 0.3,
           c0: 0x1e1c1f, c1: 0x4b484d,
           rx: R() * 6, ry: R() * 6, spin: (R() - 0.5) * 0.6,
