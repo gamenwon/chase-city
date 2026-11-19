@@ -43,6 +43,10 @@ export class Simulation {
     // unless told otherwise).
     this.missionId = options.mission || "survival60";
     this.vehicleId = options.vehicle;
+    // Day or night: picked at random for every run (50/50), unless fixed
+    // (a development override). Visual only, and drawn with Math.random,
+    // never the game's own random source, so gameplay is not affected.
+    this.fixedTimeOfDay = options.timeOfDay === "day" || options.timeOfDay === "night" ? options.timeOfDay : null;
     // Destruction for the result screen, counted as city events happen.
     this.onCityEvent = (e) => recordCityEvent(this.tally, e);
     this.reset();
@@ -73,6 +77,7 @@ export class Simulation {
   }
   reset(missionId = this.missionId, vehicleId = this.vehicleId) {
     this.runNumber++;
+    this.timeOfDay = this.fixedTimeOfDay ?? (Math.random() < 0.5 ? "day" : "night");
     this.missionId = missionId;
     this.vehicleId = vehicleId;
     const missionRules = getMission(missionId).rules;

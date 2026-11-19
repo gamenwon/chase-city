@@ -41,6 +41,9 @@ const ui = new Interface(),
     cityProfile: profile,
     mission: firstMission,
     vehicle: progress.selectedVehicle,
+    // Test override (this preview page only, like ?debug in development):
+    // ?tod=day or ?tod=night fixes the time of day.
+    timeOfDay: new URLSearchParams(location.search).get("tod"),
   });
 // Development builds (or ?adtest) show the ad buttons disabled as "not
 // connected" so the layout can be checked; production hides them until the
@@ -76,6 +79,11 @@ try {
   sim.cameraRig = renderer.cameraRig;
   // LOCATIONS: build the three locations and their destruction.
   locations = new LocationsRuntime(renderer.scene, sim, renderer);
+  // Night: the park and yard lamps light up too.
+  renderer.extraLamps = () =>
+    locations.items
+      .filter((it) => (it.kind === "lampPole" || it.kind === "lamp") && it.state === "stand")
+      .map((it) => ({ x: it.spec.x, z: it.spec.z, y: (it.spec.y ?? 0.4) + (it.kind === "lamp" ? 3.95 : 6.4), ground: (it.spec.y ?? 0.4) - 0.2 }));
   sim.cameraRig.update(sim.player, 0);
 } catch (error) {
   document.querySelector("#message").textContent =

@@ -34,6 +34,8 @@ const ui = new Interface(),
     cityProfile: profile,
     mission: firstMission,
     vehicle: progress.selectedVehicle,
+    // Development only: ?tod=day or ?tod=night fixes the time of day.
+    timeOfDay: import.meta.env.DEV ? new URLSearchParams(location.search).get("tod") : null,
   });
 // Development builds (or ?adtest) show the ad buttons disabled as "not
 // connected" so the layout can be checked; production hides them until the

@@ -11,6 +11,7 @@ import { ExplosionEffects } from "./explosions.js";
 import { BonnetCamera } from "./pip.js";
 import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
+import { NightLights, NIGHT } from "./night.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -39,7 +40,8 @@ export class CityRenderer {
     this.cameraRig = new ChaseCamera(innerWidth, innerHeight);
     this.camera = this.cameraRig.camera;
     // Clear, warm sun with readable shadows; neutral fill.
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x5f5a58, 1.35));
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x5f5a58, 1.35);
+    this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xfff2e0, 3.3);
     sun.position.set(-45, 90, 35);
     sun.castShadow = true;
@@ -167,6 +169,19 @@ export class CityRenderer {
       this.addPoliceCar(),
     );
     this.occlusion = new BuildingOcclusion(this.buildings);
+    // Day / night (night.js): the day look is the scene as built.
+    this.night = new NightLights(this.scene, layout);
+    this.dayLook = {
+      sky: new THREE.Color(theme.sky),
+      hemiSky: this.hemi.color.clone(),
+      hemiGround: this.hemi.groundColor.clone(),
+      hemi: this.hemi.intensity,
+      sun: this.sun.color.clone(),
+      sunIntensity: this.sun.intensity,
+      exposure: this.renderer.toneMappingExposure,
+    };
+    this.tod = "day";
+    this.nightFlash = 0;
     // Every explosion that goes off near the player shakes the camera; the
     // links of a chain reaction each add their own kick.
     // Bigger blasts (a fuel island, a major one) hit harder and further.
@@ -180,6 +195,8 @@ export class CityRenderer {
         (0.45 + 0.15 * Math.min(event.chainDepth || 0, 2)) *
         Math.min(1.8, Math.pow(scale, 0.7));
       if (kick > 0) this.cameraRig.kick(kick);
+      // At night a blast lights up the street for a moment.
+      if (this.tod === "night") this.nightFlash = Math.max(this.nightFlash, Math.min(1.2, 0.35 + scale * 0.25) * Math.max(0, 1 - distance / 70));
     });
     this.trails = new VehicleTrails(this.scene);
     this.wreckRenderer = new WreckRenderer(this.scene);
@@ -351,6 +368,12 @@ export class CityRenderer {
       }
     this.wreckRenderer.update(sim, this.camera);
     this.occlusion.update(this.camera.position, p, dt);
+    if ((sim.timeOfDay || "day") !== this.tod) this.applyTimeOfDay(sim.timeOfDay || "day");
+    if (this.tod === "night") {
+      this.night.update(sim, this.buildings, this.camera, this.extraLamps);
+      this.nightFlash *= Math.exp(-dt * 5);
+      this.hemi.intensity = NIGHT.hemi + this.nightFlash * 1.6;
+    }
     if (running) this.sampleMetrics(sim, dt);
     this.cameraRig.withShake(dt, sim.elapsed, () =>
       this.renderer.render(this.scene, this.camera),
@@ -425,6 +448,40 @@ export class CityRenderer {
     if (nearest < 35) this.screenMetrics.chaseSeconds += duration;
     if (active.some((c) => this.cameraRig.visible(c, this.buildings)))
       this.screenMetrics.policeVisibleSeconds += duration;
+  }
+  // DAY: the scene as built (bright, colourful). NIGHT: dark blue sky and
+  // fog, a cool moonlight that keeps every shape readable, glowing signs,
+  // and the cheap night lights (night.js). Switched only between runs.
+  applyTimeOfDay(tod) {
+    this.tod = tod;
+    const night = tod === "night", d = this.dayLook;
+    const sky = night ? new THREE.Color(NIGHT.sky) : d.sky;
+    this.renderer.setClearColor(sky);
+    this.scene.fog.color.copy(sky);
+    this.hemi.color.set(night ? NIGHT.hemiSky : d.hemiSky);
+    this.hemi.groundColor.set(night ? NIGHT.hemiGround : d.hemiGround);
+    this.hemi.intensity = night ? NIGHT.hemi : d.hemi;
+    this.sun.color.set(night ? NIGHT.moon : d.sun);
+    this.sun.intensity = night ? NIGHT.moonIntensity : d.sunIntensity;
+    this.renderer.toneMappingExposure = night ? NIGHT.exposure : d.exposure;
+    this.nightFlash = 0;
+    this.night.setOn(night);
+    // Signs and textured boards glow with their own picture at night;
+    // emissive parts (police light bars, lamp heads) glow harder.
+    this.scene.traverse((o) => {
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      for (const m of mats) {
+        if (!m || !("emissive" in m)) continue;
+        if (m.userData.dayEmissive === undefined) m.userData.dayEmissive = m.emissiveIntensity;
+        if (m.map && !m.userData.sign) m.userData.sign = true;
+        if (m.userData.sign) {
+          m.emissiveMap = night ? m.map : null;
+          m.emissive.set(night ? 0xffffff : 0x000000);
+          m.emissiveIntensity = night ? 0.75 : m.userData.dayEmissive;
+          m.needsUpdate = true;
+        } else if (m.emissive.getHex() !== 0) m.emissiveIntensity = m.userData.dayEmissive * (night ? 1.8 : 1);
+      }
+    });
   }
   reset() {
     this.roadEvents.reset();
