@@ -17,6 +17,7 @@ export class WaterJets {
       const m = new THREE.InstancedMesh(geo, mat, n);
       m.count = 0;
       m.frustumCulled = false;
+      m.visible = false; // no draw call until a hydrant breaks
       scene.add(m);
       return m;
     };
@@ -42,12 +43,15 @@ export class WaterJets {
     this.counts = { jets: 0, drops: 0 };
   }
   reset() {
-    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet]) m.count = 0;
+    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet]) {
+      m.count = 0;
+      m.visible = false;
+    }
   }
   update(city, now, camera) {
     const jets = city?.jets || [];
     if (!jets.length) {
-      if (this.columns.count) this.reset();
+      if (this.columns.visible) this.reset();
       return;
     }
     let nd = 0, nr = 0;
@@ -90,7 +94,10 @@ export class WaterJets {
     this.columns.count = this.cores.count = this.wet.count = n;
     this.drops.count = nd;
     this.rings.count = nr;
-    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet]) m.instanceMatrix.needsUpdate = true;
+    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet]) {
+      m.instanceMatrix.needsUpdate = true;
+      m.visible = m.count > 0;
+    }
     this.counts = { jets: n, drops: nd };
   }
 }
