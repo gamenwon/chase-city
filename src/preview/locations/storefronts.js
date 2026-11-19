@@ -51,13 +51,9 @@ function awning(g) {
   const z = 3.5;
   const a = G(g, -0.3, BASE + 2.62, z + 0.04);
   a.rotation.x = 0.42;
-  for (let i = 0; i < 10; i++) B(a, 0.58, 0.05, 0.62, i % 2 ? 0xffffff : 0xb9b9b9, -2.61 + i * 0.58, 0, 0);
-  // Scalloped valance along the front edge.
-  for (let i = 0; i < 10; i++) B(a, 0.56, 0.2, 0.03, i % 2 ? 0xb9b9b9 : 0xffffff, -2.61 + i * 0.58, -0.2, 0.31);
-  for (const s of [-1, 1]) {
-    const arm = B(g, 0.04, 0.04, 0.62, 0x6b6e75, -0.3 + s * 2.85, BASE + 2.42, z + 0.33);
-    arm.rotation.x = 0.42;
-  }
+  // Five wide stripes (kept cheap: ~200 shops carry one), a valance strip.
+  for (let i = 0; i < 5; i++) B(a, 1.16, 0.05, 0.62, i % 2 ? 0xb9b9b9 : 0xffffff, -2.32 + i * 1.16, 0, 0);
+  B(a, 5.8, 0.2, 0.03, 0xd6d6d6, 0, -0.2, 0.31);
 }
 // The awning torn down: hanging from one bracket to the pavement, the
 // canvas ripped in two, the frame bent, scraps blown out on the pavement.
