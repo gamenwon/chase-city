@@ -15,7 +15,7 @@ import {
   WRECK_LIFT,
   WRECK_ROLL,
 } from "../src/render/wrecks.js";
-import { ExplosionEffects, explosionScale, smokeSeconds, chunkCount } from "../src/render/explosions.js";
+import { ExplosionEffects, explosionScale, smokeSeconds, chunkCount, SEE_THROUGH } from "../src/render/explosions.js";
 import { ChaseCamera } from "../src/render/camera.js";
 
 const empty = () => {
@@ -312,4 +312,37 @@ test("a new explosion next to an old wreck makes its fire flare up and throw spa
   s.elapsed = 30;
   r.update(s, camera);
   assert.ok(slot.flames[0].scale.x < flaring, "flare settles back down");
+});
+
+test("smoke hiding the player turns see-through smoothly; elsewhere it stays opaque", () => {
+  const scene = new THREE.Scene(),
+    fx = new ExplosionEffects(scene);
+  const camera = { x: 0, y: 30, z: 30 };
+  const car = { x: 0, z: 0 };
+  // One blast on the camera-to-car line, one well off to the side.
+  const events = [
+    { id: 1, type: "explosion", x: 0, z: 9, time: 1, delay: 0 },
+    { id: 2, type: "explosion", x: 30, z: -20, time: 1, delay: 0 },
+  ];
+  fx.setViewers(camera, [car]);
+  fx.update(events, 1);
+  const [hiding, clear] = fx.columns;
+  let previous = 1, steps = 0;
+  for (let t = 1; t < 4; t += 1 / 30) {
+    fx.update(events, t);
+    // Smooth: never jumps by more than a fraction per frame.
+    assert.ok(previous - hiding.alpha < 0.25);
+    previous = hiding.alpha;
+    steps++;
+  }
+  assert.ok(steps > 60);
+  assert.equal(hiding.alpha, SEE_THROUGH);
+  assert.equal(clear.alpha, 1);
+  assert.ok(fx.counts.seeThrough > 0);
+  assert.ok(fx.counts.smoke > fx.counts.seeThrough); // the other column is still opaque
+  // The car drives away: the smoke fills back in.
+  car.x = -40;
+  for (let t = 4; t < 6; t += 1 / 30) fx.update(events, t);
+  assert.equal(hiding.alpha, 1);
+  assert.equal(fx.counts.seeThrough, 0);
 });

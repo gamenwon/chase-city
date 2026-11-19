@@ -298,6 +298,13 @@ export class CityRenderer {
     this.cityLife.update(sim.city, sim, this.camera, dt, (k) =>
       this.cameraRig.kick(k),
     );
+    // Smoke that hides the player or a nearby police car turns see-through.
+    this.effects.setViewers(this.camera.position, [
+      p,
+      ...sim.police.filter(
+        (c) => c.state === "active" && Math.abs(c.x - p.x) < 45 && Math.abs(c.z - p.z) < 45,
+      ),
+    ]);
     this.effects.update(sim.events, sim.elapsed);
     if (sim.cameraRig !== this.cameraRig || !running)
       this.cameraRig.update(p, dt);

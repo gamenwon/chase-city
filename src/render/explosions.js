@@ -124,6 +124,9 @@ class Pool {
   }
 }
 
+// Opacity of each puff of a column that hides a car.
+export const SEE_THROUGH = 0.1;
+
 const dummy = new THREE.Object3D();
 const tint = new THREE.Color();
 const tint2 = new THREE.Color();
@@ -176,6 +179,31 @@ export class ExplosionEffects {
       new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }),
       1600,
     );
+    // The same smoke, see-through: puffs of a column that is hiding the
+    // player (or a police car) are drawn here instead, with a per-puff
+    // alpha (like buildings the car passes behind), never sorted, no depth
+    // writes. Unhidden smoke stays opaque and dense above.
+    const fadeMaterial = new THREE.MeshLambertMaterial({
+      color: 0xffffff,
+      flatShading: true,
+      transparent: true,
+      depthWrite: false,
+    });
+    fadeMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nattribute float aAlpha;\nvarying float vAlpha;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvAlpha = aAlpha;");
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nvarying float vAlpha;")
+        .replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( diffuse, opacity * vAlpha );");
+    };
+    this.smokeFade = new Pool(scene, smokePuff, fadeMaterial, 1600);
+    this.fadeAlpha = new THREE.InstancedBufferAttribute(new Float32Array(1600), 1);
+    this.fadeAlpha.setUsage(THREE.DynamicDrawUsage);
+    this.smokeFade.mesh.geometry = smokePuff.clone();
+    this.smokeFade.mesh.geometry.setAttribute("aAlpha", this.fadeAlpha);
+    this.smokeFade.mesh.renderOrder = 2;
+    this.viewers = null;
     // Flying chunks (land into the debris field above).
     this.chunks = new Pool(
       scene,
@@ -209,9 +237,15 @@ export class ExplosionEffects {
       glow: this.glow.items.length,
       smoke: this.smoke.items.length,
       chunks: this.chunks.items.length,
-      columns: this.columns.length,
+      columns: this.columns.filter((c) => (this.now ?? 0) <= c.until).length,
+      seeThrough: this.smokeFade.mesh.count,
       debris: this.debris.total,
     };
+  }
+  // Where the camera is and which cars must stay visible (the player and
+  // the police near it): set by the renderer each frame.
+  setViewers(camera, targets) {
+    this.viewers = { camera, targets };
   }
   spawn(event) {
     this.pending.push({ event, at: event.time + (event.delay || 0) });
@@ -269,6 +303,13 @@ export class ExplosionEffects {
         rx: R() * 6, ry: R() * 6, spin: 8, ember: true,
       });
     }
+    // The smoke column (emits in emitColumns) is created first so the dust
+    // ring belongs to it too (for the see-through check).
+    const column = {
+      x, z, s, born: now, until: now + smokeSeconds(s),
+      fireUntil: now + (s >= 2.2 ? 12 : 4),
+      acc: 0, fireAcc: 0, alpha: 1,
+    };
     // 3. Shockwave: a fast flat ring and a dust ring rolling outwards.
     this.rings.push({ x, z, born: now, life: 0.38, radius: 9 * s, mesh: null });
     const nDust = Math.round(14 * Math.sqrt(s));
@@ -281,6 +322,7 @@ export class ExplosionEffects {
         born: now, life: 1.6 + R() * 0.8,
         s0: 0.6 * Math.sqrt(s), s1: 1.6 * Math.sqrt(s), drag: 3.2, lift: 0,
         c0: 0x8d8478, c1: 0x6f6a64, rx: R() * 6, ry: R() * 6, spin: 1,
+        col: column,
       });
     }
     // 4. Chunks: up and out, spinning; they land and stay (debris field).
@@ -303,20 +345,17 @@ export class ExplosionEffects {
     // 5. Smoke column: thick dark plumes keep rolling up long after the
     // fire (a car 14 s, a fuel island 45 s, a major blast over a minute),
     // with flames licking at the base for the first part.
-    const seconds = smokeSeconds(s);
-    this.columns.push({
-      x, z, s, born: now, until: now + seconds,
-      fireUntil: now + (s >= 2.2 ? 12 : 4),
-      acc: 0, fireAcc: 0,
-    });
+    this.columns.push(column);
   }
   emitColumns(now, dt) {
     const R = () => Math.random();
     for (const c of [...this.columns]) {
-      if (now > c.until) {
+      if (now > c.until + 12) {
+        // Its last puffs have gone: forget it.
         this.columns.splice(this.columns.indexOf(c), 1);
         continue;
       }
+      if (now > c.until) continue;
       const age = now - c.born,
         left = (c.until - now) / (c.until - c.born);
       // Dense at first, thinning out towards the end.
@@ -345,6 +384,7 @@ export class ExplosionEffects {
           drag: 0.4, lift: 0.3,
           c0: 0x1e1c1f, c1: 0x4b484d,
           rx: R() * 6, ry: R() * 6, spin: (R() - 0.5) * 0.6,
+          col: c,
         });
       }
       if (now < c.fireUntil) {
@@ -379,7 +419,9 @@ export class ExplosionEffects {
         this.pending.splice(this.pending.indexOf(p), 1);
         this.start(p.event, time);
       }
+    this.now = time;
     if (dt > 0) this.emitColumns(time, dt);
+    this.seeThrough(time, dt);
     this.stepFire(time, dt);
     this.stepGlow(time);
     this.stepSmoke(time, dt);
@@ -445,10 +487,58 @@ export class ExplosionEffects {
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }
+  // Does a smoke column stand between the camera and a car that must stay
+  // visible? One cheap test per column and car (never per puff): the
+  // column is a cylinder drifting with the breeze as it rises, plus its low
+  // dust ring while fresh; the camera-to-car line is sampled from the car
+  // up to the column's top (where smoke can hide it). A hiding column fades to SEE_THROUGH and
+  // back, smoothly (no flicker).
+  seeThrough(now, dt) {
+    const v = this.viewers;
+    for (const c of this.columns) {
+      let hides = false;
+      if (v?.camera && v.targets?.length) {
+        const age = now - c.born,
+          rs = Math.sqrt(c.s);
+        const radius = 1.3 + 1.7 * rs,
+          top = Math.min(4 + age * 3.2, 26 + 4 * c.s);
+        const cam = v.camera;
+        for (const car of v.targets) {
+          if (!car) continue;
+          // Far away from both: skip at once.
+          if (Math.abs(car.x - c.x) > 40 || Math.abs(car.z - c.z) > 40) continue;
+          // Sample the line of sight by height, from the car's roof up to
+          // the top of the column (the camera itself is far above).
+          const uTop = Math.min(1, (top - 0.8) / Math.max(1, cam.y - 0.8));
+          for (let i = 1; i <= 10 && !hides; i++) {
+            const u = (uTop * i) / 10;
+            const px = car.x + (cam.x - car.x) * u,
+              py = 0.8 + (cam.y - 0.8) * u,
+              pz = car.z + (cam.z - car.z) * u;
+            // Column axis at that height (breeze drift as it rises).
+            const ax = c.x + py * 0.2,
+              az = c.z + py * 0.1;
+            const ring = age < 2.5 && py < 2.2 ? 7 * rs : 0;
+            if (Math.hypot(px - ax, pz - az) < Math.max(radius, ring)) hides = true;
+          }
+          // The car right inside the base of the cloud.
+          if (!hides && Math.hypot(car.x - c.x, car.z - c.z) < radius * 0.9) hides = true;
+          if (hides) break;
+        }
+      }
+      c.hides = hides;
+      // Low per puff: several overlap along the line of sight.
+      const target = hides ? SEE_THROUGH : 1;
+      c.alpha += (target - c.alpha) * (1 - Math.exp(-6 * dt));
+      if (Math.abs(c.alpha - target) < 0.01) c.alpha = target;
+    }
+  }
   stepSmoke(now, dt) {
     const pool = this.smoke,
-      mesh = pool.mesh;
-    let n = 0;
+      mesh = pool.mesh,
+      fade = this.smokeFade.mesh;
+    let n = 0,
+      nf = 0;
     const keep = [];
     for (const p of pool.items) {
       const t = now - p.born;
@@ -471,15 +561,30 @@ export class ExplosionEffects {
       dummy.rotation.set(p.rx + t * p.spin, p.ry + t * p.spin * 0.6, 0);
       dummy.scale.setScalar(Math.max(0.01, size));
       dummy.updateMatrix();
-      mesh.setMatrixAt(n, dummy.matrix);
       tint.set(p.c0).lerp(tint2.set(p.c1), Math.min(1, f * 1.3));
-      mesh.setColorAt(n, tint);
-      n++;
+      const alpha = p.col ? p.col.alpha : 1;
+      if (alpha < 0.99) {
+        // Part of a column hiding a car: drawn see-through.
+        fade.setMatrixAt(nf, dummy.matrix);
+        fade.setColorAt(nf, tint);
+        this.fadeAlpha.array[nf] = alpha;
+        nf++;
+      } else {
+        mesh.setMatrixAt(n, dummy.matrix);
+        mesh.setColorAt(n, tint);
+        n++;
+      }
     }
     pool.items = keep;
     mesh.count = n;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    fade.count = nf;
+    if (nf) {
+      fade.instanceMatrix.needsUpdate = true;
+      fade.instanceColor.needsUpdate = true;
+      this.fadeAlpha.needsUpdate = true;
+    }
   }
   stepChunks(now, dt) {
     const pool = this.chunks,
@@ -554,7 +659,7 @@ export class ExplosionEffects {
     this.rings = [];
     this.pending = [];
     this.columns = [];
-    for (const pool of [this.fire, this.glow, this.smoke, this.chunks]) pool.clear();
+    for (const pool of [this.fire, this.glow, this.smoke, this.smokeFade, this.chunks]) pool.clear();
     this.debris.reset();
     this.lastEvent = 0;
     this.lastTime = null;
