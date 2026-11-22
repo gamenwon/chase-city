@@ -82,6 +82,8 @@ try {
     theme: startMap.theme,
   });
   sim.cameraRig = renderer.cameraRig;
+  // Explosions throw the loose street furniture too.
+  sim.blastListeners = [(s, e, R, k) => renderer.furniture?.blast(s, e, R, k)];
   sim.cameraRig.update(sim.player, 0);
 } catch (error) {
   document.querySelector("#message").textContent =
@@ -331,6 +333,7 @@ function frame(ms) {
     accumulator += dt;
     while (accumulator >= 1 / 60) {
       sim.update(1 / 60, input);
+      renderer?.furniture?.step(sim, 1 / 60);
       accumulator -= 1 / 60;
       if (sim.result) {
         state = "over";

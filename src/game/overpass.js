@@ -18,6 +18,7 @@
 // sides). A car going up a ramp to the broken edge drops off it onto the
 // street below and drives on: never trapped.
 import { overpassHeight } from "../world/citygen.js";
+import { makePath, project, pointAt } from "./citygraph.js";
 
 export const PILLAR = Object.freeze({ health: 100, hitMin: 5, hitScale: 3.4, collapseAt: 2, fall: 1.1 });
 
@@ -38,10 +39,22 @@ export function pillarSolids(sim) {
   for (const op of sim.overpasses || []) out.push(...op.debris.filter((d) => d.solid));
   return out;
 }
-function local(op, x, z) {
-  const dx = x - op.a.x, dz = z - op.a.z;
-  return { s: dx * op.u.x + dz * op.u.z, lat: dx * op.n.x + dz * op.n.z };
+// Position along the elevated road (s from its first foot) and sideways
+// from its centre line (lat, + to the left), along a straight or curved
+// road. Beyond either end, s runs on along the end's direction.
+const pathCache = new WeakMap();
+export function overpassLocal(op, x, z) {
+  let path = pathCache.get(op);
+  if (!path) pathCache.set(op, (path = makePath(op.pts || [op.a, { x: op.a.x + op.u.x * op.L, z: op.a.z + op.u.z * op.L }])));
+  const before = (x - op.a.x) * op.u.x + (z - op.a.z) * op.u.z;
+  if (before < 0) return { s: before, lat: (x - op.a.x) * -op.u.z + (z - op.a.z) * op.u.x };
+  const end = op.end || pointAt(path, path.len), ue = op.uEnd || op.u;
+  const after = (x - end.x) * ue.x + (z - end.z) * ue.z;
+  if (after > 0) return { s: path.len + after, lat: (x - end.x) * -ue.z + (z - end.z) * ue.x };
+  const pr = project(path, x, z), q = pointAt(path, pr.s);
+  return { s: pr.s, lat: (x - q.x) * -q.uz + (z - q.z) * q.ux, ux: q.ux, uz: q.uz };
 }
+const local = overpassLocal;
 const onDeckSection = (op, s) => s > op.R - 0.4 && s < op.L - op.R + 0.4;
 
 // Level changes and the deck's side walls for one body. Returns true if
@@ -69,23 +82,28 @@ export function constrainLevels(sim, body, radius) {
       body.y = overpassHeight(op, s);
       const lim = op.W / 2 - radius;
       if (Math.abs(lat) > lim) {
+        // The parapet: back inside, the speed into it taken away.
+        const loc = local(op, body.x, body.z);
+        const nx = -(loc.uz ?? op.u.z), nz = loc.ux ?? op.u.x;
         const back = Math.abs(lat) - lim;
         const sg = Math.sign(lat);
-        body.x -= op.n.x * sg * back;
-        body.z -= op.n.z * sg * back;
-        const vn = body.vx * op.n.x + body.vz * op.n.z;
+        body.x -= nx * sg * back;
+        body.z -= nz * sg * back;
+        const vn = body.vx * nx + body.vz * nz;
         if (vn * sg > 0) {
           body.lastImpact = Math.max(body.lastImpact || 0, Math.abs(vn));
-          body.vx -= op.n.x * vn;
-          body.vz -= op.n.z * vn;
+          body.vx -= nx * vn;
+          body.vz -= nz * vn;
         }
         return true;
       }
       return false;
     }
     if ((body.level || 0) === 0 && !body.falling && Math.abs(lat) < op.W / 2 - 0.3) {
-      const along = (body.vx || 0) * op.u.x + (body.vz || 0) * op.u.z;
-      if ((s >= 0 && s <= 2.6 && along > 0.5) || (s >= op.L - 2.6 && s <= op.L && along < -0.5)) {
+      // Onto a ramp at either foot, driving up it.
+      const ue = op.uEnd || op.u;
+      const up1 = (body.vx || 0) * op.u.x + (body.vz || 0) * op.u.z, up2 = -((body.vx || 0) * ue.x + (body.vz || 0) * ue.z);
+      if ((s >= 0 && s <= 2.6 && up1 > 0.5) || (s >= op.L - 2.6 && s <= op.L && up2 > 0.5)) {
         body.level = 1;
         body.op = op.id;
         body.y = overpassHeight(op, s);
@@ -100,6 +118,8 @@ export const sameLevel = (a, b) => (a.level || 0) === (b.level || 0);
 // A car that hit a pillar: damage by closing speed and mass.
 export function hitPillar(sim, pillar, impact, mass = 1) {
   if (!pillar.alive || impact < PILLAR.hitMin) return;
+  // (Map quality pass: the elevated road does not come down for now.)
+  if (sim.overpasses[pillar.op]?.destructible === false) return;
   pillar.health -= (impact - PILLAR.hitMin * 0.5) * PILLAR.hitScale * mass;
   sim.impacts?.push({ id: ++sim.impactId, type: "collision", x: pillar.x, z: pillar.z, strength: impact, kind: "pillar", time: sim.elapsed });
   if (pillar.health <= 0) breakPillar(sim, pillar);
@@ -119,7 +139,7 @@ export function breakPillar(sim, pillar) {
 export function blastPillars(sim, e, R, s) {
   for (const op of sim.overpasses || [])
     for (const q of op.pillars) {
-      if (!q.alive) continue;
+      if (!q.alive || op.destructible === false) continue;
       const d = Math.hypot(q.x - e.x, q.z - e.z);
       if (d < R) {
         q.health -= 85 * (1 - d / R) * s;

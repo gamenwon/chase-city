@@ -1,163 +1,140 @@
-// V2.1 elevated road drawing (game/overpass.js): concrete embankments
-// under the low part of each ramp, sloped ramp slabs, the deck in two
-// halves (so it can break in the middle), parapets, lane lines and the
-// four pillars. Pillars darken as they are damaged and leave a stump when
-// they go. When the deck comes down its halves drop and settle, broken
-// and tilted, on the street below, where they stay; concrete chunks lie
-// at the sides.
+// Elevated road drawing (map quality pass): the deck and its ramps follow
+// the road's polyline (straight or curved), sampled every 2 m, with eased
+// ramps; under the low end of each ramp a solid embankment (where cars
+// cannot pass under), parapets both sides, a dashed centre line, and
+// pillars with cap beams in the avenue's median. Deck, ramps and parapets
+// are one merged mesh; it turns see-through when it hides the player
+// driving underneath. (No collapse in this phase.)
 import * as THREE from "three";
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { overpassHeight } from "../world/citygen.js";
-import { PILLAR } from "../game/overpass.js";
+import { overpassHeight, OVERPASS } from "../world/citygen.js";
+import { makePath, pointAt } from "../game/citygraph.js";
+import { overpassLocal } from "../game/overpass.js";
 
-const CONCRETE = 0xc9c5bd, SIDE = 0xa9a39a, PARAPET = 0xe9e5dd, LINE = 0xf2b705;
-const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, flatShading: true });
+const CONCRETE = 0xcac6be, SIDE = 0xa8a299, PARAPET = 0xe9e5dd, LINE = 0xf2b705, UNDER = 0x8d877f;
+
+// Flat-coloured triangles into position/colour arrays.
+function quad(pos, col, a, b, c, d, hex) {
+  const k = new THREE.Color(hex);
+  for (const p of [a, b, c, a, c, d]) {
+    pos.push(p[0], p[1], p[2]);
+    col.push(k.r, k.g, k.b);
+  }
+}
+function geometry(pos, col) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return g;
+}
 
 export class OverpassRenderer {
   constructor(scene) {
     this.scene = scene;
     this.items = [];
-    this.mats = { concrete: mat(CONCRETE), side: mat(SIDE), parapet: mat(PARAPET), line: mat(LINE), rubble: mat(0x9c968d) };
-    this.merged = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    this.deckMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true, side: THREE.DoubleSide });
+    this.pillarMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    this.opacity = 1;
   }
   setLayout(layout) {
-    for (const it of this.items) {
-      if (it.rubble) this.scene.remove(it.rubble);
-      this.scene.remove(it.group);
-      it.group.traverse((o) => {
-        o.geometry?.dispose();
-        if (o.material && !Object.values(this.mats).includes(o.material)) o.material.dispose();
-      });
+    for (const it of this.items) for (const m of it.meshes) {
+      this.scene.remove(m);
+      m.geometry.dispose();
     }
     this.items = (layout.overpasses || []).map((op) => this.build(op));
-  }
-  box(parent, w, h, d, m, x, y, z) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
-  }
-  // Fold every plain box under `group` into one vertex-coloured mesh (one
-  // draw call), keeping the group's own transform.
-  merge(group) {
-    group.updateMatrixWorld(true);
-    const inv = group.matrixWorld.clone().invert();
-    const parts = [];
-    const drop = [];
-    group.traverse((o) => {
-      if (!o.isMesh || o.userData.keep) return;
-      const g = o.geometry.clone().toNonIndexed();
-      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
-      const c = o.material.color, n = g.attributes.position.count, a = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3);
-      g.setAttribute("color", new THREE.BufferAttribute(a, 3));
-      g.deleteAttribute("uv");
-      parts.push(g);
-      drop.push(o);
-    });
-    for (const o of drop) {
-      o.parent.remove(o);
-      o.geometry.dispose();
-    }
-    for (const c of [...group.children]) if (c.isGroup && !c.children.length) group.remove(c);
-    if (!parts.length) return;
-    const mesh = new THREE.Mesh(mergeGeometries(parts), this.merged);
-    parts.forEach((g) => g.dispose());
-    mesh.castShadow = mesh.receiveShadow = true;
-    group.add(mesh);
+    this.opacity = 1;
+    this.applyOpacity(1);
   }
   build(op) {
-    const g = new THREE.Group();
-    g.position.set(op.a.x, 0, op.a.z);
-    g.rotation.y = Math.atan2(-op.u.z, op.u.x); // local x along u, local z along n
-    this.scene.add(g);
-    const { L, R, H, W } = op;
-    const T = 0.55; // slab thickness
-    // Embankments under the low part of each ramp (solid in the game).
-    const s1 = (4.3 / H) * R;
-    for (const end of [0, 1])
-      for (let k = 0; k < 5; k++) {
-        const a = (k / 5) * s1, b = ((k + 1) / 5) * s1, h = overpassHeight(op, (a + b) / 2) - 0.1;
-        if (h <= 0.05) continue;
-        const sx = end ? L - (a + b) / 2 : (a + b) / 2;
-        this.box(g, b - a + 0.02, h, op.groundWidth, this.mats.side, sx, h / 2, 0);
+    const path = makePath(op.pts || [op.a, { x: op.a.x + op.u.x * op.L, z: op.a.z + op.u.z * op.L }]);
+    const W = op.W, T = 0.7;
+    const solidTo = (() => { for (let s = 0; s < op.R; s += 0.25) if (overpassHeight(op, s) >= OVERPASS.clear) return s; return op.R; })();
+    // Samples: every 2 m plus every polyline vertex (corners exact).
+    const ss = new Set([0, path.len]);
+    for (let s = 0; s < path.len; s += 2) ss.add(s);
+    for (const c of path.cum) ss.add(c);
+    const S = [...ss].sort((a, b) => a - b);
+    const P = S.map((s) => {
+      const q = pointAt(path, Math.min(s, path.len - 1e-6));
+      const h = overpassHeight(op, s);
+      // Under the low part of a ramp: solid down to the ground.
+      const solid = s <= solidTo || s >= path.len - solidTo;
+      return { s, x: q.x, z: q.z, nx: -q.uz, nz: q.ux, top: h + 0.02, bot: solid ? 0.02 : Math.max(0.02, h - T) };
+    });
+    const pos = [], col = [];
+    const pt = (p, lat, y) => [p.x + p.nx * lat, y, p.z + p.nz * lat];
+    for (let i = 1; i < P.length; i++) {
+      const a = P[i - 1], b = P[i];
+      // Deck top, underside, sides.
+      quad(pos, col, pt(a, -W / 2, a.top), pt(b, -W / 2, b.top), pt(b, W / 2, b.top), pt(a, W / 2, a.top), CONCRETE);
+      quad(pos, col, pt(a, -W / 2, a.bot), pt(a, W / 2, a.bot), pt(b, W / 2, b.bot), pt(b, -W / 2, b.bot), UNDER);
+      for (const side of [-1, 1]) {
+        quad(pos, col, pt(a, (side * W) / 2, a.bot), pt(b, (side * W) / 2, b.bot), pt(b, (side * W) / 2, b.top), pt(a, (side * W) / 2, a.top), SIDE);
+        // Parapet (0.3 thick, 0.9 high) along the edge.
+        const o = side * (W / 2 - 0.15);
+        for (const d of [-0.15, 0.15]) quad(pos, col, pt(a, o + d, a.top), pt(b, o + d, b.top), pt(b, o + d, b.top + 0.9), pt(a, o + d, a.top + 0.9), PARAPET);
+        quad(pos, col, pt(a, o - 0.15, a.top + 0.9), pt(b, o - 0.15, b.top + 0.9), pt(b, o + 0.15, b.top + 0.9), pt(a, o + 0.15, a.top + 0.9), PARAPET);
       }
-    // Ramp slabs and their parapets.
-    const slope = Math.atan2(H, R), len = Math.hypot(R, H);
-    for (const end of [0, 1]) {
-      const r = new THREE.Group();
-      r.position.set(end ? L - R / 2 : R / 2, H / 2 - T / 2, 0);
-      r.rotation.z = end ? -slope : slope;
-      g.add(r);
-      this.box(r, len, T, W, this.mats.concrete, 0, 0, 0);
-      for (const side of [-1, 1]) this.box(r, len, 0.9, 0.3, this.mats.parapet, 0, 0.7, side * (W / 2 - 0.15));
-      this.box(r, len * 0.9, 0.02, 0.15, this.mats.line, 0, T / 2 + 0.01, 0);
+      // Dashed centre line.
+      if (Math.floor(a.s / 3) % 2 === 0) quad(pos, col, pt(a, -0.08, a.top + 0.015), pt(b, -0.08, b.top + 0.015), pt(b, 0.08, b.top + 0.015), pt(a, 0.08, a.top + 0.015), LINE);
     }
-    // Deck halves (each with its parapets and line), pivot at their middle.
-    const span = L - 2 * R, half = span / 2;
-    const halves = [R + half / 2, L - R - half / 2].map((cx, k) => {
-      const h = new THREE.Group();
-      h.position.set(cx, H - T / 2, 0);
-      g.add(h);
-      this.box(h, half - 0.05, T, W, this.mats.concrete, 0, 0, 0);
-      this.box(h, half - 0.05, 0.25, W - 0.6, this.mats.side, 0, -T / 2 - 0.12, 0);
-      for (const side of [-1, 1]) this.box(h, half - 0.05, 0.9, 0.3, this.mats.parapet, 0, 0.7, side * (W / 2 - 0.15));
-      for (let x = -half / 2 + 1; x < half / 2 - 1; x += 3) this.box(h, 1.6, 0.02, 0.15, this.mats.line, x, T / 2 + 0.01, 0);
-      return { group: h, home: { x: cx, y: H - T / 2 }, k };
-    });
-    // Pillars (own material each: they darken with damage).
-    const pillars = op.pillars.map((q) => {
-      const s = q.s, lat = q.side * (W / 2 - 0.6);
-      const m = this.box(g, q.w, H - T, q.d, mat(CONCRETE), s, (H - T) / 2, lat);
-      const stump = this.box(g, q.w * 1.1, 0.7, q.d * 1.1, this.mats.rubble, s, 0.35, lat);
-      m.userData.keep = stump.userData.keep = true;
-      stump.visible = false;
-      return { mesh: m, stump };
-    });
-    // One draw call per deck half and one for everything else static.
-    for (const h of halves) this.merge(h.group);
-    for (const h of halves) h.group.userData.keepGroup = true;
-    const statics = new THREE.Group();
-    g.add(statics);
-    for (const c of [...g.children]) if (c !== statics && !c.userData.keep && !halves.some((h) => h.group === c)) statics.add(c);
-    this.merge(statics);
-    return { op, group: g, halves, pillars, rubble: null };
+    // End faces of the solid embankments are at ground level (nothing to
+    // close). Pillars with a cap beam under the deck.
+    const pp = [], pc = [];
+    const box = (cx, cy, cz, w, h, d, ang, hex) => {
+      const g = new THREE.BoxGeometry(w, h, d);
+      g.rotateY(ang);
+      g.translate(cx, cy, cz);
+      const k = new THREE.Color(hex), arr = g.toNonIndexed();
+      const p = arr.attributes.position.array;
+      for (let i = 0; i < p.length; i += 3) {
+        pp.push(p[i], p[i + 1], p[i + 2]);
+        pc.push(k.r, k.g, k.b);
+      }
+      g.dispose();
+      arr.dispose();
+    };
+    for (const q of op.pillars) {
+      const loc = pointAt(path, q.s);
+      const h = overpassHeight(op, q.s) - T;
+      const ang = Math.atan2(loc.ux, loc.uz);
+      box(q.x, h / 2, q.z, q.w, h, q.d, ang, 0xbab5ac);
+      box(q.x, h - 0.35, q.z, W - 1.2, 0.7, 1.6, ang, 0xa8a299);
+      box(q.x, 0.25, q.z, q.w + 0.5, 0.5, q.d + 0.5, ang, 0x8d877f);
+    }
+    const deck = new THREE.Mesh(geometry(pos, col), this.deckMat);
+    deck.castShadow = deck.receiveShadow = true;
+    const meshes = [deck];
+    if (pp.length) {
+      const pil = new THREE.Mesh(geometry(pp, pc), this.pillarMat);
+      pil.castShadow = pil.receiveShadow = true;
+      meshes.push(pil);
+    }
+    for (const m of meshes) this.scene.add(m);
+    return { op, meshes };
   }
-  update(sim) {
-    for (const it of this.items) {
-      const live = sim.overpasses?.[it.op.id ?? 0] || sim.overpasses?.[0];
-      if (!live) continue;
-      live.pillars.forEach((q, i) => {
-        const p = it.pillars[i];
-        p.mesh.visible = q.alive;
-        p.stump.visible = !q.alive;
-        const k = Math.max(0, q.health) / PILLAR.health;
-        p.mesh.material.color.setHex(CONCRETE).lerp(new THREE.Color(0x5a554f), 1 - k);
-      });
-      // The deck coming down: each half drops (accelerating) and tips to
-      // its resting tilt on the street.
-      const t = live.state === "up" ? 0 : live.state === "down" ? 1 : Math.min(1, (sim.elapsed - live.fellAt) / PILLAR.fall);
-      const e = t * t;
-      for (const h of it.halves) {
-        const rest = { y: 0.4, tilt: h.k ? -0.1 : 0.12, roll: h.k ? 0.06 : -0.05 };
-        h.group.position.y = h.home.y + (rest.y - h.home.y) * e;
-        h.group.rotation.z = rest.tilt * e;
-        h.group.rotation.x = rest.roll * e;
-      }
-      if (live.state === "down" && !it.rubble) {
-        // Concrete chunks where they came to rest (world coordinates).
-        it.rubble = new THREE.Group();
-        this.scene.add(it.rubble);
-        for (const d of live.debris) {
-          const m = this.box(it.rubble, d.w, 1.1, d.d, this.mats.rubble, d.x, 0.55, d.z);
-          m.rotation.set(0.2, d.x * 0.7, 0.15);
-        }
-      }
-      if (live.state === "up" && it.rubble) {
-        this.scene.remove(it.rubble);
-        it.rubble = null;
-      }
+  applyOpacity(o) {
+    const m = this.deckMat, t = o < 0.999;
+    if (m.transparent !== t) {
+      m.transparent = t;
+      m.depthWrite = !t;
+      m.needsUpdate = true;
     }
+    m.opacity = o;
+  }
+  // The deck fades when the player drives underneath it.
+  update(sim, dt = 1 / 60) {
+    if (!this.items.length) return;
+    const p = sim.player;
+    let under = false;
+    if (!p.level)
+      for (const it of this.items) {
+        const loc = overpassLocal(it.op, p.x, p.z);
+        if (loc.s > 0 && loc.s < it.op.L && Math.abs(loc.lat) < it.op.W / 2 + 3 && overpassHeight(it.op, loc.s) > 2.2) under = true;
+      }
+    const want = under ? 0.32 : 1;
+    this.opacity += (want - this.opacity) * (1 - Math.exp(-dt * 8));
+    if (Math.abs(this.opacity - want) < 0.01) this.opacity = want;
+    this.applyOpacity(this.opacity);
   }
 }

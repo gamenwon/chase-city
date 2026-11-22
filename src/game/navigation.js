@@ -141,12 +141,27 @@ export class RoadNavigation {
         });
         continue;
       }
-      for (const p of resample(e.pts, 9)) {
+      // On a wide road whose middle is taken (a ramp or pillars of the
+      // elevated road), nodes go to the lanes either side instead.
+      const pts = resample(e.pts, 9);
+      let prevSet = [];
+      pts.forEach((p, k) => {
+        let set = [];
         const n = add(p.x, p.z);
-        if (n && prev) link(prev, n);
-        if (n) made.push(n);
-        prev = n;
-      }
+        if (n) set = [n];
+        else if (e.width >= 14) {
+          const a = pts[Math.max(0, k - 1)], b = pts[Math.min(pts.length - 1, k + 1)], L = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+          const nx = -(b.z - a.z) / L, nz = (b.x - a.x) / L, o = e.width / 2 - 2.6;
+          for (const sg of [1, -1]) {
+            const m = add(p.x + nx * o * sg, p.z + nz * o * sg);
+            if (m) set.push(m);
+          }
+        }
+        for (const m of set) for (const q of prevSet) link(q, m);
+        made.push(...set);
+        if (set.length) prevSet = set;
+      });
+      prev = made.at(-1) || null;
       for (const n of made) n.edge ??= e.id;
       // Alleys and exit stubs join the roads at their ends.
       if (e.kind !== "road" && made.length)

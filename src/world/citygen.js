@@ -158,69 +158,181 @@ function roadGraph(R) {
   }
   list.forEach((e, k) => (e.id = k));
   for (const e of list) e.pts = polyline(nodes[e.a], nodes[e.b], e.curve);
-  const overpass = R() < 0.9 ? placeOverpass(nodes, list, R) : null;
+  const overpass = placeOverpass(nodes, list, R, { I, J, ia, ja, at });
   list.forEach((e, k) => (e.id = k));
   return { nodes, edges: list, xs, zs, overpass };
 }
 
-// V2.1 elevated road: the avenue lifts over one of its junctions. Ramps
-// (20 m) up to a deck 5.6 m high over the crossing street, which keeps
-// running underneath; the avenue's two streets at that junction become
-// ground street -> ramp foot -> overpass -> ramp foot -> ground street.
-export const OVERPASS = Object.freeze({ H: 5.6, R: 18, W: 10, solidFrom: 0.7, clear: 4.3 });
-function placeOverpass(nodes, edges, R) {
-  const inc = (n) => edges.filter((e) => e.a === n.id || e.b === n.id);
-  const cands = [];
-  for (const J of nodes) {
-    if (J.ring) continue;
-    const av = inc(J).filter((e) => e.avenue), cross = inc(J).filter((e) => !e.avenue);
-    if (av.length !== 2 || cross.length !== 2 || cross.some((e) => e.diagonal)) continue;
-    const cw = Math.max(...cross.map((e) => e.width));
-    const half = OVERPASS.R + cw / 2 + 3.5;
-    const ends = av.map((e) => nodes[e.a === J.id ? e.b : e.a]);
-    if (ends.some((P) => Math.hypot(P.x - J.x, P.z - J.z) < half + 7)) continue;
-    cands.push({ J, av, ends, cw, half });
+// Elevated road (map quality pass): a real elevated roadway above an
+// avenue, 2-3 blocks long. Ramps (28 m, eased at both ends) rise from the
+// middle of the avenue, which is 18 m wide so ground traffic keeps a lane
+// each side of a ramp; the deck (5.2 m up) crosses two or more junctions,
+// or turns on a 16 m curve at the avenue crossing onto the other avenue.
+// The streets underneath keep running (the avenue under the deck too).
+// Pillars stand in the avenue's median, never in a crossing street.
+export const OVERPASS = Object.freeze({ H: 5.2, R: 28, W: 8.6, solidFrom: 0.7, clear: 3.6, rc: 16, pillarStep: 12 });
+const ease = (t) => t * t * (3 - 2 * t);
+// s at which an eased ramp reaches height h.
+function rampAt(h) {
+  let lo = 0, hi = 1;
+  for (let k = 0; k < 30; k++) {
+    const m = (lo + hi) / 2;
+    if (ease(m) * OVERPASS.H < h) lo = m;
+    else hi = m;
   }
-  if (!cands.length) return null;
-  const c = cands[Math.floor(R() * cands.length)];
-  const [P, Q] = c.ends, J = c.J;
-  const L0 = Math.hypot(Q.x - P.x, Q.z - P.z), ux = (Q.x - P.x) / L0, uz = (Q.z - P.z) / L0;
-  const F1 = { id: nodes.length, x: J.x - ux * c.half, z: J.z - uz * c.half, foot: true };
-  const F2 = { id: nodes.length + 1, x: J.x + ux * c.half, z: J.z + uz * c.half, foot: true };
-  nodes.push(F1, F2);
-  const width = c.av[0].width;
-  for (const e of c.av) edges.splice(edges.indexOf(e), 1);
-  const mk = (a, b, o) => ({ id: -1, a: a.id, b: b.id, kind: "road", curve: 0, width, avenue: true, pts: [{ x: a.x, z: a.z }, { x: b.x, z: b.z }], ...o });
-  edges.push(mk(P, F1), mk(F2, Q));
-  const L = 2 * c.half;
-  const op = { a: { x: F1.x, z: F1.z }, u: { x: ux, z: uz }, n: { x: -uz, z: ux }, L, W: OVERPASS.W, H: OVERPASS.H, R: OVERPASS.R, groundWidth: width, junction: { x: J.x, z: J.z }, crossWidth: c.cw };
-  // Pillars at both deck ends, either side (outside the crossing street).
-  op.pillars = [];
-  for (const s of [OVERPASS.R + 0.6, L - OVERPASS.R - 0.6])
-    for (const side of [-1, 1]) {
-      const lat = side * (OVERPASS.W / 2 - 0.6);
-      op.pillars.push({ x: F1.x + ux * s + op.n.x * lat, z: F1.z + uz * s + op.n.z * lat, w: 1.1, d: 1.1, s, side });
+  return lo * OVERPASS.R;
+}
+function placeOverpass(nodes, edges, R, { I, J, ia, ja, at }) {
+  const inc = (n) => edges.filter((e) => e.a === n.id || e.b === n.id);
+  const crossW = (n) => Math.max(8, ...inc(n).filter((e) => !e.avenue).map((e) => e.width), ...(inc(n).filter((e) => e.avenue).length > 2 ? [18] : []));
+  const lineV = Array.from({ length: J }, (_, j) => at(ia, j)), lineH = Array.from({ length: I }, (_, i) => at(i, ja));
+  const clearH = rampAt(OVERPASS.clear);
+  const need = (n) => clearH + crossW(n) / 2 + 2.5; // foot -> first junction centre
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
+  const dir = (p, q) => ({ x: (q.x - p.x) / dist(p, q), z: (q.z - p.z) / dist(p, q) });
+  // The segment of an avenue line a point lies in, if it keeps clear of
+  // the junctions at its ends.
+  const segOf = (line, p) => {
+    for (let k = 0; k < line.length - 1; k++) {
+      const a = line[k], b = line[k + 1], L = dist(a, b), u = dir(a, b);
+      const t = (p.x - a.x) * u.x + (p.z - a.z) * u.z;
+      const off = Math.abs((p.x - a.x) * u.z - (p.z - a.z) * u.x);
+      if (off < 0.5 && t >= 0 && t <= L) return dist(p, a) >= 12 && dist(p, b) >= 12 ? { k, a, b } : null;
     }
-  edges.push({ id: -1, a: F1.id, b: F2.id, kind: "overpass", curve: 0, width: OVERPASS.W, pts: [{ x: F1.x, z: F1.z }, { x: F2.x, z: F2.z }], op });
+    return null;
+  };
+  const cands = [];
+  // Straight, across 2-3 junctions.
+  for (const line of [lineV, lineH])
+    for (let t1 = 0; t1 < line.length - 1; t1++)
+      for (let t2 = t1 + 2; t2 < Math.min(line.length - 1, t1 + 4); t2++) {
+        const J1 = line[t1 + 1], J2 = line[t2], u = dir(line[t1], line[t1 + 1]);
+        const F1 = { x: J1.x - u.x * need(J1), z: J1.z - u.z * need(J1) }, F2 = { x: J2.x + u.x * need(J2), z: J2.z + u.z * need(J2) };
+        const s1 = segOf(line, F1), s2 = segOf(line, F2);
+        if (s1 && s2 && s1.k === t1 && s2.k === t2) cands.push({ pts: [F1, F2], feet: [[line, s1], [line, s2]], curved: false });
+      }
+  // Curved: along one avenue, round the avenue crossing, along the other.
+  const C = at(ia, ja), iC = ja, jC = ia;
+  for (const da of [-1, 1])
+    for (const db of [-1, 1]) {
+      const A = lineV, B = lineH;
+      const aPrev = A[iC - da], bNext = B[jC + db];
+      if (!aPrev || !bNext) continue;
+      const uA = dir(aPrev, C), uB = dir(C, bNext);
+      let F1 = null, F2 = null, s1 = null, s2 = null;
+      for (let d = OVERPASS.R + OVERPASS.rc + 4; d < OVERPASS.R + OVERPASS.rc + 40 && !s1; d += 2) {
+        const p = { x: C.x - uA.x * d, z: C.z - uA.z * d };
+        const seg = segOf(A, p);
+        // Junctions between the foot and the crossing are passed high.
+        const ok = seg && A.every((n) => {
+          const t = (n.x - p.x) * uA.x + (n.z - p.z) * uA.z;
+          return t <= 0 || t >= d - 0.1 || t >= need(n);
+        });
+        if (ok) (F1 = p), (s1 = seg);
+      }
+      for (let d = OVERPASS.R + OVERPASS.rc + 4; d < OVERPASS.R + OVERPASS.rc + 40 && !s2; d += 2) {
+        const p = { x: C.x + uB.x * d, z: C.z + uB.z * d };
+        const seg = segOf(B, p);
+        const ok = seg && B.every((n) => {
+          const t = (p.x - n.x) * uB.x + (p.z - n.z) * uB.z;
+          return t <= 0 || t >= d - 0.1 || t >= need(n);
+        });
+        if (ok) (F2 = p), (s2 = seg);
+      }
+      if (!F1 || !F2) continue;
+      // Quarter circle from the first avenue onto the second.
+      const rc = OVERPASS.rc, O = { x: C.x - uA.x * rc + uB.x * rc, z: C.z - uA.z * rc + uB.z * rc };
+      const arc = [];
+      for (let k = 0; k <= 10; k++) {
+        const ph = (k / 10) * (Math.PI / 2);
+        arc.push({ x: O.x + (-uB.x * Math.cos(ph) + uA.x * Math.sin(ph)) * rc, z: O.z + (-uB.z * Math.cos(ph) + uA.z * Math.sin(ph)) * rc });
+      }
+      cands.push({ pts: [F1, ...arc, F2], feet: [[A, s1], [B, s2]], curved: true });
+    }
+  if (!cands.length) return null;
+  const curved = cands.filter((c) => c.curved), straight = cands.filter((c) => !c.curved);
+  const pool = curved.length && (R() < 0.5 || !straight.length) ? curved : straight;
+  const c = pool[Math.floor(R() * pool.length)];
+  // Ramp feet become junctions on the avenue (the ground street carries
+  // on through; traffic can take the ramp).
+  const feet = c.pts.length ? [c.pts[0], c.pts.at(-1)] : [];
+  const footNodes = feet.map((p, k) => {
+    const [line, seg] = c.feet[k];
+    const F = { id: nodes.length, x: p.x, z: p.z, foot: true };
+    nodes.push(F);
+    const e = edges.find((q) => (q.a === seg.a.id && q.b === seg.b.id) || (q.a === seg.b.id && q.b === seg.a.id));
+    const [P, Q] = e.a === seg.a.id ? [seg.a, seg.b] : [seg.b, seg.a];
+    edges.splice(edges.indexOf(e), 1);
+    const mk = (u, v) => ({ ...e, id: -1, a: u.id, b: v.id, pts: [{ x: u.x, z: u.z }, { x: v.x, z: v.z }] });
+    edges.push(mk(P, F), mk(F, Q));
+    return F;
+  });
+  // Under the elevated road the avenue is 18 m wide (a lane each side of
+  // a ramp or a pillar); elsewhere avenues stay 14 m.
+  for (const e of edges)
+    if (e.avenue && e.kind === "road") {
+      const m = { x: (e.pts[0].x + e.pts.at(-1).x) / 2, z: (e.pts[0].z + e.pts.at(-1).z) / 2 };
+      if (polyDist(m.x, m.z, c.pts) < 1 || polyDist(e.pts[0].x, e.pts[0].z, c.pts) < 1 && polyDist(e.pts.at(-1).x, e.pts.at(-1).z, c.pts) < 1) e.width = 18;
+    }
+  // The polyline, its length and directions at the ends.
+  let L = 0;
+  for (let k = 1; k < c.pts.length; k++) L += dist(c.pts[k - 1], c.pts[k]);
+  const u = dir(c.pts[0], c.pts[1]), uEnd = dir(c.pts.at(-2), c.pts.at(-1));
+  const op = { pts: c.pts, L, W: OVERPASS.W, H: OVERPASS.H, R: OVERPASS.R, a: { ...c.pts[0] }, u, n: { x: -u.z, z: u.x }, end: { ...c.pts.at(-1) }, uEnd, groundWidth: 18, curved: c.curved, destructible: false };
+  {
+    // Middle point (where a collapse would centre; collapse is off).
+    let acc = 0;
+    for (let k = 1; k < c.pts.length; k++) {
+      const d = dist(c.pts[k - 1], c.pts[k]);
+      if (acc + d >= L / 2) {
+        const t = (L / 2 - acc) / d;
+        op.junction = { x: c.pts[k - 1].x + (c.pts[k].x - c.pts[k - 1].x) * t, z: c.pts[k - 1].z + (c.pts[k].z - c.pts[k - 1].z) * t };
+        break;
+      }
+      acc += d;
+    }
+  }
+  // Pillars in the median every ~12 m under the high part, never inside a
+  // junction or a crossing street.
+  op.pillars = [];
+  const cum = [0];
+  for (let k = 1; k < c.pts.length; k++) cum.push(cum[k - 1] + dist(c.pts[k - 1], c.pts[k]));
+  const at2 = (s) => {
+    let k = 1;
+    while (k < c.pts.length - 1 && cum[k] < s) k++;
+    const t = (s - cum[k - 1]) / (cum[k] - cum[k - 1] || 1);
+    return { x: c.pts[k - 1].x + (c.pts[k].x - c.pts[k - 1].x) * t, z: c.pts[k - 1].z + (c.pts[k].z - c.pts[k - 1].z) * t };
+  };
+  const roads = edges.filter((e) => e.kind === "road");
+  for (let s = clearH + 3; s < L - clearH - 3; s += 2) {
+    if (op.pillars.length && s - op.pillars.at(-1).s < 9) continue;
+    const p = at2(s);
+    if (nodes.some((n) => !n.foot && dist(n, p) < crossW(n) / 2 + 3)) continue;
+    if (roads.some((e) => !e.avenue && polyDist(p.x, p.z, e.pts) < e.width / 2 + 1.5)) continue;
+    // Only in an avenue's median (not on the curve over a junction).
+    if (!roads.some((e) => e.avenue && polyDist(p.x, p.z, e.pts) < 0.8)) continue;
+    op.pillars.push({ x: p.x, z: p.z, w: 1.3, d: 1.3, s });
+  }
+  edges.push({ id: -1, a: footNodes[0].id, b: footNodes[1].id, kind: "overpass", curve: 0, width: OVERPASS.W, pts: c.pts.map((p) => ({ ...p })), op });
   return op;
 }
-// Height of the overpass `s` metres from its first foot.
+// Height of the elevated road `s` metres along it (eased ramps).
 export function overpassHeight(op, s) {
   if (s <= 0 || s >= op.L) return 0;
-  if (s < op.R) return (op.H * s) / op.R;
-  if (s > op.L - op.R) return (op.H * (op.L - s)) / op.R;
+  if (s < op.R) return op.H * ease(s / op.R);
+  if (s > op.L - op.R) return op.H * ease((op.L - s) / op.R);
   return op.H;
 }
-// The ground footprint a car cannot drive under (the low part of each
-// ramp, full avenue width), as axis-aligned boxes (the avenue is straight
-// and on an axis).
+// The part of each ramp a ground car cannot drive under (from 0.7 m up to
+// 3.6 m), as axis-aligned boxes (ramps rise along an avenue). Only the
+// ramp's own width: the avenue's lanes either side stay open.
 export function rampSolids(op) {
-  const s0 = (OVERPASS.solidFrom / op.H) * op.R, s1 = (OVERPASS.clear / op.H) * op.R;
+  const s0 = rampAt(OVERPASS.solidFrom), s1 = rampAt(OVERPASS.clear);
   const out = [];
-  for (const [a, b] of [[s0, s1], [op.L - s1, op.L - s0]]) {
-    const cx = op.a.x + op.u.x * (a + b) / 2, cz = op.a.z + op.u.z * (a + b) / 2;
-    const along = b - a, across = op.groundWidth + 0.4;
-    const alongX = Math.abs(op.u.x) > 0.5;
+  for (const [p, u] of [[op.a, op.u], [op.end, { x: -op.uEnd.x, z: -op.uEnd.z }]]) {
+    const cx = p.x + u.x * (s0 + s1) / 2, cz = p.z + u.z * (s0 + s1) / 2;
+    const along = s1 - s0, across = op.W + 0.4;
+    const alongX = Math.abs(u.x) > 0.5;
     out.push({ x: cx, z: cz, w: alongX ? along : across, d: alongX ? across : along, kind: "ramp" });
   }
   return out;
@@ -378,7 +490,8 @@ function buildCity(seed) {
     }
   const { list: blocks } = components(kind, LAND);
   const buildings = [], parks = [], lots = [], plazas = [], stations = [], trees = [], obstacles = [...ramps], alleys = [];
-  const counts = { park: 0, parking: 0, gas: 0, plaza: 0, built: 0 };
+  const counts = { park: 0, parking: 0, gas: 0, plaza: 0, built: 0, market: 0 };
+  const markets = [];
   const outer = (b) => Math.max(Math.abs(b.cx), Math.abs(b.cz)) > RING + 3;
   // Lot types first (so each city gets its parks, a petrol station and a
   // car park), then the blocks are built.
@@ -386,7 +499,7 @@ function buildCity(seed) {
     const inB = new Set(b.cells);
     const inSet = (r, c) => inB.has(r * N + c);
     const rect = b.area >= 8 ? largestRect(inSet, b.c0, b.c1, b.r0, b.r1) : { area: 0, c0: b.c0, c1: b.c0, r0: b.r0, r1: b.r0 };
-    return { b, inB, inSet, rect, rw: rectWorld(rect), type: b.area < 8 ? "sliver" : !outer(b) && b.area < 90 ? "plaza" : "built" };
+    return { b, inB, inSet, rect, rw: rectWorld(rect), type: b.area < 8 ? "sliver" : !outer(b) && b.area < 55 ? "plaza" : "built" };
   });
   const choose = (n, ok) => {
     const cands = order.filter((o) => o.type === "built" && !outer(o.b) && ok(o));
@@ -396,7 +509,9 @@ function buildCity(seed) {
   const mark = (t) => order.forEach((o) => o.type.startsWith("_") && (o.type = t));
   choose(1 + (R() < 0.45 ? 1 : 0), (o) => o.rw.w >= 16 && o.rw.d >= 14 && o.b.area <= 760); mark("gas");
   choose(1 + Math.floor(R() * 3), (o) => o.b.area >= 240 && o.b.area <= 1500); mark("park");
-  choose(1 + (R() < 0.5 ? 1 : 0), (o) => o.rw.w >= 14 && o.rw.d >= 14 && o.b.area <= 900); mark("parking");
+  choose(1 + (R() < 0.5 ? 1 : 0), (o) => o.rw.w >= 14 && o.rw.d >= 14 && o.b.area <= 700); mark("parking");
+  // A street market (stalls, crates, parasols) in every city.
+  choose(1, (o) => o.rw.w >= 13 && o.rw.d >= 11 && o.b.area >= 180 && o.b.area <= 900); mark("market");
   for (const o of order) {
     const { b, inB, inSet, rect, rw } = o;
     if (o.type === "sliver") {
@@ -408,7 +523,7 @@ function buildCity(seed) {
     counts[type]++;
     const info = { x: rw.x, z: rw.z, w: rw.w, d: rw.d, area: b.area };
     if (type !== "built") {
-      const code = { park: 7, parking: 8, plaza: 9, gas: 10 }[type] ?? LOT;
+      const code = { park: 7, parking: 8, plaza: 9, gas: 10, market: 9 }[type] ?? LOT;
       for (const i of b.cells) kind[i] = code;
       if (type === "park") {
         parks.push({ ...info, rects: coverRects(b, inSet) });
@@ -423,6 +538,7 @@ function buildCity(seed) {
         }
       } else if (type === "parking") lots.push({ ...info, bays: parkingBays(rw, R) });
       else if (type === "plaza") plazas.push({ ...info, rects: coverRects(b, inSet) });
+      else if (type === "market") markets.push({ ...info, rects: coverRects(b, inSet) });
       else stations.push(gasStation(rw, R, obstacles));
       continue;
     }
@@ -462,6 +578,7 @@ function buildCity(seed) {
   for (const a of alleys) allEdges.push({ id: allEdges.length, kind: "alley", width: ALLEY_WIDTH, pts: a.pts, a: null, b: null });
   for (const e of exits) allEdges.push({ id: allEdges.length, kind: "exit", width: 11, pts: [{ ...e.anchor }, { x: e.anchor.x + e.dx * 18, z: e.anchor.z + e.dz * 18 }], a: null, b: null });
   const streetProps = placeStreetProps(graph, kind, near, R, buildings);
+  const flyers = placeFlyers({ graph, kind, near, R, buildings, streetProps, plazas, markets, lots, stations, parks, obstacles });
   const parking = kerbParking(graph, kind, R);
   // Player start: on a straight inner street near the centre, heading
   // along it; police spread out behind on the same road network.
@@ -474,6 +591,8 @@ function buildCity(seed) {
     obstacles,
     lots,
     plazas,
+    markets,
+    flyers,
     stations,
     trees,
     alleys,
@@ -484,7 +603,7 @@ function buildCity(seed) {
     parking,
     start,
     counts,
-    raster: { kind, N, CELL, half: CITY_HALF },
+    raster: { kind, near, N, CELL, half: CITY_HALF },
   };
 }
 
@@ -644,10 +763,16 @@ function gasStation(rw, R, obstacles) {
 // lamps, trees, bins, signs and hydrants, clear of junctions, alleys and
 // each other.
 function placeStreetProps(graph, kind, near, R, buildings) {
+  // As dense as the old downtown (about four pieces per 30 m of kerb, both
+  // sides): lamps, bins, trees, signs, a hydrant now and then; clear of
+  // the junction corners, alleys and each other.
   const out = [];
-  const kindsAt = ["lamp", "tree", "trash", "sign", "lamp", "tree", "hydrant"];
+  const kindsAt = ["lamp", "trash", "tree", "sign", "lamp", "tree", "trash", "hydrant"];
+  const nodeW = new Map();
+  for (const e of graph.edges) if (e.kind === "road") for (const id of [e.a, e.b]) nodeW.set(id, Math.max(nodeW.get(id) || 0, e.width));
   let k = 0;
   for (const e of graph.edges) {
+    if (e.kind !== "road") continue;
     const pts = e.pts;
     let total = 0;
     const segs = [];
@@ -656,21 +781,151 @@ function placeStreetProps(graph, kind, near, R, buildings) {
       segs.push({ a: pts[i - 1], b: pts[i], L, s: total });
       total += L;
     }
-    for (let s = 9; s < total - 9; s += 8 + R() * 5)
-      for (const side of [-1, 1]) {
+    for (const side of [-1, 1])
+      for (let s = 3 + R() * 2; s < total - 3; s += 3.6 + R() * 1.2) {
         const g = segs.find((q) => s >= q.s && s <= q.s + q.L) || segs.at(-1);
         const t = (s - g.s) / g.L, ux = (g.b.x - g.a.x) / g.L, uz = (g.b.z - g.a.z) / g.L;
-        const off = e.width / 2 + 1.3;
+        const off = e.width / 2 + 1.25;
         const x = g.a.x + (g.b.x - g.a.x) * t - uz * off * side, z = g.a.z + (g.b.z - g.a.z) * t + ux * off * side;
         const c = cellOf(x), r = cellOf(z);
         if (c < 1 || r < 1 || c >= N - 1 || r >= N - 1) continue;
-        if (kind[r * N + c] !== WALK) continue;
+        const kk = kind[r * N + c];
+        if (kk !== WALK && kk !== LAND) continue;
         if (near[r * N + c] < 0.6) continue; // too close to another road's kerb
-        if (graph.nodes.some((n) => Math.hypot(n.x - x, n.z - z) < 11)) continue;
-        if (out.some((q) => Math.hypot(q.x - x, q.z - z) < 4)) continue;
-        if (buildings.some((b) => Math.abs(b.x - x) < b.w / 2 + 0.9 && Math.abs(b.z - z) < b.d / 2 + 0.9)) continue;
+        if (graph.nodes.some((n) => nodeW.has(n.id) && Math.hypot(n.x - x, n.z - z) < nodeW.get(n.id) / 2 + 4.5)) continue;
+        if (out.some((q) => Math.hypot(q.x - x, q.z - z) < 2.6)) continue;
+        if (buildings.some((b) => Math.abs(b.x - x) < b.w / 2 + 0.6 && Math.abs(b.z - z) < b.d / 2 + 0.6)) continue;
         out.push({ kind: kindsAt[k++ % kindsAt.length], x, z, angle: Math.atan2(ux, uz) });
       }
+  }
+  return out;
+}
+
+// Loose breakable furniture (render/furniture.js): shop fronts, café sets,
+// a street market, car park and petrol station kit, junction corners and
+// a small roadworks site. Placed on open pavement, never on a road, clear
+// of the street props and of each other.
+const FCOL = [0xd62f2a, 0x2457c5, 0x2fa36b, 0xf5c01a, 0xf0781e, 0xe0367a, 0x1f6e6a, 0x7a3fb8];
+export const SIDEWALK_Y = 0.4;
+function placeFlyers({ graph, kind, near, R, buildings, streetProps, plazas, markets, lots, stations, parks }) {
+  const out = [];
+  const surface = (x, z) => {
+    const c = cellOf(x), r = cellOf(z);
+    if (c < 1 || r < 1 || c >= N - 1 || r >= N - 1) return null;
+    const k = kind[r * N + c];
+    if (k === ROAD || k === ALLEY || k === BUILT || k === 6 || k === 11) return null;
+    if (near[r * N + c] < 0.5) return null;
+    return k === 8 || k === 10 ? 0.07 : k === 7 ? 0.38 : SIDEWALK_Y;
+  };
+  const free = (x, z, r = 1.1) =>
+    !out.some((q) => Math.hypot(q.x - x, q.z - z) < r) &&
+    !streetProps.some((q) => Math.hypot(q.x - x, q.z - z) < 1.3) &&
+    !buildings.some((b) => Math.abs(b.x - x) < b.w / 2 + 0.35 && Math.abs(b.z - z) < b.d / 2 + 0.35);
+  const put = (kind, x, z, ry = 0, extra = {}, r = 1.1) => {
+    const y = surface(x, z);
+    if (y == null || !free(x, z, r)) return false;
+    out.push({ kind, x, z, y, ry, ...extra });
+    return true;
+  };
+  const cafe = (x, z, seed) => {
+    if (!put("table", x, z, R() * 6.28, {}, 1.6)) return;
+    const n = 2 + Math.floor(R() * 3);
+    for (let j = 0; j < n; j++) {
+      const a = (j / n) * Math.PI * 2 + R() * 0.6, d = 0.82;
+      const cx = x + Math.sin(a) * d, cz = z + Math.cos(a) * d, y = surface(cx, cz);
+      if (y != null) out.push({ kind: "chair", x: cx, z: cz, y, ry: a + Math.PI, color: FCOL[(seed + j) % 8] });
+    }
+    if (R() < 0.7) out.push({ kind: "parasol", x: x + 0.05, z: z + 0.05, y: surface(x, z), ry: R() * 6.28, color: FCOL[(seed * 3) % 8] });
+  };
+  // Shop fronts: commercial faces mostly, a few residential ones.
+  const faces = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  for (const b of buildings) {
+    if (!b.street || b.district === "edge") continue;
+    b.street.forEach((on, k) => {
+      if (!on || R() > (b.district === "commercial" ? 0.6 : 0.12)) return;
+      const [fx, fz] = faces[k], span = fx ? b.d : b.w;
+      const along = (R() - 0.5) * Math.max(0, span - 2.4);
+      const x = b.x + fx * (b.w / 2 + 0.75) + (fx ? 0 : along), z = b.z + fz * (b.d / 2 + 0.75) + (fz ? 0 : along);
+      const ry = Math.atan2(fx, fz);
+      const pick = b.district === "commercial" ? ["sandwichBoard", "displayRack", "newsStand", "flowerPot", "sandwichBoard", "displayRack"][Math.floor(R() * 6)] : ["flowerPot", "bucket", "flowerPot"][Math.floor(R() * 3)];
+      if (put(pick, x, z, ry, pick === "sandwichBoard" ? { color: FCOL[Math.floor(R() * 8)] } : {}) && pick === "flowerPot") {
+        const ox = fx ? 0 : 0.9, oz = fz ? 0 : 0.9;
+        put("flowerPot", x + ox, z + oz, 1, {}, 0.8);
+      }
+    });
+  }
+  // Junction corners: news boxes, pots, boards.
+  for (const n of graph.nodes) {
+    const inc = graph.edges.filter((e) => e.kind === "road" && (e.a === n.id || e.b === n.id));
+    if (inc.length < 3 || n.foot) continue;
+    const dirs = inc.map((e) => {
+      const p = e.a === n.id ? e.pts[1] : e.pts.at(-2), L = Math.hypot(p.x - n.x, p.z - n.z);
+      return { x: (p.x - n.x) / L, z: (p.z - n.z) / L, w: e.width };
+    });
+    for (let i = 0; i < dirs.length; i++)
+      for (let j = i + 1; j < dirs.length; j++) {
+        const a = dirs[i], c = dirs[j], dot = a.x * c.x + a.z * c.z;
+        if (dot < -0.5 || R() > 0.4) continue;
+        const bx = a.x + c.x, bz = a.z + c.z, bl = Math.hypot(bx, bz) || 1;
+        const half = Math.acos(Math.max(-1, Math.min(1, dot))) / 2;
+        const d = Math.min(20, (Math.max(a.w, c.w) / 2 + 2.2) / Math.max(0.3, Math.sin(half)));
+        put(["newsStand", "flowerPot", "sandwichBoard", "displayRack"][Math.floor(R() * 4)], n.x + (bx / bl) * d, n.z + (bz / bl) * d, Math.atan2(bx, bz), { color: FCOL[Math.floor(R() * 8)] });
+      }
+  }
+  // Street market: two rows of stalls facing an aisle, crates in front,
+  // parasols and tables, a vendor cart, goods racks.
+  for (const m of markets) {
+    const alongX = m.w >= m.d, len = alongX ? m.w : m.d, wid = alongX ? m.d : m.w;
+    const rows = wid >= 13 ? [-wid / 2 + 2.2, wid / 2 - 2.2] : [-wid / 2 + 2.2];
+    const at = (s, o) => (alongX ? { x: m.x + s, z: m.z + o } : { x: m.x + o, z: m.z + s });
+    for (const o of rows) {
+      const ry = (alongX ? 0 : Math.PI / 2) + (o < 0 ? Math.PI : 0);
+      for (let s2 = -len / 2 + 2.4; s2 <= len / 2 - 2.4; s2 += 4.2) {
+        const p = at(s2, o);
+        put("stall", p.x, p.z, ry, {}, 1.9);
+        const q = at(s2 + (R() - 0.5), o - Math.sign(o) * 2.0);
+        put(["crateRed", "crateOrange", "crateGreen"][Math.floor(R() * 3)], q.x, q.z, R() * 0.6, {}, 0.8);
+      }
+    }
+    for (let k = 0; k < 2; k++) {
+      const p = at((R() - 0.5) * (len - 6), 0);
+      cafe(p.x, p.z, k + 3);
+    }
+    const v = at(len / 2 - 2, 0);
+    put("vendorCart", v.x, v.z, R() * 6.28, {}, 1.6);
+    const d = at(-len / 2 + 1.6, 0);
+    put("displayRack", d.x, d.z, 0);
+  }
+  // Plazas and parks: café sets, a vendor cart now and then.
+  for (const pz of plazas) if (pz.area > 30) cafe(pz.x, pz.z, Math.floor(pz.x));
+  for (const pk of parks) {
+    const r = pk.rects[0];
+    if (!r) continue;
+    cafe(r.x + r.w * 0.3, r.z - r.d * 0.3, 5);
+    if (R() < 0.6) put("vendorCart", r.x - r.w * 0.3, r.z + r.d * 0.3, R() * 6.28, {}, 1.6);
+  }
+  // Car parks: trolleys, P signs, a pay station.
+  for (const lot of lots) {
+    for (let k = 0; k < 3; k++) put("shoppingCart", lot.x + (R() - 0.5) * (lot.w - 4), lot.z + (R() - 0.5) * (lot.d - 4), R() * 6.28);
+    put("parkingSign", lot.x - lot.w / 2 + 1.2, lot.z - lot.d / 2 + 1.2, 0);
+    put("parkingSign", lot.x + lot.w / 2 - 1.2, lot.z + lot.d / 2 - 1.2, Math.PI);
+    put("ticketMachine", lot.x + lot.w / 2 - 1.2, lot.z - lot.d / 2 + 1.2, Math.PI);
+  }
+  // Petrol stations: gas bottles and buckets by the shop.
+  for (const st of stations) {
+    const sh = st.shop, fx = st.alongX ? 0 : -1, fz = st.alongX ? -1 : 0;
+    for (let k = 0; k < 3; k++) put("gasBottle", sh.x + fx * (sh.w / 2 + 0.8) + (fz ? (k - 1) * 0.7 : 0), sh.z + fz * (sh.d / 2 + 0.8) + (fx ? (k - 1) * 0.7 : 0), 0, { color: 0xd62f2a }, 0.5);
+    put("bucket", sh.x + fx * (sh.w / 2 + 1.2) + (fz ? 2.2 : 0), sh.z + fz * (sh.d / 2 + 1.2) + (fx ? 2.2 : 0), 0, { color: 0x2457c5 }, 0.5);
+  }
+  // One small roadworks site on a pavement: fence panels, a work bench,
+  // planks, a generator.
+  const quiet = buildings.filter((b) => b.district === "residential" && b.street?.some(Boolean));
+  if (quiet.length) {
+    const b = quiet[Math.floor(R() * quiet.length)], k = b.street.findIndex(Boolean), [fx, fz] = faces[k];
+    const x = b.x + fx * (b.w / 2 + 1.2), z = b.z + fz * (b.d / 2 + 1.2), ry = Math.atan2(fx, fz) + Math.PI / 2;
+    put("toolTable", x, z, ry, {}, 1.2);
+    put("plankStack", x + (fz ? 2.6 : 0), z + (fx ? 2.6 : 0), ry, {}, 1.4);
+    put("generator", x - (fz ? 2.4 : 0), z - (fx ? 2.4 : 0), ry, {}, 1.0);
   }
   return out;
 }
@@ -712,7 +967,7 @@ function startPose(graph) {
 export function validateCity(L) {
   const problems = [];
   const { kind, N: n } = L.raster;
-  const solids = [...L.buildings, ...L.obstacles];
+  const solids = [...L.buildings, ...L.obstacles, ...(L.overpasses || []).flatMap((o) => o.pillars)];
   // 1. Road graph connected (alleys and exits attach to roads).
   const nodes = L.graph.nodes, roads = L.graph.edges.filter((e) => e.kind === "road" || e.kind === "overpass");
   if (!connected(nodes, roads)) problems.push("roads not connected");
@@ -726,7 +981,12 @@ export function validateCity(L) {
       for (let s = 0; s <= len; s += 2) {
         const x = a.x + ((b.x - a.x) * s) / (len || 1), z = a.z + ((b.z - a.z) * s) / (len || 1);
         if (Math.max(Math.abs(x), Math.abs(z)) > CITY_HALF - 2) continue;
-        if (solids.some((q) => Math.abs(q.x - x) < q.w / 2 + r && Math.abs(q.z - z) < q.d / 2 + r)) {
+        // A wide road is clear if a car can pass along its middle or along
+        // either side (beside a ramp or a pillar in the median).
+        const nx = -(b.z - a.z) / (len || 1), nz = (b.x - a.x) / (len || 1);
+        const offs = e.width >= 14 ? [0, e.width / 2 - r - 0.4, -(e.width / 2 - r - 0.4)] : [0];
+        const blocked = (ox) => solids.some((q) => Math.abs(q.x - (x + nx * ox)) < q.w / 2 + r && Math.abs(q.z - (z + nz * ox)) < q.d / 2 + r);
+        if (offs.every(blocked)) {
           problems.push(`${e.kind} ${e.id} blocked at ${x.toFixed(1)},${z.toFixed(1)}`);
           s = len + 1;
           k = e.pts.length;

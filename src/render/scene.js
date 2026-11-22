@@ -16,6 +16,7 @@ import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
 import { BuildingCellsRenderer } from "./cells.js";
+import { StreetFurniture } from "./furniture.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -121,6 +122,9 @@ export class CityRenderer {
     // V2.1 destructible low-rise buildings (wall cells).
     this.cells = new BuildingCellsRenderer(this.scene);
     this.cells.setLayout(layout);
+    // Loose breakable street furniture of a generated city.
+    this.furniture = new StreetFurniture(this.scene, this.renderer);
+    this.furniture.setLayout(layout);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -244,6 +248,7 @@ export class CityRenderer {
     this.night.setLayout(layout);
     this.overpass.setLayout(layout);
     this.cells.setLayout(layout);
+    this.furniture.setLayout(layout);
     this.layout = layout;
   }
   batchStatic() {
@@ -367,7 +372,7 @@ export class CityRenderer {
     this.pickups.update(sim, this.camera);
     this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
     this.water.update(sim.city, sim.elapsed, this.camera);
-    this.overpass.update(sim);
+    this.overpass.update(sim, dt);
     this.cells.update(sim, dt);
     // A low-rise building with a hole in it: its lit windows go out.
     if (sim.buildingCells?.version !== this.cellsNightVersion) {

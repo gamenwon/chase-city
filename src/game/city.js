@@ -1,6 +1,7 @@
 import { CONFIG, clamp } from "./config.js";
 import { buildLanes, buildWalks, pointAt, project, nearestWalk } from "./citygraph.js";
 import { overpassHeight } from "../world/citygen.js";
+import { overpassLocal } from "./overpass.js";
 import { resolveBuilding } from "../world/layout.js";
 
 // V1.9 city life: destructible street props, pedestrians and civilian
@@ -1198,7 +1199,7 @@ function driveGraphLane(sim, city, t, dt) {
   // the street below).
   const op = opOf(lane);
   if (op) {
-    const s = (t.x - op.a.x) * op.u.x + (t.z - op.a.z) * op.u.z;
+    const s = overpassLocal(op, t.x, t.z).s;
     if (op.state !== "up" && s > op.R - 0.5 && s < op.L - op.R + 0.5) {
       t.state = "wreck";
       t.health = 0;
