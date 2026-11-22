@@ -137,6 +137,14 @@ export class NightLights {
     });
     this.windows.count = wins.length;
   }
+  // V2.1: a broken low-rise building's windows go dark for good.
+  hideBuilding(i) {
+    const r = this.ranges[i];
+    if (!r || r.gone) return;
+    r.gone = true;
+    for (let k = r.start; k < r.start + r.count; k++) this.placeWindow(k, this.winList[k], 0);
+    this.windows.instanceMatrix.needsUpdate = true;
+  }
   placeWindow(i, w, scale) {
     this.q.setFromAxisAngle(this.v.set(0, 1, 0), w.ry);
     this.m.compose(this.v.set(w.x, w.y, w.z), this.q, this.s.set(w.w * scale, w.h * scale, 1));
@@ -205,7 +213,7 @@ export class NightLights {
     // Windows go with their building when it fades for the camera.
     let changed = false;
     this.ranges.forEach((r, i) => {
-      const hide = (buildingEntries?.[i]?.opacity ?? 1) < 0.99;
+      const hide = (buildingEntries?.[i]?.opacity ?? 1) < 0.99 || !!r.gone;
       if (hide === r.hidden) return;
       r.hidden = hide;
       changed = true;

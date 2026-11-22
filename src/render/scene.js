@@ -15,6 +15,7 @@ import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
+import { BuildingCellsRenderer } from "./cells.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -117,6 +118,9 @@ export class CityRenderer {
     // V2.1 elevated road(s) of a generated city.
     this.overpass = new OverpassRenderer(this.scene);
     this.overpass.setLayout(layout);
+    // V2.1 destructible low-rise buildings (wall cells).
+    this.cells = new BuildingCellsRenderer(this.scene);
+    this.cells.setLayout(layout);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -239,6 +243,7 @@ export class CityRenderer {
     this.occlusion = new BuildingOcclusion(this.buildings);
     this.night.setLayout(layout);
     this.overpass.setLayout(layout);
+    this.cells.setLayout(layout);
     this.layout = layout;
   }
   batchStatic() {
@@ -363,6 +368,12 @@ export class CityRenderer {
     this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
     this.water.update(sim.city, sim.elapsed, this.camera);
     this.overpass.update(sim);
+    this.cells.update(sim, dt);
+    // A low-rise building with a hole in it: its lit windows go out.
+    if (sim.buildingCells?.version !== this.cellsNightVersion) {
+      this.cellsNightVersion = sim.buildingCells?.version;
+      for (const c of sim.buildingCells?.broken || []) this.night.hideBuilding?.(c.building);
+    }
     const spawnCameraView = spawnView(this.camera);
     for (const c of sim.police)
       if (c.spawnProof && c.state === "active") {

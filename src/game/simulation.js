@@ -16,6 +16,7 @@ import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.j
 import { updateTarget, resolveTargetContact } from "./target.js";
 import { updateBlasts } from "./blast.js";
 import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
+import { createBuildingCells, cellSolids, hitWall } from "./buildings.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget, standingPostsNear, PROPS } from "./city.js";
@@ -64,6 +65,7 @@ export class Simulation {
     this.solids = [
       ...this.staticSolids,
       ...pillarSolids(this),
+      ...cellSolids(this),
       ...this.barricades,
       ...this.wrecks.filter((w) => w.solid),
       ...(this.city?.solids || []),
@@ -89,7 +91,9 @@ export class Simulation {
   // closed narrow gaps).
   setLayout(layout) {
     this.layout = layout;
-    this.staticSolids = [...layout.buildings, ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
+    // Destructible low-rise buildings are solid as wall cells instead
+    // (buildings.js), not as one box.
+    this.staticSolids = [...layout.buildings.filter((b) => !b.destructible), ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
   }
   reset(missionId = this.missionId, vehicleId = this.vehicleId) {
     this.runNumber++;
@@ -146,7 +150,8 @@ export class Simulation {
       : null;
     // V2.1 elevated road(s) of a generated city (overpass.js).
     this.overpasses = createOverpasses(this.layout);
-    this.solids = [...this.staticSolids, ...pillarSolids(this)];
+    this.buildingCells = createBuildingCells(this.layout);
+    this.solids = [...this.staticSolids, ...pillarSolids(this), ...cellSolids(this)];
     this.navigation = new RoadNavigation([
       ...this.solids,
       ...(this.city?.navObstacles || []),
@@ -351,6 +356,7 @@ export class Simulation {
     return hit || x !== body.x || z !== body.z;
   }
   move(body, dt, radius = CONFIG.radius) {
+    const v0 = { x: body.vx, z: body.vz };
     let hit = false;
     body.lastImpact = 0;
     body.lastObstacleKind = null;
@@ -406,6 +412,11 @@ export class Simulation {
     if (body.lastObstacle?.kind === "pillar" && body.lastImpact > 0) {
       const mass = body === this.player ? (this.vehicle.stats.durability || 100) / 100 : 1.2;
       hitPillar(this, body.lastObstacle, body.lastImpact, mass);
+    }
+    // ...or on the wall of a low-rise building: it may break through.
+    if (body.lastObstacle?.kind === "bcell" && body.lastImpact > 0) {
+      const mass = body === this.player ? (this.vehicle.stats.durability || 100) / 100 : body.health != null && body.role ? 1.2 : 1;
+      if (hitWall(this, body, body.lastObstacle, body.lastImpact, mass, v0)) hit = false;
     }
     body.lastObstacle = null;
     return hit;

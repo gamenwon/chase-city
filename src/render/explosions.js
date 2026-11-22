@@ -408,7 +408,9 @@ export class ExplosionEffects {
   update(events, time) {
     for (const event of events)
       if (event.id > this.lastEvent) {
-        this.spawn(event);
+        // Only explosions (not target hits, wall breaks or a collapse
+        // starting, which have their own effects).
+        if (!event.type || event.type === "explosion") this.spawn(event);
         this.lastEvent = event.id;
       }
     const dt =

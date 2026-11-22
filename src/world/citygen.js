@@ -428,7 +428,7 @@ function buildCity(seed) {
     }
     // Built block: maybe a straight alley through it first.
     const commercial = !outer(b) && (rCenter < 50 || R() < 0.3);
-    const alley = !outer(b) && Math.max(rect.c1 - rect.c0, rect.r1 - rect.r0) * CELL >= 32 && R() < 0.65 ? cutAlley(b, inB, kind, R) : null;
+    const alley = !outer(b) && Math.max(rect.c1 - rect.c0, rect.r1 - rect.r0) * CELL >= 26 && Math.min(rect.c1 - rect.c0, rect.r1 - rect.r0) * CELL >= 15 && R() < 0.85 ? cutAlley(b, inB, kind, R) : null;
     if (alley) alleys.push(alley);
     packBuildings(b, inB, kind, R, buildings, { commercial, outer: outer(b), rCenter });
   }
@@ -450,6 +450,11 @@ function buildCity(seed) {
       return n > 0 && hit / n > 0.5;
     };
     b.street = [probe(0, 1), probe(0, -1), probe(1, 0), probe(-1, 0)]; // +z, -z, +x, -x
+    // Drive-through only where it opens a real way through: open ground on
+    // two opposite sides, at most 12 m deep between them.
+    const st = b.street;
+    b.through = st[0] && st[1] && b.d <= 12 ? "z" : st[2] && st[3] && b.w <= 12 ? "x" : null;
+    b.destructible = !!(b.destructible && b.through);
   }
   // Graph with alleys added (for navigation and drawing).
   const roadEdges = graph.edges.map((e) => ({ ...e }));
@@ -499,10 +504,13 @@ function coverRects(b, inSet) {
 // A straight alley (6 m) across the block, open at both ends to pavement.
 function cutAlley(b, inB, kind, R) {
   const tries = [];
-  for (const axis of R() < 0.5 ? ["x", "z"] : ["z", "x"]) {
+  // Along the block's long side first: two rows of buildings, each between
+  // a street and the alley (good drive-through buildings).
+  const long = b.c1 - b.c0 >= b.r1 - b.r0 ? "x" : "z";
+  for (const axis of R() < 0.85 ? [long, long === "x" ? "z" : "x"] : [long === "x" ? "z" : "x", long]) {
     const lo = axis === "x" ? b.r0 : b.c0, hi = axis === "x" ? b.r1 : b.c1;
     const span = hi - lo;
-    if (span < 24) continue;
+    if (span < 15) continue;
     for (let k = 0; k < 8; k++) tries.push({ axis, mid: Math.round(lo + span * (0.35 + R() * 0.3)) });
   }
   const W = ALLEY_WIDTH / CELL;
@@ -591,7 +599,7 @@ function packBuildings(b, inB, kind, R, out, { commercial, outer, rCenter }) {
         district: commercial ? "commercial" : outer ? "edge" : "residential",
         // One- and two-storey buildings of a fair size can be driven
         // through (V2.1 destructible low-rise); high-rises stay solid.
-        destructible: !outer && !small && h <= 8.5 && area >= 30 && area <= 170 && R() < 0.75,
+        destructible: !outer && !small && h <= 9 && area >= 24 && area <= 240,
       });
     }
   for (const i of inB) if (kind[i] === LAND) kind[i] = WALK;

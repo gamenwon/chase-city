@@ -26,7 +26,8 @@ export function wedgeSweep({ layout = createLayout(), seconds = 8, limit = Infin
       const shoveA = rng() * Math.PI * 2, shove = 8 + rng() * 14, heading = rng() * Math.PI * 2;
       const p = s.player;
       Object.assign(p, { x: t.x - Math.sin(shoveA) * 2.5, z: t.z - Math.cos(shoveA) * 2.5, angle: heading, vx: Math.sin(shoveA) * shove, vz: Math.cos(shoveA) * shove, speed: 12 });
-      // Start pose must be legal.
+      // Start pose must be legal (in the drivable world, not in a wall).
+      if (Math.max(Math.abs(t.x), Math.abs(t.z)) > 100 || !s.navigation.allowed(p)) continue;
       if (s.nearSolids(p.x, p.z, 4).some((b) => resolveBuilding({ x: p.x, z: p.z }, b, CONFIG.radius))) continue;
       s.previousPlayer = { x: p.x, z: p.z };
       out.runs++;
@@ -34,7 +35,7 @@ export function wedgeSweep({ layout = createLayout(), seconds = 8, limit = Infin
       let overl = false;
       for (let f = 0; f < seconds * 60 && !s.result; f++) {
         s.update(1 / 60, { left: steer > 0, right: steer < 0 });
-        if (s.nearSolids(p.x, p.z, 4).some((b) => resolveBuilding({ x: p.x, z: p.z }, b, CONFIG.radius - 0.05))) overl = true;
+        if (!p.level && !p.recover && s.nearSolids(p.x, p.z, 4).some((b) => resolveBuilding({ x: p.x, z: p.z }, b, CONFIG.radius - 0.05))) overl = true;
         hist.push({ x: p.x, z: p.z });
       }
       if (overl) out.overlaps++;

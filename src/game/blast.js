@@ -14,6 +14,7 @@
 // sim.blastListeners: (sim, event, radius, strength, later) => void.
 import { blastCity } from "./city.js";
 import { blastPillars } from "./overpass.js";
+import { blastWalls } from "./buildings.js";
 
 export const BLAST = Object.freeze({
   radius: 8, // metres at strength 1 (x sqrt(strength))
@@ -117,6 +118,8 @@ export function applyBlast(sim, e, later) {
   }
   // Overpass pillars (V2.1).
   if (sim.overpasses?.length) blastPillars(sim, e, R, s);
+  // Low-rise walls (V2.1).
+  if (sim.buildingCells?.cells.length) blastWalls(sim, e, R, s);
   // Everything else that listens (preview locations: parked cars, loose
   // furniture, breakable props, fuel pumps, gantries, shop windows).
   for (const fn of sim.blastListeners || []) fn(sim, e, R, s, later, depth);

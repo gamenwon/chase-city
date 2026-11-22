@@ -222,6 +222,10 @@ export class GeneratedWorld {
     const geos = [];
     let verts = 0;
     for (const b of L.buildings) {
+      if (b.destructible) {
+        geos.push(null); // drawn as wall cells (cells.js)
+        continue;
+      }
       const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
       const group = buildingGroup(b, seed, [0, 0]);
       const g = coloredGeometry(group, { dropDown: true, flush: b });
@@ -234,13 +238,17 @@ export class GeneratedWorld {
     }
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, flatShading: true });
     this.buildingMaterial = mat;
-    const batch = new THREE.BatchedMesh(geos.length, verts, 0, mat);
+    const batch = new THREE.BatchedMesh(Math.max(1, geos.filter(Boolean).length), Math.max(3, verts), 0, mat);
     batch.castShadow = batch.receiveShadow = true;
     batch.perObjectFrustumCulled = true;
     batch.sortObjects = false;
     this.group.add(batch);
     this.batch = batch;
     this.entries = geos.map((g, i) => {
+      if (!g) {
+        const b = L.buildings[i];
+        return { bounds: b, visualBounds: new THREE.Box3(new THREE.Vector3(b.x - b.w / 2, 0, b.z - b.d / 2), new THREE.Vector3(b.x + b.w / 2, b.h + 0.4, b.z + b.d / 2)), opacity: 1, occluded: false, setOpacity: () => {}, destructible: true };
+      }
       const gid = batch.addGeometry(g);
       const id = batch.addInstance(gid);
       g.computeBoundingBox();
@@ -278,7 +286,7 @@ export class GeneratedWorld {
     });
     this.batch?.dispose?.();
     for (const e of this.entries || []) {
-      e.geometry.dispose();
+      e.geometry?.dispose();
       e.ghost?.material.dispose();
     }
     this.material.dispose();

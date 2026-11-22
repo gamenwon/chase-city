@@ -169,6 +169,25 @@ export class RoadNavigation {
       n.neighbors = n.neighbors.filter((id) => id < this.baseNodeCount);
   }
   buildBypasses() {
+    // V2.1: holes broken through low-rise buildings become nodes linked to
+    // what they can see, so a corridor through a building is a route.
+    for (const h of this.holes || []) {
+      const n = { x: h.x, z: h.z, id: this.nodes.length, neighbors: [] };
+      if (!this.clear(n, n)) continue;
+      const links = this.nodes
+        .filter((o) => !o.level)
+        .map((o) => ({ o, d: distance(n, o) }))
+        .filter((v) => v.d < 14 && v.d > 0.5)
+        .sort((a, b) => a.d - b.d)
+        .filter((v) => this.clear(n, v.o))
+        .slice(0, 8);
+      if (!links.length) continue;
+      this.nodes.push(n);
+      for (const { o } of links) {
+        n.neighbors.push(o.id);
+        o.neighbors.push(n.id);
+      }
+    }
     for (const w of this.solids.filter((b) => b.kind === "wreck"))
       for (const x of [w.x - w.w / 2 - 1.8, w.x + w.w / 2 + 1.8])
         for (const z of [w.z - w.d / 2 - 1.8, w.z + w.d / 2 + 1.8]) {
