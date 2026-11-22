@@ -66,7 +66,7 @@ function useNet(sim) {
   const adj = new Map([...nodes.keys()].map((id) => [id, []]));
   const paths = new Map();
   for (const e of g.edges) {
-    if (e.kind !== "road" || e.a == null) continue;
+    if ((e.kind !== "road" && e.kind !== "overpass") || e.a == null) continue;
     adj.get(e.a).push(nodes.get(e.b));
     adj.get(e.b).push(nodes.get(e.a));
     paths.set(`${e.a}>${e.b}`, makePath(e.pts));
@@ -319,7 +319,7 @@ export function updateTarget(sim, dt) {
 export function resolveTargetContact(sim) {
   const t = sim.target,
     p = sim.player;
-  if (!t || t.state !== "fleeing") return 0;
+  if (!t || t.state !== "fleeing" || (t.level || 0) !== (p.level || 0)) return 0;
   const contact = policeContact(p, t);
   if (!contact) return 0;
   const { x: nx, z: nz, depth } = contact;

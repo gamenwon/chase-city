@@ -201,7 +201,7 @@ function placePickups(sim, count) {
   // junctions, alleys included).
   if (sim.layout.graph)
     for (const n of sim.navigation.nodes)
-      if (n.id < (sim.navigation.baseNodeCount ?? sim.navigation.nodes.length) && n.neighbors.length === 2) spots.push({ x: n.x, z: n.z });
+      if (n.id < (sim.navigation.baseNodeCount ?? sim.navigation.nodes.length) && n.neighbors.length === 2 && !n.level && !n.foot) spots.push({ x: n.x, z: n.z });
   if (!sim.layout.graph)
   for (const line of roads)
     for (const mid of [-75, -45, -15, 15, 45, 75]) {

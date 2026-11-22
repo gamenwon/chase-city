@@ -67,10 +67,33 @@ function spacedLines(R) {
   return out;
 }
 
+// Lines with at least one inner line that has a long gap (39 m+) on both
+// sides (room for an overpass's ramps either side of that junction).
+function linesWithRoom(R) {
+  for (let k = 0; k < 40; k++) {
+    const l = spacedLines(R);
+    for (let i = 1; i < l.length - 1; i++) if (l[i] - l[i - 1] >= 39 && l[i + 1] - l[i] >= 39) return l;
+  }
+  return spacedLines(R);
+}
 function roadGraph(R) {
-  const xs = spacedLines(R), zs = spacedLines(R);
+  const xs = linesWithRoom(R), zs = linesWithRoom(R);
   const I = xs.length, J = zs.length;
-  const ia = 1 + Math.floor(R() * (I - 2)), ja = 1 + Math.floor(R() * (J - 2)); // avenues
+  const roomy = (l) => {
+    for (let i = 1; i < l.length - 1; i++) if (l[i] - l[i - 1] >= 39 && l[i + 1] - l[i] >= 39) return i;
+    return -1;
+  };
+  const rx = roomy(xs), rz = roomy(zs);
+  // Avenues (straight, wide), not on the roomy lines themselves, so a
+  // roomy junction lies on an avenue (overpass room).
+  const pickLine = (n, avoid) => {
+    for (let k = 0; k < 10; k++) {
+      const i = 1 + Math.floor(R() * (n - 2));
+      if (i !== avoid) return i;
+    }
+    return 1 + Math.floor(R() * (n - 2));
+  };
+  const ia = pickLine(I, rx), ja = pickLine(J, rz);
   const nodes = [];
   const at = (i, j) => nodes[i * J + j];
   for (let i = 0; i < I; i++)
@@ -99,7 +122,10 @@ function roadGraph(R) {
   // dead end (every junction keeps 2+ roads) and the network stays one.
   const alive = new Set(edges.map((e) => e.id));
   const degree = (id) => edges.filter((e) => alive.has(e.id) && (e.a === id || e.b === id)).length;
-  const order = edges.filter((e) => !e.ring && !e.avenue).sort(() => R() - 0.5);
+  // The streets at the roomy avenue junctions stay (overpass room).
+  const keep = new Set();
+  for (const [i, j] of [[ia, rz], [rx, ja]]) if (i > 0 && j > 0 && i < I - 1 && j < J - 1) for (const e of edges) if (e.a === at(i, j).id || e.b === at(i, j).id) keep.add(e.id);
+  const order = edges.filter((e) => !e.ring && !e.avenue && !keep.has(e.id)).sort(() => R() - 0.5);
   for (const e of order) {
     if (R() > 0.27) continue;
     if (degree(e.a) <= 2 || degree(e.b) <= 2) continue;
@@ -132,7 +158,72 @@ function roadGraph(R) {
   }
   list.forEach((e, k) => (e.id = k));
   for (const e of list) e.pts = polyline(nodes[e.a], nodes[e.b], e.curve);
-  return { nodes, edges: list, xs, zs };
+  const overpass = R() < 0.9 ? placeOverpass(nodes, list, R) : null;
+  list.forEach((e, k) => (e.id = k));
+  return { nodes, edges: list, xs, zs, overpass };
+}
+
+// V2.1 elevated road: the avenue lifts over one of its junctions. Ramps
+// (20 m) up to a deck 5.6 m high over the crossing street, which keeps
+// running underneath; the avenue's two streets at that junction become
+// ground street -> ramp foot -> overpass -> ramp foot -> ground street.
+export const OVERPASS = Object.freeze({ H: 5.6, R: 18, W: 10, solidFrom: 0.7, clear: 4.3 });
+function placeOverpass(nodes, edges, R) {
+  const inc = (n) => edges.filter((e) => e.a === n.id || e.b === n.id);
+  const cands = [];
+  for (const J of nodes) {
+    if (J.ring) continue;
+    const av = inc(J).filter((e) => e.avenue), cross = inc(J).filter((e) => !e.avenue);
+    if (av.length !== 2 || cross.length !== 2 || cross.some((e) => e.diagonal)) continue;
+    const cw = Math.max(...cross.map((e) => e.width));
+    const half = OVERPASS.R + cw / 2 + 3.5;
+    const ends = av.map((e) => nodes[e.a === J.id ? e.b : e.a]);
+    if (ends.some((P) => Math.hypot(P.x - J.x, P.z - J.z) < half + 7)) continue;
+    cands.push({ J, av, ends, cw, half });
+  }
+  if (!cands.length) return null;
+  const c = cands[Math.floor(R() * cands.length)];
+  const [P, Q] = c.ends, J = c.J;
+  const L0 = Math.hypot(Q.x - P.x, Q.z - P.z), ux = (Q.x - P.x) / L0, uz = (Q.z - P.z) / L0;
+  const F1 = { id: nodes.length, x: J.x - ux * c.half, z: J.z - uz * c.half, foot: true };
+  const F2 = { id: nodes.length + 1, x: J.x + ux * c.half, z: J.z + uz * c.half, foot: true };
+  nodes.push(F1, F2);
+  const width = c.av[0].width;
+  for (const e of c.av) edges.splice(edges.indexOf(e), 1);
+  const mk = (a, b, o) => ({ id: -1, a: a.id, b: b.id, kind: "road", curve: 0, width, avenue: true, pts: [{ x: a.x, z: a.z }, { x: b.x, z: b.z }], ...o });
+  edges.push(mk(P, F1), mk(F2, Q));
+  const L = 2 * c.half;
+  const op = { a: { x: F1.x, z: F1.z }, u: { x: ux, z: uz }, n: { x: -uz, z: ux }, L, W: OVERPASS.W, H: OVERPASS.H, R: OVERPASS.R, groundWidth: width, junction: { x: J.x, z: J.z }, crossWidth: c.cw };
+  // Pillars at both deck ends, either side (outside the crossing street).
+  op.pillars = [];
+  for (const s of [OVERPASS.R + 0.6, L - OVERPASS.R - 0.6])
+    for (const side of [-1, 1]) {
+      const lat = side * (OVERPASS.W / 2 - 0.6);
+      op.pillars.push({ x: F1.x + ux * s + op.n.x * lat, z: F1.z + uz * s + op.n.z * lat, w: 1.1, d: 1.1, s, side });
+    }
+  edges.push({ id: -1, a: F1.id, b: F2.id, kind: "overpass", curve: 0, width: OVERPASS.W, pts: [{ x: F1.x, z: F1.z }, { x: F2.x, z: F2.z }], op });
+  return op;
+}
+// Height of the overpass `s` metres from its first foot.
+export function overpassHeight(op, s) {
+  if (s <= 0 || s >= op.L) return 0;
+  if (s < op.R) return (op.H * s) / op.R;
+  if (s > op.L - op.R) return (op.H * (op.L - s)) / op.R;
+  return op.H;
+}
+// The ground footprint a car cannot drive under (the low part of each
+// ramp, full avenue width), as axis-aligned boxes (the avenue is straight
+// and on an axis).
+export function rampSolids(op) {
+  const s0 = (OVERPASS.solidFrom / op.H) * op.R, s1 = (OVERPASS.clear / op.H) * op.R;
+  const out = [];
+  for (const [a, b] of [[s0, s1], [op.L - s1, op.L - s0]]) {
+    const cx = op.a.x + op.u.x * (a + b) / 2, cz = op.a.z + op.u.z * (a + b) / 2;
+    const along = b - a, across = op.groundWidth + 0.4;
+    const alongX = Math.abs(op.u.x) > 0.5;
+    out.push({ x: cx, z: cz, w: alongX ? along : across, d: alongX ? across : along, kind: "ramp" });
+  }
+  return out;
 }
 function pick(R, arr) {
   return arr[Math.floor(R() * arr.length)];
@@ -274,6 +365,11 @@ function buildCity(seed) {
     exits.push({ id: `${s.id}-${Math.round(s.dx ? n.z : n.x)}`, name: s.name, dx: s.dx, dz: s.dz, x: s.dx ? s.dx * 140 : n.x, z: s.dz ? s.dz * 140 : n.z, anchor: { x: n.x, z: n.z } });
   }
   const { kind, near } = rasterRoads(graph, exits);
+  // Under the low part of the ramps: solid (not open ground).
+  const ramps = graph.overpass ? rampSolids(graph.overpass) : [];
+  for (const q of ramps)
+    for (let r = cellOf(q.z - q.d / 2); r <= cellOf(q.z + q.d / 2 - 0.01); r++)
+      for (let c = cellOf(q.x - q.w / 2); c <= cellOf(q.x + q.w / 2 - 0.01); c++) if (r >= 0 && c >= 0 && r < N && c < N) kind[r * N + c] = 11;
   // Outside the city: not part of any block.
   for (let r = 0; r < N; r++)
     for (let c = 0; c < N; c++) {
@@ -281,7 +377,7 @@ function buildCity(seed) {
       if (Math.max(Math.abs(x), Math.abs(z)) > CITY_HALF - 0.5) kind[r * N + c] = 6;
     }
   const { list: blocks } = components(kind, LAND);
-  const buildings = [], parks = [], lots = [], plazas = [], stations = [], trees = [], obstacles = [], alleys = [];
+  const buildings = [], parks = [], lots = [], plazas = [], stations = [], trees = [], obstacles = [...ramps], alleys = [];
   const counts = { park: 0, parking: 0, gas: 0, plaza: 0, built: 0 };
   const outer = (b) => Math.max(Math.abs(b.cx), Math.abs(b.cz)) > RING + 3;
   // Lot types first (so each city gets its parks, a petrol station and a
@@ -377,7 +473,8 @@ function buildCity(seed) {
     trees,
     alleys,
     exits,
-    graph: { nodes: graph.nodes.map(({ id, x, z, ring }) => ({ id, x, z, ring })), edges: allEdges },
+    overpasses: graph.overpass ? [graph.overpass] : [],
+    graph: { nodes: graph.nodes.map(({ id, x, z, ring, foot }) => ({ id, x, z, ring, foot })), edges: allEdges },
     streetProps,
     parking,
     start,
@@ -588,8 +685,9 @@ function kerbParking(graph, kind, R) {
 
 function startPose(graph) {
   let best = null;
+  const feet = new Set(graph.nodes.filter((n) => n.foot).map((n) => n.id));
   for (const e of graph.edges) {
-    if (e.curve || e.ring) continue;
+    if (e.curve || e.ring || e.kind !== "road" || feet.has(e.a) || feet.has(e.b)) continue;
     const a = e.pts[0], b = e.pts.at(-1), L = Math.hypot(b.x - a.x, b.z - a.z);
     if (L < 28) continue;
     const m = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
@@ -608,12 +706,14 @@ export function validateCity(L) {
   const { kind, N: n } = L.raster;
   const solids = [...L.buildings, ...L.obstacles];
   // 1. Road graph connected (alleys and exits attach to roads).
-  const nodes = L.graph.nodes, roads = L.graph.edges.filter((e) => e.kind === "road");
+  const nodes = L.graph.nodes, roads = L.graph.edges.filter((e) => e.kind === "road" || e.kind === "overpass");
   if (!connected(nodes, roads)) problems.push("roads not connected");
+  // ...and still connected if the overpass comes down.
+  if (!connected(nodes, roads.filter((e) => e.kind !== "overpass"))) problems.push("depends on the overpass");
   // 2. Every road and alley keeps clearance for a police car along it.
   const r = CONFIG.policeRadius + 0.3;
   for (const e of L.graph.edges)
-    for (let k = 1; k < e.pts.length; k++) {
+    for (let k = e.kind === "overpass" ? e.pts.length : 1; k < e.pts.length; k++) {
       const a = e.pts[k - 1], b = e.pts[k], len = Math.hypot(b.x - a.x, b.z - a.z);
       for (let s = 0; s <= len; s += 2) {
         const x = a.x + ((b.x - a.x) * s) / (len || 1), z = a.z + ((b.z - a.z) * s) / (len || 1);
@@ -651,7 +751,9 @@ export function validateCity(L) {
   // 6. Start and exits on clear road.
   const clearAt = (x, z, rad) => !solids.some((q) => Math.abs(q.x - x) < q.w / 2 + rad && Math.abs(q.z - z) < q.d / 2 + rad);
   if (!clearAt(L.start.x, L.start.z, 3)) problems.push("start blocked");
-  for (const d of [12, 24, 36]) if (!clearAt(L.start.x - L.start.along.x * d, L.start.z - L.start.along.z * d, 2)) problems.push("police start blocked");
+  // Police start behind on the road network (placed along the roads by
+  // the game): the start street itself must be clear behind the car.
+  for (const d of [6, 12]) if (!clearAt(L.start.x - L.start.along.x * d, L.start.z - L.start.along.z * d, 2)) problems.push("police start blocked");
   if (L.exits.length < 3) problems.push("too few exits");
   for (const e of L.exits) if (!clearAt(e.anchor.x + e.dx * 10, e.anchor.z + e.dz * 10, 2)) problems.push(`exit ${e.id} blocked`);
   return { ok: problems.length === 0, problems };

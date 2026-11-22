@@ -1,5 +1,6 @@
 import { CONFIG, clamp } from "./config.js";
 import { buildLanes, buildWalks, pointAt, project, nearestWalk } from "./citygraph.js";
+import { overpassHeight } from "../world/citygen.js";
 import { resolveBuilding } from "../world/layout.js";
 
 // V1.9 city life: destructible street props, pedestrians and civilian
@@ -1107,7 +1108,7 @@ function driveTraffic(sim, city, t, dt) {
   const rate = target < t.speed ? 9 : 3;
   t.speed += clamp(target - t.speed, -rate * dt, rate * dt);
   if (!lane.axis) {
-    driveGraphLane(city, t, dt);
+    driveGraphLane(sim, city, t, dt);
     return;
   }
   // Lane keeping (pulled over towards the kerb while yielding).
@@ -1168,13 +1169,14 @@ function driveTraffic(sim, city, t, dt) {
 // metres ahead (so a shove off the lane is recovered and the turn across a
 // junction onto the next lane is a smooth curve); at the lane's end pick a
 // lane leaving that junction (rarely back the way it came).
-function driveGraphLane(city, t, dt) {
+function driveGraphLane(sim, city, t, dt) {
   const life = city.graphLife;
   let lane = t.lane;
+  const opOf = (l) => (l.op != null ? sim.overpasses?.[l.op] : null);
   const pr = project(lane, t.x, t.z);
   t.s = Math.max(t.s ?? 0, pr.s);
   if (t.s >= lane.len - 1.5) {
-    const next = (life.from.get(lane.end) || []).filter((l) => l.edge !== lane.edge);
+    const next = (life.from.get(lane.end) || []).filter((l) => l.edge !== lane.edge && (!opOf(l) || opOf(l).state === "up"));
     const pick = next.length ? next[Math.floor(city.random() * next.length)] : life.lanes.find((l) => l.edge === lane.edge && l.dir !== lane.dir);
     if (pick) {
       t.lane = lane = pick;
@@ -1192,6 +1194,24 @@ function driveGraphLane(city, t, dt) {
   t.x += t.vx * dt;
   t.z += t.vz * dt;
   t.s += t.speed * dt * Math.max(0, Math.cos(diff));
+  // On the overpass: up on its deck (or, if it has come down, a wreck on
+  // the street below).
+  const op = opOf(lane);
+  if (op) {
+    const s = (t.x - op.a.x) * op.u.x + (t.z - op.a.z) * op.u.z;
+    if (op.state !== "up" && s > op.R - 0.5 && s < op.L - op.R + 0.5) {
+      t.state = "wreck";
+      t.health = 0;
+      t.level = 0;
+      t.falling = true;
+      return;
+    }
+    t.level = 1;
+    t.y = overpassHeight(op, s);
+  } else if (t.level) {
+    t.level = 0;
+    t.y = 0;
+  }
 }
 
 // Two round bodies bump: they separate by mass and swap momentum along the
@@ -1286,9 +1306,10 @@ function updateTraffic(sim, city, dt) {
     driveTraffic(sim, city, t, dt);
   }
   // Collisions: with the player, the police and each other.
+  const lvl = (o) => o.level || 0;
   for (const t of city.traffic) {
     const m = t.parked || t.state === "wreck" ? 1.6 : 1;
-    let closing = bump(p, CONFIG.radius, 1.3, t, 1.1, m);
+    let closing = lvl(p) === lvl(t) ? bump(p, CONFIG.radius, 1.3, t, 1.1, m) : 0;
     if (closing > 0) {
       p.speed = Math.max(0, p.speed - closing * 0.4);
       if (closing > 6) sim.damage(5);
@@ -1315,7 +1336,7 @@ function updateTraffic(sim, city, dt) {
       }
     }
     for (const c of sim.police) {
-      if (c.state !== "active") continue;
+      if (c.state !== "active" || lvl(c) !== lvl(t)) continue;
       // A police car parked in a cordon or roadblock is braced: a civilian
       // car bumping it moves itself, not the police car.
       closing = bump(
@@ -1345,6 +1366,7 @@ function updateTraffic(sim, city, dt) {
     for (let j = i + 1; j < city.traffic.length; j++) {
       const a = city.traffic[i],
         b = city.traffic[j];
+      if ((a.level || 0) !== (b.level || 0)) continue;
       const closing = bump(
         a,
         0.95,
@@ -1379,10 +1401,11 @@ export function updateCity(sim, dt) {
   if (!city) return;
   sim.cameraKick = 0;
   const p = sim.player;
-  hitProps(sim, city, p, CONFIG.radius, true);
+  if (!p.level) hitProps(sim, city, p, CONFIG.radius, true);
   for (const c of sim.police)
     if (
       c.state === "active" &&
+      !c.level &&
       Math.hypot(c.x - p.x, c.z - p.z) < city.budget.range
     )
       // Police cars ram through street furniture: posts and street trees

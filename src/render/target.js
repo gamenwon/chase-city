@@ -84,7 +84,7 @@ export class TargetRenderer {
     }
     this.shake *= 0.85;
     this.group.visible = true;
-    this.group.position.set(t.x, 0, t.z);
+    this.group.position.set(t.x, t.y || 0, t.z);
     const wrecked = t.state === "wrecked";
     if (wrecked) {
       // Crash: thrown up, flipped onto its roof (then WreckRenderer's wreck

@@ -14,6 +14,7 @@ import { CityLifeRenderer } from "./city.js";
 import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
+import { OverpassRenderer } from "./overpass.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -113,6 +114,9 @@ export class CityRenderer {
     this.pickups = new PickupRenderer(this.scene);
     this.targetView = new TargetRenderer(this.scene);
     this.water = new WaterJets(this.scene);
+    // V2.1 elevated road(s) of a generated city.
+    this.overpass = new OverpassRenderer(this.scene);
+    this.overpass.setLayout(layout);
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -234,6 +238,7 @@ export class CityRenderer {
     this.buildings = this.world.entries;
     this.occlusion = new BuildingOcclusion(this.buildings);
     this.night.setLayout(layout);
+    this.overpass.setLayout(layout);
     this.layout = layout;
   }
   batchStatic() {
@@ -295,7 +300,7 @@ export class CityRenderer {
   }
   render(sim, dt, running = sim.started && !sim.result) {
     const p = sim.player;
-    this.player.position.set(p.x, 0, p.z);
+    this.player.position.set(p.x, p.y || 0, p.z);
     this.player.rotation.y = p.angle;
     this.player.rotation.z +=
       (-p.turn * 0.045 - this.player.rotation.z) * (1 - Math.exp(-dt * 9));
@@ -320,7 +325,7 @@ export class CityRenderer {
         c.state === "wreck"
           ? wreckPose(c.wreckAge)
           : { y: 0, pitch: 0, roll: 0 };
-      mesh.position.set(c.x, pose.y, c.z);
+      mesh.position.set(c.x, pose.y + (c.y || 0), c.z);
       mesh.rotation.set(
         pose.pitch,
         c.angle,
@@ -357,6 +362,7 @@ export class CityRenderer {
     this.pickups.update(sim, this.camera);
     this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
     this.water.update(sim.city, sim.elapsed, this.camera);
+    this.overpass.update(sim);
     const spawnCameraView = spawnView(this.camera);
     for (const c of sim.police)
       if (c.spawnProof && c.state === "active") {

@@ -50,16 +50,17 @@ export class ChaseCamera {
     }
   }
   update(player, dt) {
+    // (V2.1: rises with the car on an overpass.)
     this.follow.lerp(
-      this.point.set(player.x, 0, player.z),
+      this.point.set(player.x, player.y || 0, player.z),
       1 - Math.exp(-dt * 5),
     );
     this.camera.position.set(
       this.follow.x + (this.mobile ? 26 : 30),
-      this.mobile ? 64 : 60,
+      (this.mobile ? 64 : 60) + this.follow.y,
       this.follow.z + 40,
     );
-    this.camera.lookAt(this.follow.x, 0, this.follow.z - 6);
+    this.camera.lookAt(this.follow.x, this.follow.y, this.follow.z - 6);
     this.camera.updateMatrixWorld(true);
   }
   visible(point, entries, player = null) {

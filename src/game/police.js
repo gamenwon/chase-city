@@ -173,6 +173,12 @@ export function steerPolice(
       : c.role === "flank" && Math.abs(along) < 6
         ? "side"
         : "rear";
+  // V2.1: on an overpass the target is on its deck (level 1): the route
+  // and the line-of-sight tests are made on that level.
+  if (player.level) {
+    prediction.level = player.level;
+    if (chaseTarget) chaseTarget.level = player.level;
+  }
   const target = surrounding ? slot : chaseTarget;
   // Ambushers (every other blocker) avoid the player's own road until they
   // are in front, arriving from a side street or head-on instead.
@@ -402,7 +408,7 @@ export function steerPolice(
   const grip = 1 - Math.exp(-dt * 7);
   c.vx += ((dx / (d || 1)) * speed - c.vx) * grip;
   c.vz += ((dz / (d || 1)) * speed - c.vz) * grip;
-  const next = { x: c.x + c.vx * dt * 3, z: c.z + c.vz * dt * 3 };
+  const next = { x: c.x + c.vx * dt * 3, z: c.z + c.vz * dt * 3, level: c.level };
   const safetyRadius = navigation.clear(c, c, CONFIG.policeRadius + 0.05)
     ? CONFIG.policeRadius + 0.05
     : CONFIG.policeRadius - 0.02;
@@ -586,7 +592,7 @@ export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
   const grip = 1 - Math.exp(-dt * 7);
   c.vx += ((wx / wd) * speed - c.vx) * grip;
   c.vz += ((wz / wd) * speed - c.vz) * grip;
-  const next = { x: c.x + c.vx * dt * 3, z: c.z + c.vz * dt * 3 };
+  const next = { x: c.x + c.vx * dt * 3, z: c.z + c.vz * dt * 3, level: c.level };
   if (!navigation.clear(c, next, CONFIG.policeRadius - 0.02)) {
     c.vx *= 0.5;
     c.vz *= 0.5;

@@ -15,6 +15,7 @@ import { createTally, recordCityEvent } from "./tally.js";
 import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.js";
 import { updateTarget, resolveTargetContact } from "./target.js";
 import { updateBlasts } from "./blast.js";
+import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
 import { createCity, updateCity, cityBudget, standingPostsNear, PROPS } from "./city.js";
@@ -62,6 +63,7 @@ export class Simulation {
   refreshNavigation() {
     this.solids = [
       ...this.staticSolids,
+      ...pillarSolids(this),
       ...this.barricades,
       ...this.wrecks.filter((w) => w.solid),
       ...(this.city?.solids || []),
@@ -142,7 +144,9 @@ export class Simulation {
           budget: this.cityBudget,
         })
       : null;
-    this.solids = [...this.staticSolids];
+    // V2.1 elevated road(s) of a generated city (overpass.js).
+    this.overpasses = createOverpasses(this.layout);
+    this.solids = [...this.staticSolids, ...pillarSolids(this)];
     this.navigation = new RoadNavigation([
       ...this.solids,
       ...(this.city?.navObstacles || []),
@@ -215,7 +219,7 @@ export class Simulation {
         }
       }
     const spots = nav.nodes
-      .filter((n) => n.id < (nav.baseNodeCount ?? nav.nodes.length))
+      .filter((n) => n.id < (nav.baseNodeCount ?? nav.nodes.length) && !n.level)
       .map((n) => ({ n, d: dist.get(n.id) ?? Infinity, ahead: (n.x - p.x) * fx + (n.z - p.z) * fz }))
       .filter((v) => v.d >= 20 && v.d <= 60 && v.ahead < -8)
       .sort((a, b) => a.d - b.d);
@@ -316,6 +320,11 @@ export class Simulation {
     return [...seen].sort((a, b) => a - b).map((i) => this.solids[i]);
   }
   constrain(body, radius, fallback) {
+    if (this.overpasses?.length) {
+      // Two levels: on the overpass only its parapets count.
+      const deckHit = constrainLevels(this, body, radius);
+      if (body.level === 1) return deckHit;
+    }
     let hit = false;
     const near = this.nearSolids(body.x, body.z, radius + 4);
     // Tight alleys can be narrower than a car. Iterate neighboring contacts,
@@ -326,6 +335,7 @@ export class Simulation {
         if (resolveBuilding(body, b, radius)) {
           contact = true;
           body.lastObstacleKind = b.kind || "wall";
+          body.lastObstacle = b;
           hit = true;
         }
       if (!contact) break;
@@ -392,6 +402,12 @@ export class Simulation {
         }
       }
     }
+    // A hard hit on an overpass pillar damages it (V2.1).
+    if (body.lastObstacle?.kind === "pillar" && body.lastImpact > 0) {
+      const mass = body === this.player ? (this.vehicle.stats.durability || 100) / 100 : 1.2;
+      hitPillar(this, body.lastObstacle, body.lastImpact, mass);
+    }
+    body.lastObstacle = null;
     return hit;
   }
   explodePolice(car) {
@@ -551,6 +567,7 @@ export class Simulation {
   // nearest road point. Never while police are close, an arrest is
   // counting or the car is held: a real police box still arrests.
   watchWedge(p, touching, steering) {
+    if (p.level) return (p.wedge = null);
     const w = p.wedge;
     if (!touching) {
       if (w && Math.hypot(p.x - w.x, p.z - w.z) > 2.5) p.wedge = null;
@@ -583,7 +600,7 @@ export class Simulation {
   // along an open way from there.
   recoveryPoint(p) {
     const nodes = this.navigation.nodes
-      .filter((n) => n.id < (this.navigation.baseNodeCount ?? this.navigation.nodes.length))
+      .filter((n) => n.id < (this.navigation.baseNodeCount ?? this.navigation.nodes.length) && !n.level)
       .map((n) => ({ n, d: Math.hypot(n.x - p.x, n.z - p.z) }))
       .filter((v) => v.d > 1 && v.d < 30)
       .sort((a, b) => a.d - b.d);
@@ -720,7 +737,7 @@ export class Simulation {
   resolvePlayerPolice() {
     const p = this.player;
     for (const c of this.police) {
-      if (c.state !== "active") continue;
+      if (c.state !== "active" || !sameLevel(p, c)) continue;
       const contact = policeContact(p, c);
       if (contact) {
         // V2.0 pin arrest: when the player last touched a police car.
@@ -952,6 +969,7 @@ export class Simulation {
       for (let j = 0; j < i; j++) {
         const a = this.police[i],
           b = this.police[j];
+        if (!sameLevel(a, b)) continue;
         const speed = Math.hypot(a.vx - b.vx, a.vz - b.vz);
         const modes = [a.mode || "pursuit", b.mode || "pursuit"];
         const damage = collidePolice(a, b);
@@ -1005,7 +1023,7 @@ export class Simulation {
     // V2.1: never left inside a building. If all the pushing this step
     // still leaves the car overlapping one, it goes back to its last legal
     // spot (normally the previous frame).
-    if (!p.recover) {
+    if (!p.recover && !p.level) {
       const inside = this.nearSolids(p.x, p.z, CONFIG.radius + 4).some((b) => resolveBuilding({ x: p.x, z: p.z }, b, CONFIG.radius - 0.08));
       if (inside && p.lastLegal) {
         p.x = p.lastLegal.x;
@@ -1020,12 +1038,14 @@ export class Simulation {
       if (c.state === "active" && c.health <= 0) this.explodePolice(c);
     // Explosions damage, shove and set off what is around them (blast.js).
     updateBlasts(this);
+    if (this.overpasses.length) updateOverpasses(this, dt);
     const groundSpeed =
       Math.hypot(p.x - this.previousPlayer.x, p.z - this.previousPlayer.z) / dt;
     p.groundSpeed = groundSpeed;
     const near = this.police.filter(
       (c) =>
         c.state === "active" &&
+        sameLevel(c, p) &&
         Math.hypot(c.x - p.x, c.z - p.z) < (this.arrest > 0 ? 10.5 : 9.5),
     );
     const center = near.reduce(

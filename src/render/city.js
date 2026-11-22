@@ -315,7 +315,7 @@ export class CityLifeRenderer {
       const hurt = t.health < 60;
       this.e.set(0, t.angle, wreck ? 0.12 : 0, "YXZ");
       this.q.setFromEuler(this.e);
-      this.m.compose(this.v.set(t.x, 0, t.z), this.q, this.s.set(1, 1, 1));
+      this.m.compose(this.v.set(t.x, t.y || 0, t.z), this.q, this.s.set(1, 1, 1));
       this.carMesh.setMatrixAt(n, this.m);
       if (recolor) {
         this.color.set(CAR_COLORS[t.color]);

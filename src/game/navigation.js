@@ -117,9 +117,30 @@ export class RoadNavigation {
       b.neighbors.push(a.id);
     };
     const edges = [...graph.edges.filter((e) => e.kind === "road"), ...graph.edges.filter((e) => e.kind !== "road")];
+    let opId = 0;
     for (const e of edges) {
       const made = [];
       let prev = null;
+      if (e.kind === "overpass") {
+        // V2.1: deck nodes on level 1 (above the ground solids), joined to
+        // the ground only at the two ramp feet.
+        const id = opId++;
+        const pts = resample(e.pts, 9);
+        pts.forEach((p, k) => {
+          let n;
+          if (k === 0 || k === pts.length - 1) {
+            n = add(p.x, p.z);
+            if (n) Object.assign(n, { foot: true, op: id });
+          } else {
+            n = { x: p.x, z: p.z, id: this.nodes.length, neighbors: [], level: 1, op: id };
+            this.nodes.push(n);
+            this.map.set(`${p.x},${p.z}|1`, n);
+          }
+          if (n && prev) link(prev, n);
+          prev = n;
+        });
+        continue;
+      }
       for (const p of resample(e.pts, 9)) {
         const n = add(p.x, p.z);
         if (n && prev) link(prev, n);
@@ -202,12 +223,30 @@ export class RoadNavigation {
       lateral = (point.x - e.x) * e.dz - (point.z - e.z) * e.dx;
     return forward >= 94 && forward <= 154 && Math.abs(lateral) <= 8;
   }
+  // V2.1: the overpass came down: its deck leaves the network.
+  killOverpass(id) {
+    (this.deadOps ||= new Set()).add(id);
+    for (const n of this.nodes) if (n.op === id && n.level === 1) n.dead = true;
+    this.revision++;
+  }
   clear(a, b, radius) {
+    if (a.dead || b.dead) return false;
+    const la = a.level || 0, lb = b.level || 0;
+    if (la === 1 || lb === 1) {
+      // On the deck there is nothing in the way (its parapets keep cars
+      // on it); level changes only at a ramp foot.
+      const op = a.op ?? b.op;
+      if (this.deadOps?.has(op)) return false;
+      if (la === lb) return true;
+      return !!(a.foot || b.foot) && distance(a, b) < 10;
+    }
     if (!this.allowed(a) || !this.allowed(b)) return false;
     return clearSegment(a, b, this.solids, radius);
   }
   nearest(point, visibleFrom = null, radius = CONFIG.policeRadius - 0.02) {
+    const level = point.level || 0;
     const candidates = this.nodes
+      .filter((n) => !n.dead && (n.level || 0) === level)
       .map((n) => ({ n, d: distance(n, point) }))
       .sort((a, b) => a.d - b.d);
     for (const { n } of candidates)
@@ -246,7 +285,7 @@ export class RoadNavigation {
           id = came.get(id);
           path.push(this.nodes[id]);
         }
-        return path.reverse().map((n) => ({ x: n.x, z: n.z }));
+        return path.reverse().map((n) => (n.level || n.foot ? { x: n.x, z: n.z, level: n.level || 0, op: n.op, foot: n.foot } : { x: n.x, z: n.z }));
       }
       open.delete(id);
       for (const next of this.nodes[id].neighbors) {
@@ -285,6 +324,7 @@ export class RoadNavigation {
         forward = (n.x - player.x) * fx + (n.z - player.z) * fz;
       return (
         (this.baseNodeCount === undefined || n.id < this.baseNodeCount) &&
+        !n.level &&
         this.clear(n, n) &&
         d >= 45 &&
         d <= 115 &&
