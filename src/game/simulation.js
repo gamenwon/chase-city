@@ -7,6 +7,8 @@ import { addWreck, updateWrecks } from "./wrecks.js";
 import { spawnView, inspectSpawn } from "./spawning.js";
 import { chooseExit, constrainToWorld } from "./escape.js";
 import { updateBarricades } from "./barricades.js";
+import { gapFillers } from "../world/layout.js";
+import { clearSegment } from "./navigation.js";
 import { createMission, updateMission, getMission } from "./missions.js";
 import { getVehicle } from "./vehicles.js";
 import { createTally, recordCityEvent } from "./tally.js";
@@ -30,7 +32,8 @@ export class Simulation {
     this.cameraRig =
       options.cameraRig ||
       new ChaseCamera(options.width || 1100, options.height || 740);
-    this.staticSolids = [...layout.buildings, ...(layout.obstacles || [])];
+    // Narrow gaps between buildings are closed for physics (gapFillers).
+    this.staticSolids = [...layout.buildings, ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
     this.random = options.random || Math.random;
     this.reinforcementsEnabled = options.reinforcements !== false;
     this.barricadesEnabled = options.barricades !== false;
@@ -492,6 +495,58 @@ export class Simulation {
       return true;
     });
   }
+  // V2.1 wedge guard. Pressed against walls for 2.5 s without getting
+  // 2.5 m anywhere, even while steering (the slide above only runs with
+  // no input): turn towards the most open heading and commit to it. If no
+  // heading is open at all (wedged), glide along a clear line to the
+  // nearest road point. Never while police are close, an arrest is
+  // counting or the car is held: a real police box still arrests.
+  watchWedge(p, touching, steering) {
+    const w = p.wedge;
+    if (!touching) {
+      if (w && Math.hypot(p.x - w.x, p.z - w.z) > 2.5) p.wedge = null;
+      return;
+    }
+    if (!w || Math.hypot(p.x - w.x, p.z - w.z) > 2.5) {
+      p.wedge = { x: p.x, z: p.z, at: this.elapsed };
+      return;
+    }
+    if (this.elapsed - w.at < 2.5 || p.postEscape) return;
+    p.wedge = { x: p.x, z: p.z, at: this.elapsed };
+    const policeNear = this.police.some((c) => c.state === "active" && Math.hypot(c.x - p.x, c.z - p.z) < 9);
+    if (policeNear || this.arrest > 0 || p.contained || this.pin?.trapped) return;
+    const all = Array.from({ length: 24 }, (_, i) => p.angle + Math.PI + (i / 24) * Math.PI * 2);
+    const open = this.clearHeadings(p, all, 12);
+    this.stats.unwedges = (this.stats.unwedges || 0) + 1;
+    if (open.length) {
+      const heading = open.sort((x, y) => Math.abs(angleDelta(x, p.angle)) - Math.abs(angleDelta(y, p.angle)))[0];
+      p.postEscape = { heading, until: this.elapsed + 1.4, forced: this.elapsed + 0.7 };
+      return;
+    }
+    const to = this.recoveryPoint(p);
+    if (!to) return;
+    const d = Math.hypot(to.x - p.x, to.z - p.z);
+    p.recover = { from: { x: p.x, z: p.z }, to, t: 0, seconds: clamp(d / 14, 0.25, 0.9), heading: to.heading };
+    this.stats.recoveryGlides = (this.stats.recoveryGlides || 0) + 1;
+  }
+  // The nearest road node reachable on a straight clear line (a thin
+  // probe, so it can leave a pocket the car is jammed in), with a heading
+  // along an open way from there.
+  recoveryPoint(p) {
+    const nodes = this.navigation.nodes
+      .filter((n) => n.id < (this.navigation.baseNodeCount ?? this.navigation.nodes.length))
+      .map((n) => ({ n, d: Math.hypot(n.x - p.x, n.z - p.z) }))
+      .filter((v) => v.d > 1 && v.d < 30)
+      .sort((a, b) => a.d - b.d);
+    for (const { n } of nodes) {
+      if (!clearSegment(p, n, this.solids, 0.45)) continue;
+      if (this.nearSolids(n.x, n.z, 3).some((b) => resolveBuilding({ x: n.x, z: n.z }, b, CONFIG.radius))) continue;
+      const next = n.neighbors.map((id) => this.navigation.nodes[id])[0];
+      const heading = next ? Math.atan2(-(next.x - n.x), -(next.z - n.z)) : p.angle;
+      return { x: n.x, z: n.z, heading };
+    }
+    return null;
+  }
   drivePlayer(dt, input) {
     const p = this.player;
     const steering = (input.left ? 1 : 0) - (input.right ? 1 : 0);
@@ -511,7 +566,7 @@ export class Simulation {
     const post = this.postAhead(p);
     const esc = p.postEscape;
     if (!post && esc) {
-      if (this.elapsed > esc.until || Math.abs(steering) > 0 ||
+      if (this.elapsed > esc.until || (Math.abs(steering) > 0 && !(esc.forced && this.elapsed < esc.forced)) ||
           Math.abs(angleDelta(esc.heading, p.angle)) < 0.08) p.postEscape = null;
       else {
         p.angle += clamp(angleDelta(esc.heading, p.angle), -5 * dt, 5 * dt);
@@ -519,7 +574,22 @@ export class Simulation {
         p.vz = -Math.cos(esc.heading) * 7;
       }
     }
+    if (p.recover) {
+      // V2.1 recovery glide (unwedge): along a clear straight line to a
+      // road point, over a fraction of a second, then driving on.
+      const r = p.recover;
+      r.t = Math.min(1, r.t + dt / r.seconds);
+      const e = r.t * r.t * (3 - 2 * r.t);
+      p.x = r.from.x + (r.to.x - r.from.x) * e;
+      p.z = r.from.z + (r.to.z - r.from.z) * e;
+      p.angle += clamp(angleDelta(r.heading, p.angle), -6 * dt, 6 * dt);
+      p.vx = -Math.sin(p.angle) * 6;
+      p.vz = -Math.cos(p.angle) * 6;
+      if (r.t >= 1) p.recover = null;
+      return;
+    }
     const hitWall = this.move(p, dt);
+    this.watchWedge(p, hitWall || !!post, steering);
     // Pressed against walls or posts for over a second without getting
     // anywhere (a pocket the sideways slide only shuttles about in): turn
     // round towards the most open way out and commit to it.
@@ -864,6 +934,7 @@ export class Simulation {
       resolveTargetContact(this);
     }
     for (const c of [p, ...this.police.filter((c) => c.state === "active")]) {
+      if (c === p && p.recover) continue; // gliding out along a clear line
       const before = { x: c.x, z: c.z };
       const hit = this.constrain(
         c,
@@ -882,6 +953,17 @@ export class Simulation {
       }
     }
     this.wedgePlayer(previous.get(p));
+    // V2.1: never left inside a building. If all the pushing this step
+    // still leaves the car overlapping one, it goes back to its last legal
+    // spot (normally the previous frame).
+    if (!p.recover) {
+      const inside = this.nearSolids(p.x, p.z, CONFIG.radius + 4).some((b) => resolveBuilding({ x: p.x, z: p.z }, b, CONFIG.radius - 0.08));
+      if (inside && p.lastLegal) {
+        p.x = p.lastLegal.x;
+        p.z = p.lastLegal.z;
+        this.stats.overlapRestores = (this.stats.overlapRestores || 0) + 1;
+      } else if (!inside) p.lastLegal = { x: p.x, z: p.z };
+    }
     // V1.9: street props, pedestrians and traffic react to where the cars
     // ended up this step (props/traffic can still nudge them).
     if (this.city) updateCity(this, dt);

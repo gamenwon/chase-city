@@ -1,11 +1,13 @@
 import { Simulation } from "../src/game/simulation.js";
 import { createLayout } from "../src/world/layout.js";
-// Normal launch, neutral steering for five seconds, then hold right. No car,
-// police, health, mission, clock or reinforcement overrides.
+// Normal launch, neutral steering for eight seconds, then hold right. No car,
+// police, health, mission, clock or reinforcement overrides. (V2.1: was five
+// seconds; that route ran into a gap mouth between two buildings that is now
+// closed for physics, and the chase that followed went another way.)
 export function normalCordonControls(elapsed, profile = "desktop") {
   return {
     left: false,
-    right: Math.round(elapsed * 60) > (profile === "mobile" ? 0 : 300),
+    right: Math.round(elapsed * 60) > (profile === "mobile" ? 0 : 480),
   };
 }
 export function cordonSample(sim) {

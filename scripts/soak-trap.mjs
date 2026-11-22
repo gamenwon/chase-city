@@ -22,9 +22,9 @@ function wanderer(seed) {
     return { left: steer > 0, right: steer < 0 };
   };
 }
-export function soak({ seeds = 12, seconds = 90, profile = "mobile" } = {}) {
+export function soak({ seeds = 12, seconds = 90, profile = "mobile", from = 1 } = {}) {
   const out = { runs: 0, minutes: 0, stuck: [], policeStuck: 0, policeStuckSeconds: 0, arrests: 0, falseArrests: [], sustainedShakes: 0, shakes: 0 };
-  for (let seed = 1; seed <= seeds; seed++)
+  for (let seed = from; seed < from + seeds; seed++)
     for (const kind of ["loop", "wander"]) {
       const s = new Simulation(layout, { width: 390, height: 664, random: random(seed), city: true, cityProfile: profile });
       s.start();

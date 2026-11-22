@@ -58,3 +58,31 @@ export function resolveBuilding(body, box, radius = CONFIG.radius) {
   }
   return true;
 }
+// Gaps between buildings too narrow for a car (the car is 2.3 m across)
+// are filled with an invisible collider, so a building row reads as one
+// flat wall to physics (a shallow 0.6 m notch at the mouth): no V-shaped pocket at a gap's mouth that a car
+// shoved into it can wedge in. Gaps a car fits through (alleys) are kept.
+export function gapFillers(buildings, maxGap = 2 * CONFIG.radius + 0.9) {
+  const out = [];
+  for (let i = 0; i < buildings.length; i++)
+    for (let j = i + 1; j < buildings.length; j++) {
+      const a = buildings[i], b = buildings[j];
+      for (const [k, w, o, ow] of [["x", "w", "z", "d"], ["z", "d", "x", "w"]]) {
+        const lo = a[k] < b[k] ? a : b, hi = lo === a ? b : a;
+        const gap = hi[k] - hi[w] / 2 - (lo[k] + lo[w] / 2);
+        if (gap <= 0.01 || gap > maxGap) continue;
+        // Recessed 0.6 m into the gap at each end: a car (radius 1.15) in
+        // the mouth rests on the filler and cannot reach both corners.
+        const s0 = Math.max(a[o] - a[ow] / 2, b[o] - b[ow] / 2) + 0.6, s1 = Math.min(a[o] + a[ow] / 2, b[o] + b[ow] / 2) - 0.6;
+        if (s1 - s0 < 0.5) continue;
+        const c = (lo[k] + lo[w] / 2 + hi[k] - hi[w] / 2) / 2;
+        const box = { kind: "gap", hidden: true };
+        box[k] = c;
+        box[w] = gap + 0.02;
+        box[o] = (s0 + s1) / 2;
+        box[ow] = s1 - s0;
+        out.push(box);
+      }
+    }
+  return out;
+}

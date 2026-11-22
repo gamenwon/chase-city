@@ -148,7 +148,7 @@ test("chase impact damage distinguishes glancing and head-on crashes, but low-sp
 test("normal fixed starts and different legal right-steering routes can both produce genuine arrests", () => {
   for (const [width, delay] of [
     [1100, 0],
-    [1100, 5],
+    [1100, 8], // V2.1: was 5 s (that route now meets a closed building gap)
     [390, 0],
     [390, 3],
   ]) {
