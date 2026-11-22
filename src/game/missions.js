@@ -197,6 +197,12 @@ export function updateMission(sim) {
 function placePickups(sim, count) {
   const roads = [-90, -60, -30, 0, 30, 60, 90];
   const spots = [];
+  // V2.1 generated city: on the road network (navigation nodes away from
+  // junctions, alleys included).
+  if (sim.layout.graph)
+    for (const n of sim.navigation.nodes)
+      if (n.id < (sim.navigation.baseNodeCount ?? sim.navigation.nodes.length) && n.neighbors.length === 2) spots.push({ x: n.x, z: n.z });
+  if (!sim.layout.graph)
   for (const line of roads)
     for (const mid of [-75, -45, -15, 15, 45, 75]) {
       spots.push({ x: line, z: mid });

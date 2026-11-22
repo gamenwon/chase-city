@@ -11,10 +11,23 @@ export function planBarricade(player, navigation, solids, active, fleet, id) {
     fx = speed > 3 ? player.vx / speed : -Math.sin(player.angle),
     fz = speed > 3 ? player.vz / speed : -Math.cos(player.angle);
   const candidates = [];
+  const graph = navigation.graph;
   for (const node of navigation.nodes) {
     if (Math.abs(node.x) > 90 || Math.abs(node.z) > 90) continue;
-    const vertical = node.x % 30 === 0 && node.z % 30 !== 0,
-      horizontal = node.z % 30 === 0 && node.x % 30 !== 0;
+    let vertical = node.x % 30 === 0 && node.z % 30 !== 0,
+      horizontal = node.z % 30 === 0 && node.x % 30 !== 0,
+      across = 11.2;
+    if (graph) {
+      // Generated city: mid-street nodes of straight streets that run
+      // close to an axis (a barricade is an axis-aligned box).
+      const e = graph.edges[node.edge];
+      if (!e || e.kind !== "road" || e.pts.length !== 2 || node.neighbors.length !== 2) continue;
+      const a = e.pts[0], b = e.pts[1], L = Math.hypot(b.x - a.x, b.z - a.z);
+      if (Math.min(Math.hypot(node.x - a.x, node.z - a.z), Math.hypot(node.x - b.x, node.z - b.z)) < 10) continue;
+      vertical = Math.abs(b.z - a.z) / L > 0.97;
+      horizontal = Math.abs(b.x - a.x) / L > 0.97;
+      across = e.width + 0.2;
+    }
     if (!vertical && !horizontal) continue;
     const dist = distance(node, player),
       forward = (node.x - player.x) * fx + (node.z - player.z) * fz;
@@ -23,8 +36,8 @@ export function planBarricade(player, navigation, solids, active, fleet, id) {
       id,
       x: node.x,
       z: node.z,
-      w: vertical ? 11.2 : 1.2,
-      d: vertical ? 1.2 : 11.2,
+      w: vertical ? across : 1.2,
+      d: vertical ? 1.2 : across,
       kind: "barricade",
       vertical,
       road: { x: node.x, z: node.z },

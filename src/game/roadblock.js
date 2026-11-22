@@ -7,10 +7,20 @@ import { clearSegment } from "./navigation.js";
 // hold still until the player gets past or turns off, then rejoin the chase.
 const SPACING = CONFIG.spacing;
 
+// A road as a line: unit direction u, unit normal n, its offset `center`
+// (= n . any point on it) and the player's direction along u. The grid's
+// roads are the axis-aligned case (axis "x": u = +x, n = +z).
+const GRID_U = { x: { u: { x: 1, z: 0 }, n: { x: 0, z: 1 } }, z: { u: { x: 0, z: 1 }, n: { x: 1, z: 0 } } };
+const uOf = (road) => road.u ?? GRID_U[road.axis].u;
+const nOf = (road) => road.n ?? GRID_U[road.axis].n;
+const across = (road, q) => q.x * nOf(road).x + q.z * nOf(road).z;
+
 // The straight road the player is on, if any: axis "x" means driving along x.
-export function playerRoad(player) {
+// V2.1 generated city (sim given): a straight street of the road graph.
+export function playerRoad(player, sim = null) {
   const fx = -Math.sin(player.angle),
     fz = -Math.cos(player.angle);
+  if (sim?.layout?.graph) return graphRoad(player, sim.layout.graph, fx, fz);
   const axis = Math.abs(fx) >= Math.abs(fz) ? "x" : "z";
   const along = axis === "x" ? fx : fz;
   // Only commit while the heading is clearly along the road.
@@ -18,16 +28,34 @@ export function playerRoad(player) {
   const across = axis === "x" ? player.z : player.x;
   const center = Math.round(across / SPACING) * SPACING || 0; // no -0
   if (Math.abs(across - center) > CONFIG.roadWidth / 2) return null;
-  return { axis, dir: Math.sign(along), center };
+  return { axis, dir: Math.sign(along), center, ...GRID_U[axis] };
+}
+function graphRoad(player, graph, fx, fz) {
+  for (const e of graph.edges) {
+    if (e.kind !== "road" || e.pts.length !== 2) continue;
+    const a = e.pts[0], b = e.pts[1], L = Math.hypot(b.x - a.x, b.z - a.z);
+    const ux = (b.x - a.x) / L, uz = (b.z - a.z) / L;
+    const al = fx * ux + fz * uz;
+    if (Math.abs(al) < 0.85) continue;
+    const t = (player.x - a.x) * ux + (player.z - a.z) * uz;
+    if (t < 0 || t > L) continue;
+    const n = { x: -uz, z: ux }, center = a.x * n.x + a.z * n.z;
+    if (Math.abs(player.x * n.x + player.z * n.z - center) > e.width / 2) continue;
+    const s0 = a.x * ux + a.z * uz;
+    return { key: `e${e.id}`, edge: e.id, u: { x: ux, z: uz }, n, center, dir: Math.sign(al), s0, s1: s0 + L, width: e.width };
+  }
+  return null;
 }
 
-const pointOn = (road, s) =>
-  road.axis === "x" ? { x: s, z: road.center } : { x: road.center, z: s };
-const coordOf = (road, p) => (road.axis === "x" ? p.x : p.z);
+const pointOn = (road, s, o = road.center) => ({
+  x: uOf(road).x * s + nOf(road).x * o,
+  z: uOf(road).z * s + nOf(road).z * o,
+});
+const coordOf = (road, p) => p.x * uOf(road).x + p.z * uOf(road).z;
 
 // Car heading that faces across the road (perpendicular to travel).
 export function acrossAngle(road) {
-  return road.axis === "x" ? 0 : Math.PI / 2;
+  return Math.atan2(nOf(road).x, nOf(road).z);
 }
 
 // Cars parked across the road, spaced so every gap (kerb, between cars,
@@ -37,9 +65,7 @@ export function slotPositions(road, s, lo, hi, count) {
     gap = Math.max(0, (hi - lo - count * length) / (count + 1));
   return Array.from({ length: count }, (_, i) => {
     const o = lo + gap * (i + 1) + length * i + length / 2;
-    const p = pointOn(road, s);
-    if (road.axis === "x") p.z = o;
-    else p.x = o;
+    const p = pointOn(road, s, o);
     return { ...p, angle: acrossAngle(road) };
   });
 }
@@ -62,16 +88,14 @@ export function roadExtent(sim, road, point, reach = 9) {
     cache = { revision: sim.navigation.revision, map: new Map() };
     extentCache.set(sim.navigation, cache);
   }
-  const key = `${road.axis}:${road.center}:${Math.round(coordOf(road, point) * 2)}:${reach}`;
+  const key = `${road.key ?? road.axis}:${road.center}:${Math.round(coordOf(road, point) * 2)}:${reach}`;
   if (!cache.map.has(key))
     cache.map.set(key, measureExtent(sim, road, point, reach));
   return cache.map.get(key);
 }
 function measureExtent(sim, road, point, reach) {
   const probe = (o) => {
-    const q = { ...point };
-    if (road.axis === "x") q.z = road.center + o;
-    else q.x = road.center + o;
+    const q = pointOn(road, coordOf(road, point), road.center + o);
     return sim.navigation.allowed(q) && clearSegment(q, q, sim.solids, 0.02);
   };
   // Take the outermost free point on each side, not the first obstacle: a
@@ -92,9 +116,13 @@ export function* blockCandidates(sim, road) {
     start = coordOf(road, p);
   for (let d = CONFIG.blockMinAhead; d <= CONFIG.blockMaxAhead; d += 2) {
     const s = start + road.dir * d;
-    const phase = ((s % SPACING) + SPACING) % SPACING;
     // Keep out of intersections so the block actually seals the road.
-    if (phase < 9 || phase > SPACING - 9) continue;
+    if (road.s0 != null) {
+      if (s < road.s0 + 9 || s > road.s1 - 9) continue;
+    } else {
+      const phase = ((s % SPACING) + SPACING) % SPACING;
+      if (phase < 9 || phase > SPACING - 9) continue;
+    }
     const point = pointOn(road, s);
     if (!sim.navigation.allowed(point)) continue;
     const extent = roadExtent(sim, road, point);
@@ -126,14 +154,14 @@ function aheadBlock(sim, road, active, nearest, pace) {
   const ahead = active
     .filter((c) => {
       const along = (coordOf(road, c) - start) * road.dir,
-        across = road.axis === "x" ? c.z : c.x,
+        acr = across(road, c),
         heading =
-          ((road.axis === "x" ? c.vx : c.vz) * road.dir) /
+          ((c.vx * uOf(road).x + c.vz * uOf(road).z) * road.dir) /
           (Math.hypot(c.vx, c.vz) || 1);
       return (
         along > 10 &&
         along < 70 &&
-        Math.abs(across - road.center) < CONFIG.roadWidth / 2 + 1 &&
+        Math.abs(acr - road.center) < (road.width ?? CONFIG.roadWidth) / 2 + 1 &&
         heading > 0.5
       );
     })
@@ -166,7 +194,7 @@ function aheadBlock(sim, road, active, nearest, pace) {
     cars.length === count
       ? spots
       : slotPositions(road, s, extent.lo, extent.hi, cars.length);
-  const lateral = (q) => (road.axis === "x" ? q.z : q.x);
+  const lateral = (q) => across(road, q);
   return {
     found: {
       s,
@@ -218,12 +246,11 @@ export function updateRoadblock(sim, dt) {
     const road = block.road;
     // Signed distance from the player to the block along the road.
     const ahead = (block.s - coordOf(road, p)) * road.dir;
-    const across = road.axis === "x" ? p.z : p.x;
-    const offRoad = Math.abs(across - road.center) > CONFIG.roadWidth / 2 + 1;
-    const heading = playerRoad(p);
+    const offRoad = Math.abs(across(road, p) - road.center) > (road.width ?? CONFIG.roadWidth) / 2 + 1;
+    const heading = playerRoad(p, sim);
     const sameRoad =
       heading &&
-      heading.axis === road.axis &&
+      (heading.key ?? heading.axis) === (road.key ?? road.axis) &&
       heading.center === road.center &&
       heading.dir === road.dir;
     // Scraping along the block while pinned against it changes the player's
@@ -261,7 +288,7 @@ export function updateRoadblock(sim, dt) {
     p.cordonActive
   )
     return;
-  const road = playerRoad(p);
+  const road = playerRoad(p, sim);
   if (!road) return;
   const active = sim.police.filter(
     (c) => c.state === "active" && c.mode !== "contain" && !c.blockId,
@@ -299,7 +326,7 @@ export function updateRoadblock(sim, dt) {
     if (able.length < candidate.count) continue;
     // Hand out the slots in order across the road, matching the officers'
     // own order across it, so their paths to the slots do not cross.
-    const lateral = (q) => (road.axis === "x" ? q.z : q.x);
+    const lateral = (q) => across(road, q);
     found = candidate;
     slots = spots;
     chosen = able

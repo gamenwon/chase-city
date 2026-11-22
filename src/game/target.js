@@ -15,6 +15,7 @@
 import { CONFIG, clamp, angleDelta } from "./config.js";
 import { policeContact } from "./police.js";
 import { addWreck } from "./wrecks.js";
+import { makePath, pointAt, project } from "./citygraph.js";
 
 export const TARGET = Object.freeze({
   health: 100,
@@ -53,9 +54,55 @@ const nearestNode = (x, z) => ({
   z: clamp(Math.round(z / SPACING) * SPACING, -90, 90),
 });
 
+// V2.1: the road network the target drives. Downtown: the 30 m grid.
+// A generated city: its road graph (junctions joined by straight or
+// curved streets); `lanePoint` then follows the real street.
+let NET = null;
+function useNet(sim) {
+  const g = sim.layout?.graph;
+  if (!g) return (NET = null);
+  if (NET && NET.graph === g) return NET;
+  const nodes = new Map(g.nodes.map((n) => [n.id, { x: n.x, z: n.z, id: n.id, ring: n.ring }]));
+  const adj = new Map([...nodes.keys()].map((id) => [id, []]));
+  const paths = new Map();
+  for (const e of g.edges) {
+    if (e.kind !== "road" || e.a == null) continue;
+    adj.get(e.a).push(nodes.get(e.b));
+    adj.get(e.b).push(nodes.get(e.a));
+    paths.set(`${e.a}>${e.b}`, makePath(e.pts));
+    paths.set(`${e.b}>${e.a}`, makePath(e.pts.slice().reverse()));
+  }
+  return (NET = { graph: g, nodes, adj, paths });
+}
+const pathOf = (a, b) => NET?.paths.get(`${a.id}>${b.id}`);
+const segLength = (a, b) => (NET ? pathOf(a, b)?.len ?? Math.hypot(b.x - a.x, b.z - a.z) : SPACING);
+// Distance along the street from a to b reached by (x, z).
+function progress(a, b, x, z) {
+  const path = NET && pathOf(a, b);
+  if (path) return project(path, x, z).s;
+  return SPACING - Math.hypot(b.x - x, b.z - z);
+}
+function neighboursOf(n) {
+  if (!NET) return neighbours(n);
+  return NET.adj.get(n.id) || [];
+}
+function nearestOf(x, z) {
+  if (!NET) return nearestNode(x, z);
+  let best = null, bd = Infinity;
+  for (const n of NET.nodes.values()) {
+    const d = Math.hypot(n.x - x, n.z - z);
+    if (d < bd && (NET.adj.get(n.id) || []).length) (bd = d), (best = n);
+  }
+  return best;
+}
 // Point on the right-hand lane of the road from a to b, `along` metres
 // from a.
 function lanePoint(a, b, along) {
+  const path = NET && pathOf(a, b);
+  if (path) {
+    const q = pointAt(path, along);
+    return { x: q.x - q.uz * TARGET.laneOffset, z: q.z + q.ux * TARGET.laneOffset };
+  }
   const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz) || 1;
   const ux = dx / len, uz = dz / len;
   // Right of travel in this world (forward (-sin a, -cos a)): (-uz, ux)
@@ -69,12 +116,13 @@ function lanePoint(a, b, along) {
 // Where to place the target at the start: a road segment 40-60 m from the
 // player, preferably ahead of him, clear of solids; it starts driving away.
 export function createTarget(sim) {
+  useNet(sim);
   const p = sim.player,
     f = fwd(p.angle);
   const segs = [];
-  for (const x of LINES)
-    for (const z of LINES)
-      for (const nb of neighbours({ x, z })) {
+  const junctions = NET ? [...NET.nodes.values()] : LINES.flatMap((x) => LINES.map((z) => ({ x, z })));
+  for (const { x, z, id } of junctions)
+      for (const nb of neighboursOf(NET ? NET.nodes.get(id) : { x, z })) {
         const mid = { x: (x + nb.x) / 2, z: (z + nb.z) / 2 };
         const d = Math.hypot(mid.x - p.x, mid.z - p.z);
         if (d < 45 || d > 62) continue;
@@ -82,18 +130,18 @@ export function createTarget(sim) {
         // Leaving away from the player (it has a head start).
         const away = Math.hypot(nb.x - p.x, nb.z - p.z) > Math.hypot(x - p.x, z - p.z);
         if (!away) continue;
-        segs.push({ from: { x, z }, to: nb, score: ahead + sim.random() * 0.6 });
+        segs.push({ from: NET ? NET.nodes.get(id) : { x, z }, to: nb, score: ahead + sim.random() * 0.6 });
       }
   segs.sort((a, b) => b.score - a.score);
   let pick = segs[0];
   for (const s of segs) {
-    const pos = lanePoint(s.from, s.to, SPACING / 2);
+    const pos = lanePoint(s.from, s.to, segLength(s.from, s.to) / 2);
     if (sim.navigation.allowed(pos) && !sim.nearSolids(pos.x, pos.z, 2).length) {
       pick = s;
       break;
     }
   }
-  const pos = lanePoint(pick.from, pick.to, SPACING / 2);
+  const pos = lanePoint(pick.from, pick.to, segLength(pick.from, pick.to) / 2);
   return {
     x: pos.x,
     z: pos.z,
@@ -128,9 +176,9 @@ export function createTarget(sim) {
 function chooseNext(sim, t, cur, prev) {
   const p = sim.player;
   const open = (n) => !((t.blocked.get(segKey(cur, n)) ?? -1) > sim.elapsed);
-  let options = neighbours(cur).filter((n) => (!prev || key(n) !== key(prev)) && open(n));
-  if (!options.length) options = neighbours(cur).filter(open);
-  if (!options.length) options = neighbours(cur);
+  let options = neighboursOf(cur).filter((n) => (!prev || key(n) !== key(prev)) && open(n));
+  if (!options.length) options = neighboursOf(cur).filter(open);
+  if (!options.length) options = neighboursOf(cur);
   const toPlayer = { x: p.x - cur.x, z: p.z - cur.z };
   const dp = Math.hypot(toPlayer.x, toPlayer.z) || 1;
   const straight = prev ? { x: cur.x - prev.x, z: cur.z - prev.z } : null;
@@ -139,7 +187,7 @@ function chooseNext(sim, t, cur, prev) {
     const dx = n.x - cur.x, dz = n.z - cur.z;
     // Away from the player (the far end's distance), never straight at him.
     let s = Math.hypot(n.x - p.x, n.z - p.z) * 0.9;
-    s -= Math.max(0, (dx * toPlayer.x + dz * toPlayer.z) / (SPACING * dp)) * 28;
+    s -= Math.max(0, (dx * toPlayer.x + dz * toPlayer.z) / ((Math.hypot(dx, dz) || 1) * dp)) * 28;
     // Recently visited junctions are avoided (no loops).
     const seen = t.visited.filter((k) => k === key(n)).length;
     s -= seen * 30;
@@ -159,6 +207,7 @@ function chooseNext(sim, t, cur, prev) {
 export function updateTarget(sim, dt) {
   const t = sim.target;
   if (!t || t.state === "wrecked") return;
+  useNet(sim);
   if (t.state === "waiting") {
     if (!sim.started) return;
     t.state = "fleeing";
@@ -171,10 +220,12 @@ export function updateTarget(sim, dt) {
   if (!detouring && !t.next && toTo < 26) t.next = chooseNext(sim, t, t.to, t.from);
   // Progress along the next road (from the junction), once it is chosen.
   const seg = { x: t.to.x - t.from.x, z: t.to.z - t.from.z };
-  const past = ((t.x - t.to.x) * seg.x + (t.z - t.to.z) * seg.z) / SPACING;
+  const segLen = Math.hypot(seg.x, seg.z) || 1;
+  const past = ((t.x - t.to.x) * seg.x + (t.z - t.to.z) * seg.z) / (NET ? segLen * segLen / SPACING : SPACING);
   let into = -Infinity;
   if (t.next) {
-    const nx = (t.next.x - t.to.x) / SPACING, nz = (t.next.z - t.to.z) / SPACING;
+    const nl = NET ? Math.hypot(t.next.x - t.to.x, t.next.z - t.to.z) || 1 : SPACING;
+    const nx = (t.next.x - t.to.x) / nl, nz = (t.next.z - t.to.z) / nl;
     into = (t.x - t.to.x) * nx + (t.z - t.to.z) * nz;
   }
   // Reached the junction (onto the next road, or past it going straight):
@@ -199,10 +250,14 @@ export function updateTarget(sim, dt) {
   while (t.detour.length && Math.hypot(t.detour[0].x - t.x, t.detour[0].z - t.z) < 3) t.detour.shift();
   if (t.detour.length) aim = t.detour[0];
   else if (t.next && d < 10) {
-    const nx = (t.next.x - t.to.x) / SPACING, nz = (t.next.z - t.to.z) / SPACING;
+    const nl = NET ? Math.hypot(t.next.x - t.to.x, t.next.z - t.to.z) || 1 : SPACING;
+    const nx = (t.next.x - t.to.x) / nl, nz = (t.next.z - t.to.z) / nl;
     const along = Math.max(0, (t.x - t.to.x) * nx + (t.z - t.to.z) * nz);
     aim = lanePoint(t.to, t.next, along + 8);
-  } else aim = lanePoint(t.from, t.to, clamp(SPACING - d + 9, 0, SPACING));
+  } else {
+    const L = segLength(t.from, t.to);
+    aim = lanePoint(t.from, t.to, clamp(progress(t.from, t.to, t.x, t.z) + 9, 0, L));
+  }
   let want = headingTo(t.x, t.z, aim.x, aim.z);
   if (t.reverse > 0) {
     // Backing out of a stall: reverse with the wheels turned to the aim.
@@ -239,7 +294,7 @@ export function updateTarget(sim, dt) {
     // the roads along a real route (round benches, wrecks, fallen trees).
     t.blocked.set(segKey(t.from, t.to), sim.elapsed + 25);
     t.blocked.set(segKey(t.to, t.from), sim.elapsed + 25);
-    const here = nearestNode(t.x, t.z);
+    const here = nearestOf(t.x, t.z);
     t.from = here;
     t.to = chooseNext(sim, t, here, null);
     t.next = null;
