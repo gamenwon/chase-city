@@ -39,8 +39,8 @@ export const EXIT_CANDIDATES = Object.freeze([
     },
   ]),
 ]);
-export function chooseExit(solids, rng = Math.random, lastId = null) {
-  const candidates = EXIT_CANDIDATES.filter(
+export function chooseExit(solids, rng = Math.random, lastId = null, list = EXIT_CANDIDATES) {
+  const candidates = list.filter(
     (e) => e.id !== lastId && clearSegment(e.anchor, e, solids, 2),
   );
   if (!candidates.length) throw new Error("No reachable exit road");

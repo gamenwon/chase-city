@@ -1,4 +1,5 @@
 import { CONFIG, clamp } from "./config.js";
+import { buildLanes, buildWalks, pointAt, project, nearestWalk } from "./citygraph.js";
 import { resolveBuilding } from "../world/layout.js";
 
 // V1.9 city life: destructible street props, pedestrians and civilian
@@ -64,6 +65,14 @@ const blockExists = (cx, cz) => Math.abs(cx) <= 75 && Math.abs(cz) <= 75;
 export function cityProps(layout) {
   const props = [];
   let id = 0;
+  if (layout.procedural) {
+    // V2.1 generated city: furniture placed by the generator along every
+    // road's pavement, trees in the parks (big, solid).
+    const mk = (kind, x, z, angle) => ({ id: id++, kind, x, z, angle, state: "stand", fall: 0, fallDir: 0, wobble: 0, y: 0, vx: 0, vz: 0, vy: 0, spin: 0, solidId: null, dirty: true });
+    for (const q of layout.streetProps || []) props.push(mk(q.kind, q.x, q.z, q.angle));
+    for (const t of layout.trees || []) props.push(mk("bigTree", t.x, t.z, 0));
+    return props;
+  }
   const add = (kind, x, z, angle) =>
     props.push({
       id: id++,
@@ -128,6 +137,10 @@ export function createCity(layout, options = {}) {
   }
   // Parking spots: one per sidewalk block side where the hash says so.
   const parking = [];
+  if (layout.procedural) {
+    for (const q of layout.parking || []) parking.push({ x: q.x, z: q.z, angle: q.angle });
+    for (const lot of layout.lots || []) for (const q of lot.bays) if (q.car) parking.push({ x: q.x, z: q.z, angle: q.angle });
+  } else
   for (const n of LINES)
     for (const m of LINES.slice(0, -1))
       for (const side of [-1, 1]) {
@@ -174,6 +187,8 @@ export function createCity(layout, options = {}) {
       .map((p) => ({ x: p.x, z: p.z, w: 1.8, d: 1.8, kind: "tree" })),
     pedestrians: [],
     traffic: [],
+    // V2.1: lanes and pavement walks along a generated city's roads.
+    graphLife: layout.procedural ? { ...buildLanes(layout.graph), walks: buildWalks(layout.graph) } : null,
     parking: parking.map((p, i) => ({ ...p, id: i, car: null })),
     litter: [],
     jets: [], // broken hydrants spraying water (until restart)
@@ -615,7 +630,7 @@ export function addPedestrian(city, at) {
     cross: null,
     threat: null,
     closest: Infinity,
-    ...at,
+    ...Object.fromEntries(Object.entries(at).filter(([, v]) => v !== undefined)),
   };
   city.pedestrians.push(q);
   return q;
@@ -624,6 +639,18 @@ export function addPedestrian(city, at) {
 function spawnPedestrian(sim, city) {
   const p = sim.player,
     r = city.random;
+  if (city.graphLife) {
+    const walks = city.graphLife.walks;
+    for (let tries = 0; tries < 10; tries++) {
+      const w = walks[Math.floor(r() * walks.length)], s = r() * w.len;
+      const q = pointAt(w, s), d = Math.hypot(q.x - p.x, q.z - p.z);
+      if (d < 20 || d > 55) continue;
+      if (boxesNear(city, q.x, q.z).some((b) => Math.abs(b.x - q.x) < b.w / 2 + 0.4 && Math.abs(b.z - q.z) < b.d / 2 + 0.4)) continue;
+      addPedestrian(city, { x: q.x, z: q.z, walk: undefined, walkId: w.id, s });
+      return;
+    }
+    return;
+  }
   for (let tries = 0; tries < 8; tries++) {
     const a = r() * Math.PI * 2,
       dist = 22 + r() * 30;
@@ -762,7 +789,19 @@ function updatePedestrians(sim, city, dt) {
         }
       }
     }
-    if (q.state === "walk") {
+    if (q.state === "walk" && q.walkId != null) {
+      // Generated city: along the pavement, turning back at its ends.
+      const w = city.graphLife.walks[q.walkId];
+      q.s += q.dir * q.walk * dt;
+      if (q.s < 0 || q.s > w.len) {
+        q.dir = -q.dir;
+        q.s = Math.max(0, Math.min(w.len, q.s));
+      }
+      const at = pointAt(w, q.s);
+      q.heading = Math.atan2(at.x - q.x, at.z - q.z) || q.heading;
+      q.x = at.x;
+      q.z = at.z;
+    } else if (q.state === "walk") {
       q.u += q.dir * q.walk * dt;
       const L = SIDE,
         t = ((q.u % (4 * L)) + 4 * L) % (4 * L);
@@ -794,7 +833,7 @@ function updatePedestrians(sim, city, dt) {
       q.z = at.z;
     } else if (q.state === "cross" || q.state === "recover") {
       const target =
-        q.state === "cross" ? q.cross.end : loopPoint(q.cx, q.cz, q.u);
+        q.state === "cross" ? q.cross.end : q.walkId != null ? pointAt(city.graphLife.walks[q.walkId], q.s) : loopPoint(q.cx, q.cz, q.u);
       const dx = target.x - q.x,
         dz = target.z - q.z,
         d = Math.hypot(dx, dz);
@@ -805,7 +844,7 @@ function updatePedestrians(sim, city, dt) {
           q.cz = q.cross.to.cz;
           q.cross = null;
         }
-        q.u = projectOnLoop(q.cx, q.cz, q.x, q.z);
+        if (q.walkId == null) q.u = projectOnLoop(q.cx, q.cz, q.x, q.z);
         q.state = "walk";
       } else {
         q.heading = Math.atan2(dx, dz);
@@ -821,10 +860,16 @@ function updatePedestrians(sim, city, dt) {
       if (q.timer <= 0) {
         if (q.closest < 3.2) city.stats.nearMisses++;
         // Back to the nearest sidewalk.
-        const { cx, cz } = nearestBlock(q.x, q.z);
-        q.cx = cx;
-        q.cz = cz;
-        q.u = projectOnLoop(cx, cz, q.x, q.z);
+        if (city.graphLife) {
+          const n = nearestWalk(city.graphLife.walks, q.x, q.z);
+          q.walkId = n.walk.id;
+          q.s = n.s;
+        } else {
+          const { cx, cz } = nearestBlock(q.x, q.z);
+          q.cx = cx;
+          q.cz = cz;
+          q.u = projectOnLoop(cx, cz, q.x, q.z);
+        }
         q.state = "recover";
         q.cross = null;
       }
@@ -894,7 +939,7 @@ export function addTraffic(city, lane, x, z, extra = {}) {
     x,
     z,
     lane,
-    angle: headingOf(lane),
+    angle: lane.axis ? headingOf(lane) : 0,
     vx: 0,
     vz: 0,
     speed: cruise,
@@ -915,6 +960,18 @@ export { laneCenter };
 function spawnTraffic(sim, city) {
   const p = sim.player,
     r = city.random;
+  if (city.graphLife) {
+    const lanes = city.graphLife.lanes;
+    for (let tries = 0; tries < 10; tries++) {
+      const lane = lanes[Math.floor(r() * lanes.length)], s = r() * lane.len;
+      const q = pointAt(lane, s), d = Math.hypot(q.x - p.x, q.z - p.z);
+      if (d < 32 || d > 68) continue;
+      if ([...city.traffic, ...sim.police].some((o) => Math.hypot(o.x - q.x, o.z - q.z) < 8)) continue;
+      addTraffic(city, lane, q.x, q.z, { s, angle: Math.atan2(-q.ux, -q.uz) });
+      return;
+    }
+    return;
+  }
   for (let tries = 0; tries < 8; tries++) {
     const axis = r() < 0.5 ? "x" : "z";
     const line = LINES[1 + Math.floor(r() * (LINES.length - 2))];
@@ -995,8 +1052,9 @@ function sirenNear(sim, car, range) {
 
 function driveTraffic(sim, city, t, dt) {
   const lane = t.lane;
-  const fx = lane.axis === "x" ? lane.dir : 0,
-    fz = lane.axis === "z" ? lane.dir : 0;
+  const gdir = lane.axis ? null : pointAt(lane, (t.s ?? 0) + 2);
+  const fx = gdir ? gdir.ux : lane.axis === "x" ? lane.dir : 0,
+    fz = gdir ? gdir.uz : lane.axis === "z" ? lane.dir : 0;
   // Anything ahead in my lane? (cars, the player, police, pedestrians)
   let gap = Infinity;
   const ahead = (o, r) => {
@@ -1048,6 +1106,10 @@ function driveTraffic(sim, city, t, dt) {
   // Hard braking is visible: brake much faster than accelerating.
   const rate = target < t.speed ? 9 : 3;
   t.speed += clamp(target - t.speed, -rate * dt, rate * dt);
+  if (!lane.axis) {
+    driveGraphLane(city, t, dt);
+    return;
+  }
   // Lane keeping (pulled over towards the kerb while yielding).
   const want =
     laneCenter(t.lane) +
@@ -1100,6 +1162,36 @@ function driveTraffic(sim, city, t, dt) {
     Math.cos(heading - t.angle),
   );
   t.angle += clamp(diff, -4 * dt, 4 * dt);
+}
+
+// Generated city: follow the lane's polyline, steering for a point a few
+// metres ahead (so a shove off the lane is recovered and the turn across a
+// junction onto the next lane is a smooth curve); at the lane's end pick a
+// lane leaving that junction (rarely back the way it came).
+function driveGraphLane(city, t, dt) {
+  const life = city.graphLife;
+  let lane = t.lane;
+  const pr = project(lane, t.x, t.z);
+  t.s = Math.max(t.s ?? 0, pr.s);
+  if (t.s >= lane.len - 1.5) {
+    const next = (life.from.get(lane.end) || []).filter((l) => l.edge !== lane.edge);
+    const pick = next.length ? next[Math.floor(city.random() * next.length)] : life.lanes.find((l) => l.edge === lane.edge && l.dir !== lane.dir);
+    if (pick) {
+      t.lane = lane = pick;
+      t.s = project(pick, t.x, t.z).s;
+    }
+  }
+  const aim = pointAt(lane, t.s + 3.5 + (t.state === "yield" ? 0 : 0));
+  // Pulled towards the kerb while yielding.
+  const ax = aim.x + (t.state === "yield" ? -aim.uz * 0.8 : 0), az = aim.z + (t.state === "yield" ? aim.ux * 0.8 : 0);
+  const heading = Math.atan2(-(ax - t.x), -(az - t.z));
+  const diff = Math.atan2(Math.sin(heading - t.angle), Math.cos(heading - t.angle));
+  t.angle += clamp(diff, -3 * dt, 3 * dt);
+  t.vx = -Math.sin(t.angle) * t.speed;
+  t.vz = -Math.cos(t.angle) * t.speed;
+  t.x += t.vx * dt;
+  t.z += t.vz * dt;
+  t.s += t.speed * dt * Math.max(0, Math.cos(diff));
 }
 
 // Two round bodies bump: they separate by mass and swap momentum along the

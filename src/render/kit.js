@@ -447,11 +447,14 @@ export function buildingGroup(b, seed, outward) {
   band(g, b.w, b.d, base, 0.5, 0.05, 0x55535c);
   band(g, b.w, b.d, base + GF, 0.22, 0.12, trim);
   const shopColors = [K.red, K.blue, K.green, K.yellow, K.orange];
+  // b.street (generated cities): which faces front a street, [+z, -z,
+  // +x, -x]; otherwise the faces pointing away from the block centre.
+  const sf = b.street;
   const faces = [
-    { ry: 0, span: b.w, half: b.d / 2, street: outward[1] > 0 },
-    { ry: Math.PI, span: b.w, half: b.d / 2, street: outward[1] < 0 },
-    { ry: Math.PI / 2, span: b.d, half: b.w / 2, street: outward[0] > 0 },
-    { ry: -Math.PI / 2, span: b.d, half: b.w / 2, street: outward[0] < 0 },
+    { ry: 0, span: b.w, half: b.d / 2, street: sf ? sf[0] : outward[1] > 0 },
+    { ry: Math.PI, span: b.w, half: b.d / 2, street: sf ? sf[1] : outward[1] < 0 },
+    { ry: Math.PI / 2, span: b.d, half: b.w / 2, street: sf ? sf[2] : outward[0] > 0 },
+    { ry: -Math.PI / 2, span: b.d, half: b.w / 2, street: sf ? sf[3] : outward[0] < 0 },
   ];
   const floors = Math.max(0, Math.floor((b.h - GF - 0.6) / FH));
   faces.forEach((f, k) => {

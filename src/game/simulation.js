@@ -1,6 +1,6 @@
 import { ChaseCamera } from "../render/camera.js";
 import { CONFIG, clamp, angleDelta } from "./config.js";
-import { RoadNavigation } from "./navigation.js";
+import { RoadNavigation, distance } from "./navigation.js";
 import { resolveBuilding } from "../world/layout.js";
 import { inspectEnclosure } from "./arrest.js";
 import { addWreck, updateWrecks } from "./wrecks.js";
@@ -51,6 +51,10 @@ export class Simulation {
     // (a development override). Visual only, and drawn with Math.random,
     // never the game's own random source, so gameplay is not affected.
     this.fixedTimeOfDay = options.timeOfDay === "day" || options.timeOfDay === "night" ? options.timeOfDay : null;
+    // V2.1: a new generated city for every run (world/citygen.js), or the
+    // same one again with a fixed seed (?seed=..., for replaying a map).
+    this.cityGenerator = options.cityGenerator || null;
+    this.fixedSeed = Number.isFinite(options.seed) ? options.seed : null;
     // Destruction for the result screen, counted as city events happen.
     this.onCityEvent = (e) => recordCityEvent(this.tally, e);
     this.reset();
@@ -79,8 +83,20 @@ export class Simulation {
     this.refreshNavigation();
     this.navigation.addExit(this.escape.exit);
   }
+  // Physics boxes of the current layout (buildings, fixed obstacles, the
+  // closed narrow gaps).
+  setLayout(layout) {
+    this.layout = layout;
+    this.staticSolids = [...layout.buildings, ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
+  }
   reset(missionId = this.missionId, vehicleId = this.vehicleId) {
     this.runNumber++;
+    if (this.cityGenerator) {
+      // A fresh city each run (the seed drawn with Math.random, never the
+      // game's own random source), or the fixed replay seed.
+      const seed = this.fixedSeed ?? ((Math.random() * 2 ** 31) >>> 0);
+      this.setLayout(this.cityGenerator(seed));
+    }
     this.timeOfDay = this.fixedTimeOfDay ?? (Math.random() < 0.5 ? "day" : "night");
     this.missionId = missionId;
     this.vehicleId = vehicleId;
@@ -95,7 +111,7 @@ export class Simulation {
     this.target = null; // TARGET HUNT: the fleeing car (target.js)
     this.blastQueue = []; // chain links waiting to go off (blast.js)
     this.cameraRig.reset();
-    this.cameraRig.update({ x: 0, z: 8 }, 0);
+    this.cameraRig.update(this.layout.start || { x: 0, z: 8, angle: 0 }, 0);
     this.spawnEvents = [];
     this.spawnRetryAt = 0;
     this.captureOpenTime = 0;
@@ -130,17 +146,18 @@ export class Simulation {
     this.navigation = new RoadNavigation([
       ...this.solids,
       ...(this.city?.navObstacles || []),
-    ]);
-    const exit = chooseExit(this.staticSolids, this.random, this.lastExitId);
+    ], this.layout.graph || null);
+    const exit = chooseExit(this.staticSolids, this.random, this.lastExitId, this.layout.exits || undefined);
     this.lastExitId = exit.id;
     this.escape = { phase: "locked", exit, openedAt: null };
-    this.previousPlayer = { x: 0, z: 8 };
+    const start = this.layout.start || { x: 0, z: 8, angle: 0 };
+    this.previousPlayer = { x: start.x, z: start.z };
     this.player = {
-      x: 0,
-      z: 8,
-      angle: 0,
-      vx: 0,
-      vz: -this.vehicle.stats.topSpeed,
+      x: start.x,
+      z: start.z,
+      angle: start.angle,
+      vx: -Math.sin(start.angle) * this.vehicle.stats.topSpeed,
+      vz: -Math.cos(start.angle) * this.vehicle.stats.topSpeed,
       speed: this.vehicle.stats.topSpeed,
       turn: 0,
       steering: 0,
@@ -178,7 +195,39 @@ export class Simulation {
     this.police = this.policeEnabled
       ? Array.from({ length: CONFIG.policeCount }, (_, i) => makePolice(i))
       : [];
+    if (this.layout.start) this.placeStartPolice();
     this.mission.definition.setup?.(this);
+  }
+  // Generated city: the police start behind the player on the road
+  // network (20-55 m back along the roads), facing the way it goes.
+  placeStartPolice() {
+    const p = this.player, nav = this.navigation;
+    const fx = -Math.sin(p.angle), fz = -Math.cos(p.angle);
+    const origin = nav.nodes.map((n) => ({ n, d: Math.hypot(n.x - p.x, n.z - p.z) })).sort((a, b) => a.d - b.d)[0]?.n;
+    if (!origin) return;
+    const dist = new Map([[origin.id, 0]]), queue = [origin];
+    for (let k = 0; k < queue.length; k++)
+      for (const id of queue[k].neighbors) {
+        const m = nav.nodes[id], d = dist.get(queue[k].id) + distance(queue[k], m);
+        if (!dist.has(id) || d < dist.get(id)) {
+          if (!dist.has(id)) queue.push(m);
+          dist.set(id, d);
+        }
+      }
+    const spots = nav.nodes
+      .filter((n) => n.id < (nav.baseNodeCount ?? nav.nodes.length))
+      .map((n) => ({ n, d: dist.get(n.id) ?? Infinity, ahead: (n.x - p.x) * fx + (n.z - p.z) * fz }))
+      .filter((v) => v.d >= 20 && v.d <= 60 && v.ahead < -8)
+      .sort((a, b) => a.d - b.d);
+    const used = [];
+    for (const c of this.police) {
+      const s = spots.find((v) => used.every((u) => distance(u, v.n) > 7));
+      if (!s) break;
+      used.push(s.n);
+      c.x = s.n.x;
+      c.z = s.n.z;
+      c.angle = Math.atan2(-(p.x - c.x), -(p.z - c.z));
+    }
   }
   start() {
     if (!this.result) {

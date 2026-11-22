@@ -55,13 +55,29 @@ export function clearSegment(
   }
   return true;
 }
+// Points along a polyline at most `step` apart (both ends included).
+export function resample(pts, step) {
+  const out = [{ x: pts[0].x, z: pts[0].z }];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], len = Math.hypot(b.x - a.x, b.z - a.z);
+    const n = Math.max(1, Math.ceil(len / step));
+    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, z: a.z + ((b.z - a.z) * k) / n });
+  }
+  return out;
+}
 export class RoadNavigation {
-  constructor(solids) {
+  // graph: a generated city's road graph (world/citygen.js): nodes along
+  // every road, alley and exit stub. Without it, the downtown grid.
+  constructor(solids, graph = null) {
     this.solids = solids;
     this.nodes = [];
     this.map = new Map();
     this.searches = 0;
     this.revision = 0;
+    if (graph) {
+      this.buildFromGraph(graph);
+      return;
+    }
     for (let x = -90; x <= 90; x += 10)
       for (let z = -90; z <= 90; z += 10) {
         const node = { x, z, id: this.nodes.length, neighbors: [] };
@@ -83,6 +99,47 @@ export class RoadNavigation {
         const other = this.map.get(`${n.x + dx},${n.z + dz}`);
         if (other && this.clear(n, other)) n.neighbors.push(other.id);
       }
+  }
+  buildFromGraph(graph) {
+    const add = (x, z) => {
+      const k = `${x},${z}`;
+      let n = this.map.get(k);
+      if (n) return n;
+      n = { x, z, id: this.nodes.length, neighbors: [] };
+      if (!this.allowed(n) || !clearSegment(n, n, this.solids)) return null;
+      this.nodes.push(n);
+      this.map.set(k, n);
+      return n;
+    };
+    const link = (a, b) => {
+      if (!a || !b || a === b || a.neighbors.includes(b.id) || !this.clear(a, b)) return;
+      a.neighbors.push(b.id);
+      b.neighbors.push(a.id);
+    };
+    const edges = [...graph.edges.filter((e) => e.kind === "road"), ...graph.edges.filter((e) => e.kind !== "road")];
+    for (const e of edges) {
+      const made = [];
+      let prev = null;
+      for (const p of resample(e.pts, 9)) {
+        const n = add(p.x, p.z);
+        if (n && prev) link(prev, n);
+        if (n) made.push(n);
+        prev = n;
+      }
+      for (const n of made) n.edge ??= e.id;
+      // Alleys and exit stubs join the roads at their ends.
+      if (e.kind !== "road" && made.length)
+        for (const end of [made[0], made.at(-1)]) {
+          const near = this.nodes
+            .filter((o) => o !== end && !made.includes(o))
+            .map((o) => ({ o, d: distance(o, end) }))
+            .filter((v) => v.d < 11)
+            .sort((a, b) => a.d - b.d)
+            .slice(0, 3);
+          for (const { o } of near) link(end, o);
+        }
+    }
+    this.graph = graph;
   }
   stripBypasses() {
     this.baseNodeCount ??= this.nodes.length;

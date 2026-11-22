@@ -13,6 +13,7 @@ import { OfficerRenderer } from "./officers.js";
 import { CityLifeRenderer } from "./city.js";
 import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
+import { GeneratedWorld } from "./world.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -58,108 +59,13 @@ export class CityRenderer {
     this.scene.add(sun);
     this.sun = sun;
     this.materials = new Map();
-    this.box(0, -0.7, 0, 225, 1, 225, theme.grass);
-    this.box(0, -0.12, 0, 216, 0.3, 216, theme.pavement);
-    for (let n = -90; n <= 90; n += 30) {
-      this.box(n, 0.06, 0, 11, 0.08, 216, theme.road);
-      this.box(0, 0.07, n, 216, 0.08, 11, theme.road);
-      // Double yellow centre line on each stretch between junctions.
-      for (let m = -105; m < 105; m += 30)
-        for (const s of [-0.16, 0.16]) {
-          this.box(n + s, 0.13, m + 15, 0.12, 0.025, 16, theme.marking);
-          this.box(m + 15, 0.14, n + s, 16, 0.025, 0.12, theme.marking);
-        }
-      for (let m = -90; m <= 90; m += 30) {
-        for (let side of [-1, 1])
-          for (let t = -3; t <= 3; t += 1.2) {
-            this.box(n + t, 0.15, m + side * 7, 0.65, 0.03, 2.5, K.lineWhite);
-            this.box(n + side * 7, 0.15, m + t, 2.5, 0.03, 0.65, K.lineWhite);
-          }
-      }
-    }
-    for (let x = -75; x <= 105; x += 30)
-      for (let z = -75; z <= 105; z += 30)
-        if (x < 100 && z < 100) {
-          // Pavement block: kerb ring, slabs with joints.
-          this.box(x, 0.15, z, 19, 0.4, 19, K.curb);
-          this.box(x, 0.16, z, 18.4, 0.4, 18.4, K.walk);
-          for (let o = -7.5; o <= 7.5; o += 1.5) {
-            this.box(x + o, 0.365, z, 0.05, 0.01, 18.4, K.walkJoint);
-            this.box(x, 0.366, z + o, 18.4, 0.01, 0.05, K.walkJoint);
-          }
-        }
-    for (const p of layout.parks) {
-      // Lawn with mowing stripes, edged paved paths crossing at a small
-      // square. Everything here is flat: cars can drive across a park.
-      this.box(p.x, 0.39, p.z, 18, 0.2, 18, K.grass);
-      for (let i = -2; i <= 2; i++) this.box(p.x, 0.495, p.z + i * 3.6, 18, 0.01, 1.8, K.grassStripe);
-      this.box(p.x, 0.51, p.z, 2.4, 0.04, 18, K.pave);
-      this.box(p.x, 0.515, p.z, 18, 0.04, 2.4, K.pave);
-      for (const s of [-1, 1]) {
-        this.box(p.x + s * 1.29, 0.51, p.z - 5.25, 0.18, 0.06, 7.5, K.paveEdge);
-        this.box(p.x + s * 1.29, 0.51, p.z + 5.25, 0.18, 0.06, 7.5, K.paveEdge);
-        this.box(p.x - 5.25, 0.51, p.z + s * 1.29, 7.5, 0.06, 0.18, K.paveEdge);
-        this.box(p.x + 5.25, 0.51, p.z + s * 1.29, 7.5, 0.06, 0.18, K.paveEdge);
-      }
-      this.box(p.x, 0.52, p.z, 3.0, 0.045, 3.0, 0xb8ab92);
-      // V1.9: the park trees are big (solid) city props, drawn by
-      // CityLifeRenderer. The bench is the park's fixed obstacle (3 x 0.8).
-      const bench = parkBench(this.scene, p.x + 4, p.z - 0.15, 0, 3.0);
-      bench.position.y = 0.49;
-      bakeStatic(bench);
-    }
     this.buildings = [];
-    const occlusionRay = new THREE.Raycaster();
-    const rayOrigin = new THREE.Vector3(),
-      rayTarget = new THREE.Vector3(),
-      rayDirection = new THREE.Vector3();
-    for (const b of layout.buildings) {
-      // Street-facing sides (away from the block centre) get shopfronts.
-      const cx = Math.round((b.x - 15) / 30) * 30 + 15,
-        cz = Math.round((b.z - 15) / 30) * 30 + 15;
-      const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
-      const group = buildingGroup(b, seed, [Math.sign(b.x - cx), Math.sign(b.z - cz)]);
-      const geometry = coloredGeometry(group, { dropDown: true, flush: b });
-      geometry.translate(b.x, 0, b.z);
-      const geometries = [geometry];
-      const mesh = new THREE.Mesh(
-        mergeGeometries(geometries),
-        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, flatShading: true }),
-      );
-      geometries.forEach((g) => g.dispose());
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.userData.building = true;
-      mesh.userData.components = [
-        "body",
-        "roof",
-        "rooftop",
-        "windows",
-        "door",
-        "sign",
-        "balconies",
-        "bands",
-      ];
-      mesh.geometry.computeBoundingBox();
-      this.scene.add(mesh);
-      mesh.updateMatrixWorld(true);
-      this.buildings.push({
-        mesh,
-        bounds: b,
-        visualBounds: mesh.geometry.boundingBox,
-        opacity: 1,
-        occluded: false,
-        intersects(camera, target) {
-          rayOrigin.set(camera.x, camera.y, camera.z);
-          rayTarget.set(target.x, target.y, target.z);
-          rayDirection.subVectors(rayTarget, rayOrigin);
-          const distance = rayDirection.length();
-          occlusionRay.set(rayOrigin, rayDirection.normalize());
-          occlusionRay.far = Math.max(0, distance - 0.05);
-          return occlusionRay.intersectObject(mesh, false).length > 0;
-        },
-      });
-    }
+    if (layout.procedural) {
+      // V2.1 generated city (world.js).
+      this.world = new GeneratedWorld(this.scene, layout, theme);
+      this.buildings = this.world.entries;
+    } else this.buildGridWorld(layout, theme);
+    this.layout = layout;
     // V1.9: street trees, lamps, signs and bins are interactive city props
     // (src/game/city.js), drawn by CityLifeRenderer.
     this.batchStatic();
@@ -215,6 +121,120 @@ export class CityRenderer {
     this.follow = new THREE.Vector3(0, 0, 0);
     this.resize();
     window.addEventListener("resize", () => this.resize());
+  }
+  // The downtown grid (roads, pavement blocks, parks, buildings).
+  buildGridWorld(layout, theme) {
+    this.box(0, -0.7, 0, 225, 1, 225, theme.grass);
+    this.box(0, -0.12, 0, 216, 0.3, 216, theme.pavement);
+    for (let n = -90; n <= 90; n += 30) {
+      this.box(n, 0.06, 0, 11, 0.08, 216, theme.road);
+      this.box(0, 0.07, n, 216, 0.08, 11, theme.road);
+      // Double yellow centre line on each stretch between junctions.
+      for (let m = -105; m < 105; m += 30)
+        for (const s of [-0.16, 0.16]) {
+          this.box(n + s, 0.13, m + 15, 0.12, 0.025, 16, theme.marking);
+          this.box(m + 15, 0.14, n + s, 16, 0.025, 0.12, theme.marking);
+        }
+      for (let m = -90; m <= 90; m += 30) {
+        for (let side of [-1, 1])
+          for (let t = -3; t <= 3; t += 1.2) {
+            this.box(n + t, 0.15, m + side * 7, 0.65, 0.03, 2.5, K.lineWhite);
+            this.box(n + side * 7, 0.15, m + t, 2.5, 0.03, 0.65, K.lineWhite);
+          }
+      }
+    }
+    for (let x = -75; x <= 105; x += 30)
+      for (let z = -75; z <= 105; z += 30)
+        if (x < 100 && z < 100) {
+          // Pavement block: kerb ring, slabs with joints.
+          this.box(x, 0.15, z, 19, 0.4, 19, K.curb);
+          this.box(x, 0.16, z, 18.4, 0.4, 18.4, K.walk);
+          for (let o = -7.5; o <= 7.5; o += 1.5) {
+            this.box(x + o, 0.365, z, 0.05, 0.01, 18.4, K.walkJoint);
+            this.box(x, 0.366, z + o, 18.4, 0.01, 0.05, K.walkJoint);
+          }
+        }
+    for (const p of layout.parks) {
+      // Lawn with mowing stripes, edged paved paths crossing at a small
+      // square. Everything here is flat: cars can drive across a park.
+      this.box(p.x, 0.39, p.z, 18, 0.2, 18, K.grass);
+      for (let i = -2; i <= 2; i++) this.box(p.x, 0.495, p.z + i * 3.6, 18, 0.01, 1.8, K.grassStripe);
+      this.box(p.x, 0.51, p.z, 2.4, 0.04, 18, K.pave);
+      this.box(p.x, 0.515, p.z, 18, 0.04, 2.4, K.pave);
+      for (const s of [-1, 1]) {
+        this.box(p.x + s * 1.29, 0.51, p.z - 5.25, 0.18, 0.06, 7.5, K.paveEdge);
+        this.box(p.x + s * 1.29, 0.51, p.z + 5.25, 0.18, 0.06, 7.5, K.paveEdge);
+        this.box(p.x - 5.25, 0.51, p.z + s * 1.29, 7.5, 0.06, 0.18, K.paveEdge);
+        this.box(p.x + 5.25, 0.51, p.z + s * 1.29, 7.5, 0.06, 0.18, K.paveEdge);
+      }
+      this.box(p.x, 0.52, p.z, 3.0, 0.045, 3.0, 0xb8ab92);
+      // V1.9: the park trees are big (solid) city props, drawn by
+      // CityLifeRenderer. The bench is the park's fixed obstacle (3 x 0.8).
+      const bench = parkBench(this.scene, p.x + 4, p.z - 0.15, 0, 3.0);
+      bench.position.y = 0.49;
+      bakeStatic(bench);
+    }
+    const occlusionRay = new THREE.Raycaster();
+    const rayOrigin = new THREE.Vector3(),
+      rayTarget = new THREE.Vector3(),
+      rayDirection = new THREE.Vector3();
+    for (const b of layout.buildings) {
+      // Street-facing sides (away from the block centre) get shopfronts.
+      const cx = Math.round((b.x - 15) / 30) * 30 + 15,
+        cz = Math.round((b.z - 15) / 30) * 30 + 15;
+      const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
+      const group = buildingGroup(b, seed, [Math.sign(b.x - cx), Math.sign(b.z - cz)]);
+      const geometry = coloredGeometry(group, { dropDown: true, flush: b });
+      geometry.translate(b.x, 0, b.z);
+      const geometries = [geometry];
+      const mesh = new THREE.Mesh(
+        mergeGeometries(geometries),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, flatShading: true }),
+      );
+      geometries.forEach((g) => g.dispose());
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.building = true;
+      mesh.userData.components = [
+        "body",
+        "roof",
+        "rooftop",
+        "windows",
+        "door",
+        "sign",
+        "balconies",
+        "bands",
+      ];
+      mesh.geometry.computeBoundingBox();
+      this.scene.add(mesh);
+      mesh.updateMatrixWorld(true);
+      this.buildings.push({
+        mesh,
+        bounds: b,
+        visualBounds: mesh.geometry.boundingBox,
+        opacity: 1,
+        occluded: false,
+        intersects(camera, target) {
+          rayOrigin.set(camera.x, camera.y, camera.z);
+          rayTarget.set(target.x, target.y, target.z);
+          rayDirection.subVectors(rayTarget, rayOrigin);
+          const distance = rayDirection.length();
+          occlusionRay.set(rayOrigin, rayDirection.normalize());
+          occlusionRay.far = Math.max(0, distance - 0.05);
+          return occlusionRay.intersectObject(mesh, false).length > 0;
+        },
+      });
+    }
+  }
+  // V2.1: a new generated city for the next run.
+  setLayout(layout) {
+    if (layout === this.layout) return;
+    this.world?.dispose();
+    this.world = new GeneratedWorld(this.scene, layout, this.theme);
+    this.buildings = this.world.entries;
+    this.occlusion = new BuildingOcclusion(this.buildings);
+    this.night.setLayout(layout);
+    this.layout = layout;
   }
   batchStatic() {
     const groups = new Map();

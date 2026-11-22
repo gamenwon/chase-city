@@ -34,6 +34,11 @@ export function approachOpacity(current, occluded, dt) {
 // Changing transparent switches Three.js shader variants (OPAQUE define).
 // Opacity uniforms alone cannot fade a shader compiled as opaque.
 export function applyBuildingOpacity(entry, opacity) {
+  if (entry.setOpacity) {
+    // Batched building (generated city): its own swap to a faded copy.
+    if (entry.opacity !== opacity || opacity < 1) entry.setOpacity(opacity);
+    return;
+  }
   entry.opacity = opacity;
   const meshes = entry.meshes || [entry.mesh];
   for (const mesh of meshes) {

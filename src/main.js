@@ -7,6 +7,7 @@ import { missionOrder, nextMission } from "./game/catalog.js";
 import { getVehicle } from "./game/vehicles.js";
 import { Progress } from "./game/progress.js";
 import { getMap, mapLayout } from "./world/maps.js";
+import { generateCity } from "./world/citygen.js";
 import { installAdBridge, PLACEMENTS } from "./platform/ads.js";
 import { Input } from "./game/input.js";
 import { CityRenderer } from "./render/scene.js";
@@ -36,7 +37,20 @@ const ui = new Interface(),
     vehicle: progress.selectedVehicle,
     // Development only: ?tod=day or ?tod=night fixes the time of day.
     timeOfDay: import.meta.env.DEV ? new URLSearchParams(location.search).get("tod") : null,
+    // V2.1: a new generated city every run; ?seed=N replays one city.
+    cityGenerator: generateCity,
+    seed: seedParam(),
   });
+function seedParam() {
+  const v = new URLSearchParams(location.search).get("seed");
+  return v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) >>> 0 : undefined;
+}
+// The seed of the city on screen (for reporting a bad map).
+function showSeed() {
+  document.body.dataset.citySeed = sim.layout.seed;
+  console.info(`[CHASE CITY] city seed ${sim.layout.seed} (map ${sim.layout.mapSeed}, attempts ${sim.layout.attempts})`);
+}
+showSeed();
 // Development builds (or ?adtest) show the ad buttons disabled as "not
 // connected" so the layout can be checked; production hides them until the
 // host registers its ad provider.
@@ -92,6 +106,8 @@ function chooseMission(id) {
   if (!renderer || state === "running") return;
   document.body.classList.remove("busted");
   sim.reset(id, progress.selectedVehicle);
+  renderer.setLayout(sim.layout);
+  showSeed();
   renderer.reset();
   audio.reset();
   state = "ready";
@@ -106,6 +122,8 @@ ui.start.addEventListener("click", () => {
   document.body.classList.remove("busted");
   if (state === "over") {
     sim.reset();
+    renderer.setLayout(sim.layout);
+    showSeed();
     renderer.reset();
     audio.reset();
     state = "ready";

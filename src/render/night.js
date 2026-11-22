@@ -45,11 +45,12 @@ export function buildingWindows(b, outward) {
   const base = 0.4, GF = 3.4, FH = 3.0;
   const floors = Math.max(0, Math.floor((b.h - GF - 0.6) / FH));
   const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
+  const sf = b.street;
   const faces = [
-    { ry: 0, span: b.w, half: b.d / 2, street: outward[1] > 0 },
-    { ry: Math.PI, span: b.w, half: b.d / 2, street: outward[1] < 0 },
-    { ry: Math.PI / 2, span: b.d, half: b.w / 2, street: outward[0] > 0 },
-    { ry: -Math.PI / 2, span: b.d, half: b.w / 2, street: outward[0] < 0 },
+    { ry: 0, span: b.w, half: b.d / 2, street: sf ? sf[0] : outward[1] > 0 },
+    { ry: Math.PI, span: b.w, half: b.d / 2, street: sf ? sf[1] : outward[1] < 0 },
+    { ry: Math.PI / 2, span: b.d, half: b.w / 2, street: sf ? sf[2] : outward[0] > 0 },
+    { ry: -Math.PI / 2, span: b.d, half: b.w / 2, street: sf ? sf[3] : outward[0] < 0 },
   ];
   const out = [];
   faces.forEach((f, k) => {
@@ -93,11 +94,25 @@ export class NightLights {
     this.beams = inst(flat, additive(0xfff2c8, 0.55), 64);
     this.dots = inst(new THREE.IcosahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xfffbe8 }), 128);
     this.tails = inst(new THREE.IcosahedronGeometry(0.13, 0), new THREE.MeshBasicMaterial({ color: 0xff3a30 }), 128);
+    this.scene = scene;
+    this.buildWindows(layout);
+    this.lampKey = "";
+    this.lampAt = -1;
+  }
+  // V2.1: a new city's windows.
+  setLayout(layout) {
+    this.scene.remove(this.windows);
+    this.windows.geometry.dispose();
+    this.windows.material.dispose();
+    this.buildWindows(layout);
+    this.windows.visible = this.on;
+  }
+  buildWindows(layout) {
     // Windows: built once; one instance range per building.
     const wins = [];
     this.ranges = [];
     for (const b of layout.buildings || []) {
-      const cx = Math.round((b.x - 15) / 30) * 30 + 15, cz = Math.round((b.z - 15) / 30) * 30 + 15;
+      const cx = Math.round((b.x - 15) / 30) * 30 + 15, cz = Math.round((b.z - 15) / 30) * 30 + 15; // (b.street wins when set)
       const list = buildingWindows(b, [Math.sign(b.x - cx), Math.sign(b.z - cz)]);
       this.ranges.push({ start: wins.length, count: list.length, hidden: false });
       wins.push(...list);
@@ -107,7 +122,7 @@ export class NightLights {
     this.windows.frustumCulled = false;
     this.windows.visible = false;
     this.windows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, wins.length) * 3), 3);
-    scene.add(this.windows);
+    this.scene.add(this.windows);
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
     this.v = new THREE.Vector3();
@@ -121,8 +136,6 @@ export class NightLights {
       this.windows.setColorAt(i, this.c);
     });
     this.windows.count = wins.length;
-    this.lampKey = "";
-    this.lampAt = -1;
   }
   placeWindow(i, w, scale) {
     this.q.setFromAxisAngle(this.v.set(0, 1, 0), w.ry);
