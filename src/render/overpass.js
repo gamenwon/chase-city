@@ -6,6 +6,7 @@
 // and tilted, on the street below, where they stay; concrete chunks lie
 // at the sides.
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { overpassHeight } from "../world/citygen.js";
 import { PILLAR } from "../game/overpass.js";
 
@@ -17,6 +18,7 @@ export class OverpassRenderer {
     this.scene = scene;
     this.items = [];
     this.mats = { concrete: mat(CONCRETE), side: mat(SIDE), parapet: mat(PARAPET), line: mat(LINE), rubble: mat(0x9c968d) };
+    this.merged = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
   }
   setLayout(layout) {
     for (const it of this.items) {
@@ -35,6 +37,35 @@ export class OverpassRenderer {
     mesh.castShadow = mesh.receiveShadow = true;
     parent.add(mesh);
     return mesh;
+  }
+  // Fold every plain box under `group` into one vertex-coloured mesh (one
+  // draw call), keeping the group's own transform.
+  merge(group) {
+    group.updateMatrixWorld(true);
+    const inv = group.matrixWorld.clone().invert();
+    const parts = [];
+    const drop = [];
+    group.traverse((o) => {
+      if (!o.isMesh || o.userData.keep) return;
+      const g = o.geometry.clone().toNonIndexed();
+      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      const c = o.material.color, n = g.attributes.position.count, a = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3);
+      g.setAttribute("color", new THREE.BufferAttribute(a, 3));
+      g.deleteAttribute("uv");
+      parts.push(g);
+      drop.push(o);
+    });
+    for (const o of drop) {
+      o.parent.remove(o);
+      o.geometry.dispose();
+    }
+    for (const c of [...group.children]) if (c.isGroup && !c.children.length) group.remove(c);
+    if (!parts.length) return;
+    const mesh = new THREE.Mesh(mergeGeometries(parts), this.merged);
+    parts.forEach((g) => g.dispose());
+    mesh.castShadow = mesh.receiveShadow = true;
+    group.add(mesh);
   }
   build(op) {
     const g = new THREE.Group();
@@ -80,9 +111,17 @@ export class OverpassRenderer {
       const s = q.s, lat = q.side * (W / 2 - 0.6);
       const m = this.box(g, q.w, H - T, q.d, mat(CONCRETE), s, (H - T) / 2, lat);
       const stump = this.box(g, q.w * 1.1, 0.7, q.d * 1.1, this.mats.rubble, s, 0.35, lat);
+      m.userData.keep = stump.userData.keep = true;
       stump.visible = false;
       return { mesh: m, stump };
     });
+    // One draw call per deck half and one for everything else static.
+    for (const h of halves) this.merge(h.group);
+    for (const h of halves) h.group.userData.keepGroup = true;
+    const statics = new THREE.Group();
+    g.add(statics);
+    for (const c of [...g.children]) if (c !== statics && !c.userData.keep && !halves.some((h) => h.group === c)) statics.add(c);
+    this.merge(statics);
     return { op, group: g, halves, pillars, rubble: null };
   }
   update(sim) {

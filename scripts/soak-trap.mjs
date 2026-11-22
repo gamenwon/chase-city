@@ -8,8 +8,9 @@ import { Simulation } from "../src/game/simulation.js";
 import { createLayout } from "../src/world/layout.js";
 import { driver, random } from "./autoplay.js";
 import { escapeAttempts } from "./audit-arrests.js";
+import { generateCity } from "../src/world/citygen.js";
 
-const layout = createLayout();
+const downtown = createLayout();
 function wanderer(seed) {
   const rng = random(seed * 7 + 1);
   let steer = 0, until = 0;
@@ -22,13 +23,15 @@ function wanderer(seed) {
     return { left: steer > 0, right: steer < 0 };
   };
 }
-export function soak({ seeds = 12, seconds = 90, profile = "mobile", from = 1 } = {}) {
+// generated: each seed plays its own generated city (V2.1).
+export function soak({ seeds = 12, seconds = 90, profile = "mobile", from = 1, generated = false } = {}) {
   const out = { runs: 0, minutes: 0, stuck: [], policeStuck: 0, policeStuckSeconds: 0, arrests: 0, falseArrests: [], sustainedShakes: 0, shakes: 0 };
   for (let seed = from; seed < from + seeds; seed++)
-    for (const kind of ["loop", "wander"]) {
+    for (const kind of generated ? ["wander", "wander2"] : ["loop", "wander"]) {
+      const layout = generated ? generateCity(seed * 101 + (kind === "wander2" ? 7 : 0)) : downtown;
       const s = new Simulation(layout, { width: 390, height: 664, random: random(seed), city: true, cityProfile: profile });
       s.start();
-      const ctl = kind === "loop" ? driver(seed) : wanderer(seed);
+      const ctl = kind === "loop" ? driver(seed) : wanderer(seed + (kind === "wander2" ? 50 : 0));
       const hist = [];
       let lastEv = s.city.eventId, lastShake = { at: -9, x: 0, z: 0 }, stuckFrom = null;
       const pStill = new Map();
@@ -81,7 +84,7 @@ export function soak({ seeds = 12, seconds = 90, profile = "mobile", from = 1 } 
   return out;
 }
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const r = soak({ seeds: +(process.env.SEEDS || 12), seconds: +(process.env.SECONDS || 90) });
+  const r = soak({ seeds: +(process.env.SEEDS || 12), seconds: +(process.env.SECONDS || 90), generated: !!process.env.GENERATED });
   console.log(JSON.stringify({ ...r, stuck: r.stuck.length, longestStuck: Math.max(0, ...r.stuck.map((x) => x.seconds)) }));
   for (const x of r.stuck.sort((a, b) => b.seconds - a.seconds).slice(0, 8)) console.log("stuck", JSON.stringify(x));
   for (const x of r.falseArrests) console.log("false arrest", JSON.stringify(x));
