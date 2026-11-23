@@ -32,6 +32,18 @@ export function poleSign(g) {
   B(g, 1.5, 0.8, 0.03, 0xffffff, 0, 3.2, -0.08);
   B(g, 1.1, 0.14, 0.04, 0xfff6d2, 0, 3.35, 0.1);
 }
+// Construction site: a diamond work sign on an A-frame stand.
+export function workSign(g) {
+  for (const s of [-1, 1]) {
+    const leg = B(g, 0.06, 1.2, 0.06, 0x8a8d93, s * 0.32, 0, 0);
+    leg.rotation.z = -s * 0.18;
+  }
+  const d = G(g, 0, 1.05, 0.04);
+  d.rotation.z = Math.PI / 4;
+  B(d, 0.62, 0.62, 0.04, 0xf5c01a, 0, -0.31, 0);
+  B(d, 0.5, 0.5, 0.02, 0x232227, 0, -0.25, 0.025);
+  B(d, 0.4, 0.4, 0.02, 0xf5c01a, 0, -0.2, 0.035);
+}
 // Display rack outside a shop: a wire stand with goods on three shelves.
 export function displayRack(g) {
   for (const x of [-0.4, 0.4]) for (const z of [-0.2, 0.2]) B(g, 0.04, 1.4, 0.04, 0x9da1a8, x, 0, z);
@@ -216,6 +228,7 @@ export function shard(g) {
 // flies; breakAt: impact speed (m/s) that breaks it; shatter: pieces
 // [kind, x, y, z] in its own frame; bits: small pieces sprayed out.
 export const SMALL_FLYERS = {
+  workSign: { build: workSign, mass: 0.3, r: 0.4, side: 0.15, bounces: 2 },
   poleSign: { build: poleSign, tint: true, mass: 1.1, r: 0.45, side: 0.3, bits: "paper", bitN: 6, bounces: 1 },
   sandwichBoard: { build: sandwichBoard, tint: true, mass: 0.2, r: 0.4, side: 0.05, breakAt: 7, shatter: [["boardHalf", 0, 1.1, -0.2], ["boardHalf", 0, 1.1, 0.2]], bits: "paper", bitN: 3 },
   boardHalf: { build: boardHalf, mass: 0.15, r: 0.35, side: 0.04, spawnOnly: true, tintFrom: true },

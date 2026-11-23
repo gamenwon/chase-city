@@ -17,6 +17,7 @@ import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
+import { jumpPitch } from "../game/jumps.js";
 import { setLocations } from "../preview/locations/layout-consts.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
@@ -331,7 +332,10 @@ export class CityRenderer {
     const p = sim.player;
     this.world?.update?.(sim, dt);
     this.player.position.set(p.x, p.y || 0, p.z);
+    this.player.rotation.order = "YXZ"; // yaw, then pitch and roll in the car's frame
     this.player.rotation.y = p.angle;
+    // Nose up off a ramp, down for the landing (jumps.js).
+    this.player.rotation.x += (jumpPitch(p) - this.player.rotation.x) * (1 - Math.exp(-dt * 14));
     this.player.rotation.z +=
       (-p.turn * 0.045 - this.player.rotation.z) * (1 - Math.exp(-dt * 9));
     for (const wheel of this.player.userData.wheels) {
@@ -356,8 +360,11 @@ export class CityRenderer {
           ? wreckPose(c.wreckAge)
           : { y: 0, pitch: 0, roll: 0 };
       mesh.position.set(c.x, pose.y + (c.y || 0), c.z);
+      // Off a dirt ramp: pitched in the car's own frame (yaw first).
+      const jp = c.state === "active" ? jumpPitch(c) : 0;
+      mesh.rotation.order = jp ? "YXZ" : "XYZ";
       mesh.rotation.set(
-        pose.pitch,
+        jp || pose.pitch,
         c.angle,
         c.state === "wreck" ? pose.roll : -c.turn * 0.04,
       );

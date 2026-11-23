@@ -14,6 +14,7 @@ import { getVehicle } from "./vehicles.js";
 import { createTally, recordCityEvent } from "./tally.js";
 import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.js";
 import { updateTarget, resolveTargetContact } from "./target.js";
+import { updateJump } from "./jumps.js";
 import { updateBlasts } from "./blast.js";
 import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
 import { createBuildingCells, cellSolids, hitWall } from "./buildings.js";
@@ -693,6 +694,8 @@ export class Simulation {
       return;
     }
     const hitWall = this.move(p, dt);
+    // Dirt ramps (jumps.js): up the slope, over the crest, through the air.
+    updateJump(this, p, dt, (this.vehicle.stats.durability || 100) / 100);
     this.watchWedge(p, hitWall || !!post, steering);
     // Pressed against walls or posts for over a second without getting
     // anywhere (a pocket the sideways slide only shuttles about in): turn
@@ -979,7 +982,9 @@ export class Simulation {
       c.noRamp = !(p.level === 1 || c.route?.some((q) => q.level === 1));
       trafficBrake(c, this.police, p, dt);
       if (c.boostTimer > 0) this.stats.boostSeconds += dt;
-      if (this.move(c, dt, CONFIG.policeRadius)) {
+      const policeHit = this.move(c, dt, CONFIG.policeRadius);
+      updateJump(this, c, dt, 1.2);
+      if (policeHit) {
         this.applyPoliceObstacleDamage(c, c.lastImpact);
         c.stuck += dt;
         c.routeTimer = 0;
@@ -1044,6 +1049,7 @@ export class Simulation {
     // TARGET HUNT: the fleeing car drives, and the player can ram it.
     if (this.target) {
       updateTarget(this, dt);
+      if (this.target?.state === "fleeing") updateJump(this, this.target, dt, 1.1);
       resolveTargetContact(this);
     }
     for (const c of [p, ...this.police.filter((c) => c.state === "active")]) {

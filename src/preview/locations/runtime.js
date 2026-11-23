@@ -18,6 +18,7 @@ import * as P from "./props.js";
 import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
 import { dinerDecor } from "./diner.js";
+import { bigsiteDecor } from "./bigsite.js";
 import { siteDecor } from "./sites-decor.js";
 import { PERIMETER, perimeterBuilding } from "./perimeter.js";
 import { Storefronts } from "./storefronts.js";
@@ -106,6 +107,7 @@ export class LocationsRuntime {
       const decor = new THREE.Group();
       for (const it of f.items) if (it.kind === "statue") P.plinth(G(decor, it.x, it.y, it.z, it.ry));
       if (f.kind === "diner") dinerDecor(decor, f);
+      if (f.kind === "bigsite") bigsiteDecor(decor, f);
       if (decor.children.length) scene.add(bake(decor));
     }
     (layout.yards || []).forEach((y, i) => {
@@ -208,7 +210,8 @@ export class LocationsRuntime {
     this.fire.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(96 * 3), 3);
     this.smoke = new THREE.InstancedMesh(puff, new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.6, depthWrite: false }), 64);
     this.foam = new THREE.InstancedMesh(puff, new THREE.MeshLambertMaterial({ color: 0xf4fbff, transparent: true, opacity: 0.92, depthWrite: false }), 64);
-    for (const m of [this.fire, this.smoke, this.foam]) {
+    this.dust = new THREE.InstancedMesh(puff, new THREE.MeshLambertMaterial({ color: 0xc09a6a, transparent: true, opacity: 0.7, depthWrite: false }), 48);
+    for (const m of [this.fire, this.smoke, this.foam, this.dust]) {
       m.frustumCulled = false;
       m.count = 0;
       scene.add(m);
@@ -324,6 +327,8 @@ export class LocationsRuntime {
     // TARGET HUNT: the fleeing car smashes through the locations too.
     if (sim.target?.state === "fleeing") cars.push(sim.target);
     for (const car of cars) {
+      // In the air over a dirt ramp: clear of everything on the ground.
+      if (car.air && car.y > 1.0) continue;
       const sp = Math.hypot(car.vx || 0, car.vz || 0);
       const before = this.speeds.get(car) ?? sp;
       this.speeds.set(car, sp);
@@ -342,6 +347,15 @@ export class LocationsRuntime {
       if (near(PARK, 13)) this.touchFountain(sim, car, radius, speed);
       if (near(GAS, 13) || near(COURT, 13) || near(PARK, 13)) {
         if (near(COURT, 13)) this.touchBalls(car, radius);
+      }
+    }
+    // Dirt-ramp landings throw up dust (and a few clods).
+    for (const e of sim.city?.events || []) {
+      if (e.id <= (this.seenCity ?? 0)) continue;
+      this.seenCity = e.id;
+      if (e.type === "jump" && e.action === "land") {
+        this.fx.push({ kind: "dust", x: e.x, z: e.z, born: sim.elapsed, size: 0.6 + Math.min(0.8, (e.strength - 6) / 10) });
+        for (let i = 0; i < 4; i++) this.throwChunk(1, e.x, e.z, 2 + Math.random() * 2, Math.random() * 6.3);
       }
     }
     for (const p of [...this.pending])
@@ -696,6 +710,12 @@ export class LocationsRuntime {
       this.m.compose(this.v.set(x, y, z), this.q.identity(), this.s.set(r, r * 0.7, r));
       this.foam.setMatrixAt(nfo++, this.m);
     };
+    let nd = 0;
+    const dustPuff = (x, y, z, r) => {
+      if (nd >= 48 || r <= 0.02) return;
+      this.m.compose(this.v.set(x, y, z), this.q.identity(), this.s.set(r, r * 0.7, r));
+      this.dust.setMatrixAt(nd++, this.m);
+    };
     const puff = (x, y, z, r) => {
       if (ns >= 64 || r <= 0.02) return;
       this.m.compose(this.v.set(x, y, z), this.q.identity(), this.s.set(r, r * 0.85, r));
@@ -709,6 +729,16 @@ export class LocationsRuntime {
         for (let i = 0; i < 3; i++) {
           const ph = ((now * 0.3 + i / 3) % 1 + 1) % 1;
           puff(fx + ph * 0.5, TOP + 1.8 + ph * 4, fz, f.size * (0.4 + ph) * (1 - ph));
+        }
+        continue;
+      }
+      if (f.kind === "dust") {
+        // A brown cloud that swells and settles in ~1.5 s (smoke puffs).
+        if (t > 1.6) continue;
+        const k = Math.min(1, t / 0.25) * (1 - t / 1.6);
+        for (let i = 0; i < 6; i++) {
+          const a = i * 1.05 + f.x, r = 0.6 + t * 2.2;
+          dustPuff(f.x + Math.cos(a) * r, 0.35 + t * 0.6 + (i % 2) * 0.3, f.z + Math.sin(a) * r, f.size * (0.7 + t) * k);
         }
         continue;
       }
@@ -766,6 +796,9 @@ export class LocationsRuntime {
         }
       }
     }
+    this.dust.count = nd;
+    this.dust.visible = nd > 0;
+    if (nd) this.dust.instanceMatrix.needsUpdate = true;
     this.fire.count = nf;
     this.smoke.count = ns;
     this.foam.count = nfo;

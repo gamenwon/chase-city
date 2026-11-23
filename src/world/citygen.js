@@ -34,6 +34,7 @@ import { depotFlyers } from "../preview/locations/gasdepot.js";
 import { parkPlan } from "../preview/locations/plan.js";
 import { sitePlan } from "../preview/locations/sites.js";
 import { dinerPlan } from "../preview/locations/diner.js";
+import { bigsitePlan } from "../preview/locations/bigsite.js";
 
 export const CITY_HALF = 108; // city edge (|x|, |z|)
 export const RING = 90; // ring road centre line
@@ -572,6 +573,14 @@ export function buildCity(seed) {
     b.type = "diner";
     specials.push(b);
   }
+  // ...and a large construction site with jump ramps (a long block if
+  // there is one free: longer run-up and landing).
+  {
+    const b = spreadPick((x) => fits(x, 20.5, 31) && Math.max(x.w, x.d) >= 24) || spreadPick((x) => fits(x));
+    if (!b) return { failed: "no block for the construction site" };
+    b.type = "bigsite";
+    specials.push(b);
+  }
   const parks = [], trees = [];
   for (let k = 0; k < 2; k++) {
     const b = spreadPick((x) => fits(x, 20.5, 40));
@@ -580,10 +589,18 @@ export function buildCity(seed) {
   }
   for (const b of free) b.type = "built";
   // ---- raster and contents per block.
-  const buildings = [], alleys = [], arches = [], specialFeatures = [];
+  const buildings = [], alleys = [], arches = [], specialFeatures = [], mounds = [];
   const counts = { landmark: 0, park: 0, built: 0, alley: 0, shortcut: 0, diner: 0 };
   for (const b of blocks) {
     const S = SIDEWALK;
+    if (b.type === "bigsite") {
+      counts.bigsite = (counts.bigsite || 0) + 1;
+      cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
+      const plan = bigsitePlan(b, R);
+      mounds.push(...plan.mounds);
+      specialFeatures.push(plan.feature);
+      continue;
+    }
     if (b.type === "diner") {
       counts.diner++;
       cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
@@ -748,6 +765,7 @@ export function buildCity(seed) {
     features,
     yards,
     arches,
+    mounds,
     raster: { kind, near, N, CELL, half: CITY_HALF },
   };
 }
@@ -1113,6 +1131,7 @@ export function validateCity(L) {
   if (L.modular) {
     for (const k of ["gas", "court", "park", "gasDepot"]) if (!L.locations?.[k]) problems.push(`missing ${k}`);
     if (!L.features.some((f) => f.kind === "diner")) problems.push("missing restaurant plaza");
+    if (!L.features.some((f) => f.kind === "bigsite") || !L.mounds?.length) problems.push("missing construction site");
     const kinds = new Set((L.yards || []).map((y) => y.kind));
     for (const k of ["parking", "carwash", "construction", "market", "cafe", "depot", "plaza", "corner"]) if (!kinds.has(k)) problems.push(`missing yard ${k}`);
     const content = L.streetProps.length + [...L.features, ...L.yards].reduce((a, f) => a + f.items.length + f.flyers.length + (f.vehicles?.length || 0), 0);
