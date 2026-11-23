@@ -69,8 +69,8 @@ function useNet(sim) {
     if ((e.kind !== "road" && e.kind !== "overpass") || e.a == null) continue;
     adj.get(e.a).push(nodes.get(e.b));
     adj.get(e.b).push(nodes.get(e.a));
-    paths.set(`${e.a}>${e.b}`, makePath(e.pts));
-    paths.set(`${e.b}>${e.a}`, makePath(e.pts.slice().reverse()));
+    paths.set(`${e.a}>${e.b}`, Object.assign(makePath(e.pts), { width: e.width }));
+    paths.set(`${e.b}>${e.a}`, Object.assign(makePath(e.pts.slice().reverse()), { width: e.width }));
   }
   return (NET = { graph: g, nodes, adj, paths });
 }
@@ -101,7 +101,9 @@ function lanePoint(a, b, along) {
   const path = NET && pathOf(a, b);
   if (path) {
     const q = pointAt(path, along);
-    return { x: q.x - q.uz * TARGET.laneOffset, z: q.z + q.ux * TARGET.laneOffset };
+    // On the wide avenue under the elevated road: the lane beside the ramps.
+    const off = path.width >= 18 ? path.width / 2 - 2.6 : TARGET.laneOffset;
+    return { x: q.x - q.uz * off, z: q.z + q.ux * off };
   }
   const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz) || 1;
   const ux = dx / len, uz = dz / len;
@@ -278,6 +280,8 @@ export function updateTarget(sim, dt) {
     const rate = target > t.speed ? TARGET.accel : TARGET.brake;
     t.speed += clamp(target - t.speed, -rate * dt, rate * dt);
   }
+  // Up a ramp only when its road is the elevated one.
+  t.noRamp = !(NET && t.from.foot && t.to.foot);
   // Move: velocity eases to the heading (a shove from a hit dies away).
   const f = fwd(t.angle);
   const grip = 1 - Math.exp(-6 * dt);

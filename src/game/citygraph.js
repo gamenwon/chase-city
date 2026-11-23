@@ -45,7 +45,7 @@ export function buildLanes(graph) {
   const lanes = [], from = new Map();
   for (const e of graph.edges) {
     if ((e.kind !== "road" && e.kind !== "overpass") || e.a == null) continue;
-    const off = e.kind === "overpass" ? 2.4 : e.width >= 10 ? 2.75 : 2.0;
+    const off = e.kind === "overpass" ? 2.4 : e.width >= 18 ? e.width / 2 - 3 : e.width >= 10 ? 2.75 : 2.0;
     for (const dir of [1, -1]) {
       const pts = dir > 0 ? e.pts : e.pts.slice().reverse();
       const lane = { id: lanes.length, edge: e.id, dir, start: dir > 0 ? e.a : e.b, end: dir > 0 ? e.b : e.a, op: e.kind === "overpass" ? 0 : null, ...makePath(offset(pts, off)) };

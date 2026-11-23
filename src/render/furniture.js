@@ -24,6 +24,8 @@ export class StreetFurniture {
     if (!specs.length) return;
     const multi = !!this.renderer?.extensions?.has?.("WEBGL_multi_draw");
     this.batch = multi ? new PropBatch(this.scene) : new PropInstances(this.scene);
+    // Small loose pieces: no shadow casting (a mobile budget saving).
+    if (this.batch.mesh) this.batch.mesh.castShadow = false;
     this.flyers = new FlyerSystem(this.batch, specs, {
       // A piece never comes to rest inside a building or a wall.
       outside: (it) => {

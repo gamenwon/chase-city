@@ -99,7 +99,8 @@ export function constrainLevels(sim, body, radius) {
       }
       return false;
     }
-    if ((body.level || 0) === 0 && !body.falling && Math.abs(lat) < op.W / 2 - 0.3) {
+    // (Cars routed along the ground street beside a ramp do not go up it.)
+    if ((body.level || 0) === 0 && !body.falling && !body.noRamp && Math.abs(lat) < op.W / 2 - 0.3) {
       // Onto a ramp at either foot, driving up it.
       const ue = op.uEnd || op.u;
       const up1 = (body.vx || 0) * op.u.x + (body.vz || 0) * op.u.z, up2 = -((body.vx || 0) * ue.x + (body.vz || 0) * ue.z);

@@ -14,6 +14,7 @@ import { junctionGeometry, sidewalkBands, crossings, inside, KERB_TOP } from "./
 import { makePath } from "../game/citygraph.js";
 
 const C3 = (hex) => new THREE.Color(hex);
+const SMALL_WALLS = [0xe8dcc4, 0xd9a868, 0xb4553f, 0x7aa6c2, 0xc77a45, 0x9fb07a];
 // A box with a flat vertex colour, positioned.
 function cbox(list, x, y, z, w, h, d, color) {
   const g = new THREE.BoxGeometry(w, h, d);
@@ -117,7 +118,8 @@ export class GeneratedWorld {
   buildGround(L, theme) {
     const flat = [], raised = [], props = [];
     // Grass outside, pavement under the whole city.
-    cbox(flat, 0, -0.7, 0, 400, 1, 400, theme.grass);
+    // Grass only round the city (not under it: no hidden overdraw).
+    for (const [x, z, w, d] of [[0, -154, 400, 92], [0, 154, 400, 92], [-154, 0, 92, 216], [154, 0, 92, 216]]) cbox(flat, x, -0.7, z, w, 1, d, theme.grass);
     // Asphalt under the whole city: whatever the raised pavement does not
     // cover is road, so junctions are road right up to their kerbs.
     cbox(flat, 0, -0.12, 0, 216, 0.3, 216, theme.road);
@@ -131,7 +133,9 @@ export class GeneratedWorld {
         continue;
       }
       if (e.kind === "overpass") continue; // drawn by overpass.js, up in the air
-      ribbon(flat, e.pts, e.width, e.kind === "alley" ? 0.065 : 0.06, e.kind === "alley" ? 0x47454c : theme.road);
+      // Ordinary streets are the asphalt base itself; alleys get their own
+      // darker surface.
+      if (e.kind === "alley") ribbon(flat, e.pts, e.width, 0.065, 0x47454c);
     }
     // Junction surfaces: the polygon the corner kerb arcs bound.
     const J = junctionGeometry(L);
@@ -292,8 +296,19 @@ export class GeneratedWorld {
         continue;
       }
       const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
-      const group = buildingGroup(b, seed, [0, 0]);
-      const g = coloredGeometry(group, { dropDown: true, flush: b });
+      let g;
+      if (Math.min(b.w, b.d) <= 4) {
+        // Small annexes and kiosks along stepped block edges: a plain body
+        // and a roof cap (cheap; they are many and low).
+        const parts = [];
+        cbox(parts, 0, 0.4 + b.h / 2, 0, b.w, b.h, b.d, SMALL_WALLS[seed % SMALL_WALLS.length]);
+        cbox(parts, 0, 0.4 + b.h + 0.08, 0, b.w + 0.2, 0.16, b.d + 0.2, 0xdedad2);
+        g = mergeGeometries(parts);
+        parts.forEach((q) => q.dispose());
+      } else {
+        const group = buildingGroup(b, seed, [0, 0]);
+        g = coloredGeometry(group, { dropDown: true, flush: b });
+      }
       g.translate(b.x, 0, b.z);
       const ng = g.index ? g.toNonIndexed() : g;
       if (ng !== g) g.dispose();

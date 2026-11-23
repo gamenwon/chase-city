@@ -942,6 +942,9 @@ export class Simulation {
       c.wallCooldown = Math.max(0, (c.wallCooldown || 0) - dt);
       c.pairCooldown = Math.max(0, (c.pairCooldown || 0) - dt);
       steerPolice(c, i, p, dt, this.navigation, this.police, this.elapsed);
+      // Up a ramp only to chase the player onto the elevated road, or on a
+      // route that runs over it.
+      c.noRamp = !(p.level === 1 || c.route?.some((q) => q.level === 1));
       trafficBrake(c, this.police, p, dt);
       if (c.boostTimer > 0) this.stats.boostSeconds += dt;
       if (this.move(c, dt, CONFIG.policeRadius)) {
