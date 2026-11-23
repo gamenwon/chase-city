@@ -299,6 +299,11 @@ export class RoadNavigation {
     const from = this.nearest(start, start, radius),
       to = this.nearest(goal);
     if (!from || !to) return [];
+    // A goal found unreachable from this part of the graph (the player
+    // boxed in by wrecks, say) stays so until the solids change: answer at
+    // once instead of walking the whole graph again for every police car.
+    const miss = this.unreachable?.get(to.id);
+    if (miss && miss.revision === this.revision && miss.explored.has(from.id)) return [];
     const open = new Set([from.id]),
       came = new Map(),
       g = new Map([[from.id, 0]]);
@@ -343,6 +348,8 @@ export class RoadNavigation {
         }
       }
     }
+    // Every node reachable from `from` was explored: remember it.
+    (this.unreachable ||= new Map()).set(to.id, { revision: this.revision, explored: new Set(g.keys()) });
     return [];
   }
   spawn(player, fleet, id, generation = 0, camera = null) {
@@ -376,7 +383,9 @@ export class RoadNavigation {
     });
     if (!candidates.length) return null;
     const shift = (id + generation) % Math.min(4, candidates.length);
-    for (let i = 0; i < candidates.length; i++) {
+    // At most four route searches a call: when the player cannot be reached
+    // at all (boxed in by wrecks), each search walks the whole graph.
+    for (let i = 0; i < Math.min(4, candidates.length); i++) {
       const n = candidates[(i + shift) % candidates.length],
         route = this.findPath(n, player);
       if (route.length < 2) continue;

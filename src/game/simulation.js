@@ -424,14 +424,26 @@ export class Simulation {
       const sp = Math.hypot(v0.x, v0.z);
       if (sp > 2.5 && this.elapsed - body.wreckPressSince > 1.2 && !(this.arrest > 0)) {
         const ux = v0.x / sp, uz = v0.z / sp, step = Math.min(0.3, sp * dt * 0.45);
+        let moved = false;
         for (const w of this.pushedWrecks) {
           const nx = w.x + ux * step, nz = w.z + uz * step;
           const blocked = Math.max(Math.abs(nx), Math.abs(nz)) > 104 || this.nearSolids(nx, nz, 5).some((q) => q !== w && Math.abs(q.x - nx) < (q.w + w.w) / 2 - 0.05 && Math.abs(q.z - nz) < (q.d + w.d) / 2 - 0.05);
           if (blocked) continue;
           w.x = nx;
           w.z = nz;
-          this.wreckMovedAt = this.elapsed;
+          moved = true;
           this.solidGridFor = null; // re-bin the solids
+        }
+        // Wedged in (an alley sealed by a pile of wrecks): pressing one
+        // that cannot move for 3 s flattens it (still there, no longer
+        // solid), so a pile never shuts the car in for good.
+        if (moved) body.wreckBlockedSince = null;
+        else body.wreckBlockedSince ??= this.elapsed;
+        if (body.wreckBlockedSince != null && this.elapsed - body.wreckBlockedSince > 3) {
+          for (const w of this.pushedWrecks) (w.solid = false), (w.flattened = true);
+          body.wreckBlockedSince = null;
+          this.stats.wrecksFlattened = (this.stats.wrecksFlattened || 0) + 1;
+          this.refreshNavigation();
         }
       }
       this.pushedWrecks.clear();
@@ -852,11 +864,10 @@ export class Simulation {
     this.hitCooldown -= dt;
     const p = this.player;
     updateWrecks(this);
-    // A shoved wreck: the police re-route round it once it has settled.
-    if (this.wreckMovedAt != null && this.elapsed - this.wreckMovedAt > 0.6) {
-      this.wreckMovedAt = null;
-      this.refreshNavigation();
-    }
+    // (A shoved wreck moves in place: physics sees it at once; police
+    // routing keeps its clearance cache until the next real change, as a
+    // full navigation refresh on every shove made a car pushing a pile of
+    // wrecks cost seconds a frame.)
     this.previousPlayer = { x: p.x, z: p.z };
     if (
       this.escape.phase === "locked" &&

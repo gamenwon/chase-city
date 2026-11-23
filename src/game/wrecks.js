@@ -21,7 +21,7 @@ export function addWreck(sim, car, delay = 0) {
 export function updateWrecks(sim) {
   let changed = false;
   for (const wreck of sim.wrecks)
-    if (!wreck.solid && sim.elapsed - wreck.born >= 0.9) {
+    if (!wreck.solid && !wreck.flattened && sim.elapsed - wreck.born >= 0.9) {
       wreck.solid = true;
       changed = true;
     }
