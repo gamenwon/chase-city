@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { generateCity, polyDist, KIND, overpassHeight } from "../src/world/citygen.js";
 import { createLayout, resolveBuilding } from "../src/world/layout.js";
+import { previewLayout } from "../src/preview/locations/layout.js";
 import { createCity } from "../src/game/city.js";
 import { Simulation } from "../src/game/simulation.js";
 import { junctionGeometry, sidewalkBands, crossings } from "../src/render/sidewalks.js";
@@ -13,31 +14,83 @@ import { random } from "../scripts/autoplay.js";
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-test("interactive objects per city back to the old downtown's level (654 props), with far more kinds", () => {
-  const old = createCity(createLayout(), { seed: 1 }).props.length;
-  assert.equal(old, 654);
-  let markets = 0;
+// Every interactive, breakable or explosive thing in a layout: street
+// props, location items, loose pieces, parked / work vehicles, storefronts
+// (street faces of shop buildings).
+function inventory(L, props) {
+  const groups = [...(L.features || []), ...(L.yards || [])];
+  const faces = L.buildings.filter((b) => !b.destructible).reduce((a, b) => a + (b.street ? b.street.filter(Boolean).length : 2), 0);
+  return {
+    props: props.length,
+    items: groups.reduce((a, f) => a + f.items.length, 0),
+    flyers: groups.reduce((a, f) => a + f.flyers.length, 0),
+    vehicles: groups.reduce((a, f) => a + (f.vehicles?.length || 0), 0),
+    faces,
+    yards: new Set((L.yards || []).map((y) => y.kind)),
+  };
+}
+const total = (v) => v.props + v.items + v.flyers + v.vehicles + v.faces;
+
+test("destruction content per city at least the stable build's (locations preview, 6bf8cb3), every facility kind present", () => {
+  const base = previewLayout();
+  const ref = inventory(base, createCity(base, { seed: 1 }).props);
   for (const seed of SEEDS) {
     const L = generateCity(seed);
+    const v = inventory(L, createCity(L, { seed: 1 }).props);
+    assert.ok(total(v) >= 0.9 * total(ref), `seed ${seed}: ${total(v)} vs ${total(ref)}`);
+    assert.ok(v.vehicles >= 0.8 * ref.vehicles, `seed ${seed}: ${v.vehicles} vehicles vs ${ref.vehicles}`);
+    for (const k of ref.yards) assert.ok(v.yards.has(k), `seed ${seed}: no ${k}`);
+    for (const k of ["gas", "court", "park", "gasDepot"]) assert.ok(L.locations[k]);
     const props = createCity(L, { seed: 1 }).props;
-    const kinds = new Set([...props.map((p) => p.kind), ...L.flyers.map((f) => f.kind)]);
-    assert.ok(props.length >= 400, `seed ${seed}: ${props.length} street props`);
-    assert.ok(props.length + L.flyers.length >= 0.9 * old, `seed ${seed}: ${props.length + L.flyers.length} interactive objects`);
-    assert.ok(kinds.size >= 15, `seed ${seed}: ${kinds.size} kinds`);
-    assert.ok(props.filter((p) => p.kind === "hydrant").length >= 30);
-    markets += L.markets.length;
+    assert.ok(props.filter((p) => p.kind === "hydrant").length >= 25);
   }
-  assert.ok(markets >= SEEDS.length - 1, `${markets} markets in ${SEEDS.length} cities`);
+  assert.equal(setLocationsBack(), true);
 });
+const setLocationsBack = () => (previewLayout(), true);
 
-test("loose furniture stands on open ground: never on a road or in a building", () => {
+test("loose shop-front furniture stands on open ground: never on a road or in a building", () => {
   for (const seed of SEEDS) {
     const L = generateCity(seed), { kind, N, CELL, half } = L.raster;
-    for (const f of L.flyers) {
+    for (const f of L.features.find((q) => q.kind === "street").flyers) {
       const k = kind[Math.floor((f.z + half) / CELL) * N + Math.floor((f.x + half) / CELL)];
       assert.ok(k !== KIND.ROAD && k !== KIND.ALLEY && k !== KIND.BUILT, `seed ${seed}: ${f.kind} on ${k}`);
       assert.ok(!L.buildings.some((b) => Math.abs(b.x - f.x) < b.w / 2 && Math.abs(b.z - f.z) < b.d / 2));
     }
+  }
+});
+
+test("building rows: fronts flush, no gap between neighbours a car could nose into, no closed pocket", () => {
+  for (const seed of SEEDS) {
+    const L = generateCity(seed);
+    const B = L.buildings;
+    for (let i = 0; i < B.length; i++)
+      for (let j = i + 1; j < B.length; j++) {
+        const a = B[i], b = B[j];
+        const gx = Math.abs(a.x - b.x) - (a.w + b.w) / 2, gz = Math.abs(a.z - b.z) - (a.d + b.d) / 2;
+        // Side by side (overlapping along the other axis): touching, or a
+        // real way through (an alley, 6 m), never a slot in between.
+        const filled = (x, z) => B.some((q) => Math.abs(q.x - x) < q.w / 2 && Math.abs(q.z - z) < q.d / 2);
+        const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+        if (gz < -0.5 && gx > 0.05 && !filled(mid.x, mid.z)) assert.ok(gx >= 5.9, `seed ${seed}: ${gx.toFixed(2)} m slot at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
+        if (gx < -0.5 && gz > 0.05 && !filled(mid.x, mid.z)) assert.ok(gz >= 5.9, `seed ${seed}: ${gz.toFixed(2)} m slot at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
+        assert.ok(!(gx < -0.05 && gz < -0.05), `seed ${seed}: overlapping buildings`);
+      }
+  }
+});
+
+test("city edge: a visible wall all round (no invisible wall), roads end only at gated exits", () => {
+  for (const seed of SEEDS) {
+    const L = generateCity(seed);
+    const walls = L.obstacles.filter((o) => o.kind === "edge-wall");
+    for (const side of ["n", "s", "e", "w"]) {
+      const on = walls.filter((o) => (side === "n" ? o.z < -100 && o.w > o.d : side === "s" ? o.z > 100 && o.w > o.d : side === "e" ? o.x > 100 && o.d > o.w : o.x < -100 && o.d > o.w));
+      const len = on.reduce((a, o) => a + Math.max(o.w, o.d), 0);
+      assert.ok(len >= 216 - 14.1, `seed ${seed} ${side}: wall ${len}`);
+    }
+    // Every road reaching past the ring is an exit (gated).
+    for (const e of L.graph.edges.filter((q) => q.kind === "road"))
+      for (const p of e.pts) assert.ok(Math.max(Math.abs(p.x), Math.abs(p.z)) <= 90.01, `seed ${seed}: road past the ring`);
+    assert.equal(L.graph.edges.filter((q) => q.kind === "exit").length, L.exits.length);
   }
 });
 

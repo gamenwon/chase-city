@@ -142,11 +142,18 @@ export function junctionGeometry(L) {
     }
     polygons.push({ n, pts: poly, degree: list.length, foot: !!n.foot });
   }
-  return { trims, corners, polygons, lens, incident: at };
+  // Module city: no pavement corners out in the yard strip.
+  const keep = (c) => {
+    if (!L.modular) return true;
+    const a = c.a0 + c.da / 2, r = (c.r0 + c.r1) / 2;
+    return Math.max(Math.abs(c.o.x + Math.cos(a) * r), Math.abs(c.o.z + Math.sin(a) * r)) < OUTER;
+  };
+  return { trims, corners: corners.filter(keep), polygons, lens, incident: at };
 }
 
 // Bands along every street side: [{ pts: [{x,z,nx,nz}], w0, w1, side }]
 // with alley mouths cut out.
+const OUTER = 95.5; // ring road kerb (module city)
 export function sidewalkBands(L, J) {
   const bands = [];
   const alleyEnds = (L.alleys || []).flatMap((a) => a.pts);
@@ -181,6 +188,12 @@ export function sidewalkBands(L, J) {
           const q = pointAt(path, Math.min(t, path.len - 1e-6));
           return { x: q.x, z: q.z, nx: -q.uz * sg, nz: q.ux * sg };
         });
+        // Module city: past the ring road is the yard strip (no pavement
+        // on the ring's outer side or along the exit roads through it).
+        if (L.modular) {
+          const m = pts[Math.floor(pts.length / 2)], w = e.width / 2 + SIDEWALK_W / 2;
+          if (e.kind === "exit" || Math.max(Math.abs(m.x + m.nx * w), Math.abs(m.z + m.nz * w)) > OUTER) continue;
+        }
         bands.push({ pts, w0: e.width / 2, w1: e.width / 2 + SIDEWALK_W, edge: e.id, side });
       }
     }

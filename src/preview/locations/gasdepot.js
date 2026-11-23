@@ -13,7 +13,8 @@
 import * as THREE from "three";
 import { C, B, G, cyl, add, bake, signBoard, pieceMesh } from "./parts.js";
 
-export const GASDEPOT = { x: -45, z: 45 };
+import { GASDEPOT } from "./layout-consts.js";
+export { GASDEPOT };
 export const GD_PLAN = {
   sphere: { x: 3.4, z: -3.4, r: 2.9, cy: 4.7 },
   bullets: [

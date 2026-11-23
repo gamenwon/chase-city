@@ -7,26 +7,27 @@ import { createLayout, resolveBuilding } from "../src/world/layout.js";
 import { wedgeSweep } from "../scripts/wedge-repro.mjs";
 import { CONFIG } from "../src/game/config.js";
 
-test("60 seeds: every city generates, passes validation and has the features (varied junctions, curves, alleys, lots)", () => {
-  const seen = { diag: 0, curve: 0, t: 0, alleys: 0, parks: 0, gas: 0, parking: 0, overpass: 0, destructible: 0 };
+test("60 seeds: every city generates, passes validation and has the features (modules, T-junctions, alleys, parks, shortcuts, overpass)", () => {
+  const seen = { t: 0, alleys: 0, parks: 0, overpass: 0, curvedOverpass: 0, destructible: 0 };
   for (let seed = 1; seed <= 60; seed++) {
     const L = generateCity(seed);
     assert.ok(validateCity(L).ok, `seed ${seed}`);
     const roads = L.graph.edges.filter((e) => e.kind === "road");
-    if (roads.some((e) => e.diagonal)) seen.diag++;
-    if (roads.some((e) => e.curve)) seen.curve++;
     const deg = new Map();
     for (const e of roads) for (const id of [e.a, e.b]) deg.set(id, (deg.get(id) || 0) + 1);
     if ([...deg.values()].some((d) => d === 3)) seen.t++;
     seen.alleys += L.alleys.length > 0;
     seen.parks += L.parks.length > 0;
-    seen.gas += L.stations.length > 0;
-    seen.parking += L.lots.length > 0;
     seen.overpass += L.overpasses.length > 0;
+    seen.curvedOverpass += !!L.overpasses[0]?.curved;
     seen.destructible += L.buildings.some((b) => b.destructible);
     assert.equal(L.exits.length, 4);
+    // Every landmark module, and every yard kind of the stable build.
+    for (const k of ["gas", "court", "park", "gasDepot"]) assert.ok(L.locations[k], `seed ${seed}: ${k}`);
+    const kinds = new Set(L.yards.map((y) => y.kind));
+    for (const k of ["parking", "carwash", "construction", "market", "cafe", "depot", "plaza", "corner"]) assert.ok(kinds.has(k), `seed ${seed}: ${k}`);
   }
-  for (const [k, v] of Object.entries(seen)) assert.ok(v >= 30, `${k}: ${v}/60`);
+  for (const [k, v] of Object.entries(seen)) assert.ok(v >= (k === "curvedOverpass" ? 8 : 30), `${k}: ${v}/60`);
 });
 
 test("same seed, same city (replay); a new seed, a different city", () => {
@@ -105,7 +106,7 @@ test("wedge sweep on generated cities (both cars): shoved into corners, alleys a
 
 test("drive-through buildings: a full-speed ram goes through, a slow nudge does nothing, high-rises stay solid", () => {
   let through = 0, tried = 0, standing = 0;
-  for (const seed of [1, 2, 3]) {
+  for (let seed = 1; seed <= 12 && tried < 8; seed++) {
     const mk = () => {
       const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed, reinforcements: false, barricades: false });
       s.start();
@@ -143,7 +144,9 @@ test("drive-through buildings: a full-speed ram goes through, a slow nudge does 
 
 test("the heavier car breaks walls more readily (impact x mass)", () => {
   const dmg = (vehicle) => {
-    const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed: 2, vehicle, reinforcements: false, barricades: false });
+    let seed = 1;
+    while (!generateCity(seed).buildings.some((q) => q.destructible)) seed++;
+    const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed, vehicle, reinforcements: false, barricades: false });
     s.start();
     s.police = [];
     const b = s.layout.buildings.find((q) => q.destructible);

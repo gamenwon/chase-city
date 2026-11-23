@@ -12,7 +12,7 @@
 // closed by debris.
 import { createLayout } from "../../world/layout.js";
 
-import { GAS, COURT, PARK } from "./layout-consts.js";
+import { GAS, COURT, PARK, setLocations } from "./layout-consts.js";
 import { GASDEPOT, depotSolids, depotFlyers } from "./gasdepot.js";
 import { parkPlan } from "./plan.js";
 import { sitePlan } from "./sites.js";
@@ -35,12 +35,12 @@ export const FOUNTAIN_R = 2.6;
 
 const inBlock = (b, c) => Math.abs(b.x - c.x) < 10 && Math.abs(b.z - c.z) < 10;
 
-export function previewLayout() {
-  const base = createLayout();
-  const buildings = base.buildings.filter((b) => !inBlock(b, GAS) && !inBlock(b, COURT) && !inBlock(b, GASDEPOT));
-  const parks = base.parks.filter((p) => !(p.x === PARK.x && p.z === PARK.z));
-  const obstacles = base.obstacles.filter((o) => !inBlock(o, PARK));
-  const solid = (c, x, z, w, d, kind) => obstacles.push({ x: c.x + x, z: c.z + z, w, d, kind });
+// Solid boxes of the four landmark locations at their current centres
+// (setLocations): gas station shop, pump islands and pylon, court and park
+// trees, the fountain, the gas depot's tanks, cage, hut and pipe rack.
+export function locationSolids() {
+  const out = [];
+  const solid = (c, x, z, w, d, kind) => out.push({ x: c.x + x, z: c.z + z, w, d, kind });
   const m = GAS_PLAN.mart;
   // The shop, with its front kit (ice chest, vending machine) inside the box.
   solid(GAS, m.x, m.z + 0.45, m.w, m.d + 0.9, "gas-mart");
@@ -53,12 +53,23 @@ export function previewLayout() {
   solid(PARK, 0, 0, 2 * f, f * 0.9, "fountain");
   solid(PARK, 0, 0, f * 0.9, 2 * f, "fountain");
   for (const x of [-6.8, 6.8]) for (const z of [-6.8, 6.8]) solid(PARK, x, z, 0.6, 0.6, "tree");
+  out.push(...depotSolids());
+  return out;
+}
+
+export function previewLayout() {
+  setLocations();
+  const base = createLayout();
+  const buildings = base.buildings.filter((b) => !inBlock(b, GAS) && !inBlock(b, COURT) && !inBlock(b, GASDEPOT));
+  const parks = base.parks.filter((p) => !(p.x === PARK.x && p.z === PARK.z));
+  const obstacles = base.obstacles.filter((o) => !inBlock(o, PARK));
+  obstacles.push(...locationSolids());
   // Park features and outer-ring yards: only their small solid pieces
   // (statue plinths, site cabins, containers) are added to the layout.
   const features = parkPlan(parks);
-  // Gas storage depot (gasdepot.js): its solids, and its loose fence
-  // panels and gas cylinders as a group of flyers.
-  features.push({ kind: "gasdepot", items: [], vehicles: [], flyers: depotFlyers(), solids: depotSolids() });
+  // Gas storage depot (gasdepot.js): its loose fence panels and gas
+  // cylinders as a group of flyers (its solids are in locationSolids).
+  features.push({ kind: "gasdepot", items: [], vehicles: [], flyers: depotFlyers(), solids: [] });
   // Shop-front clutter on the shopping streets (sandwich boards, racks,
   // pots, newspaper boxes): loose flyers, never solid.
   features.push({ kind: "street", items: [], vehicles: [], flyers: streetFlyers(buildings, { parks }), solids: [] });

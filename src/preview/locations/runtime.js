@@ -67,6 +67,12 @@ function cellMesh(scene, geometry, material, count, cell) {
 
 export class LocationsRuntime {
   constructor(scene, sim, renderer, layout = sim.layout) {
+    // Everything this builds hangs off one group, so a new generated city
+    // can drop the old locations in one go (dispose).
+    this.parent = scene;
+    this.root = new THREE.Group();
+    scene.add(this.root);
+    scene = this.root;
     this.scene = scene;
     this.renderer = renderer;
     this.gas = buildGas(scene);
@@ -104,10 +110,14 @@ export class LocationsRuntime {
       scene.add(bake(decor));
       // A building behind some of the outer sites (scenery past the city
       // edge: not solid, nothing on any route).
-      if (PERIMETER[i] && y.kind !== "corner") {
+      const per = layout.modular ? y.perimeter : PERIMETER[i];
+      if (per && y.kind !== "corner") {
         const pg = new THREE.Group();
-        perimeterBuilding(PERIMETER[i], i * 7 + 3)(G(pg, y.x, 0, y.z, y.ry));
-        scene.add(bake(pg));
+        perimeterBuilding(per, i * 7 + 3)(G(pg, y.x, 0, y.z, y.ry));
+        const baked = bake(pg);
+        // Past the city edge: its shadow falls on nothing that matters.
+        if (layout.modular) baked.traverse((o) => o.isMesh && (o.castShadow = false));
+        scene.add(baked);
       }
     });
     // Instanced copies are grouped by 60 m map cell, each group with real
@@ -220,6 +230,11 @@ export class LocationsRuntime {
     sim.blastListeners = [(s, e, R, k, later, depth) => this.blast(s, e, R, k, later, depth)];
     this.stats = { islands: 0, fountain: 0, policeWrecked: 0, knocked: 0, broken: 0, pushed: 0, wrecked: 0 };
     this.reset(sim);
+  }
+
+  dispose() {
+    this.parent.remove(this.root);
+    this.root.traverse((o) => o.geometry?.dispose?.());
   }
 
   // ------------------------------------------------------------ state --
@@ -340,7 +355,7 @@ export class LocationsRuntime {
     }
     for (const f of this.storefronts.faces) {
       if (f.broken) continue;
-      const wx = f.b.x + f.nx * 3.6, wz = f.b.z + f.nz * 3.6;
+      const wx = f.b.x + f.nx * (f.half + 0.1), wz = f.b.z + f.nz * (f.half + 0.1);
       if (Math.hypot(wx - e.x, wz - e.z) < R * 0.55) this.storefronts.breakFace(sim, f, 8 + 6 * s);
     }
   }

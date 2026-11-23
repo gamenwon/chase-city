@@ -104,6 +104,36 @@ export class GeneratedWorld {
     this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true, side: THREE.DoubleSide });
     this.buildGround(layout, theme);
     this.buildBuildings(layout);
+    // Exit gates (module city): a striped boom across each exit road at
+    // the city edge, down until the escape opens that exit.
+    this.booms = [];
+    if (layout.modular)
+      for (const e of layout.exits) {
+        const g = new THREE.Group();
+        g.position.set(e.anchor.x + e.dx * 17.2, 0, e.anchor.z + e.dz * 17.2);
+        g.rotation.y = Math.atan2(e.dx, e.dz);
+        const pivot = new THREE.Group();
+        pivot.position.set(-6.1, 1.15, 0);
+        g.add(pivot);
+        for (let k = 0; k < 6; k++) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.22, 0.22), new THREE.MeshStandardMaterial({ color: k % 2 ? 0xffffff : 0xd62f2a, roughness: 0.6 }));
+          m.position.x = 1.05 + k * 2.05;
+          m.castShadow = true;
+          pivot.add(m);
+        }
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, 0.5), new THREE.MeshStandardMaterial({ color: 0xf5c01a }));
+        post.position.set(-6.1, 0.7, 0);
+        g.add(post);
+        this.group.add(g);
+        this.booms.push({ e, pivot, a: 0 });
+      }
+  }
+  update(sim, dt) {
+    for (const b of this.booms) {
+      const open = sim.escape?.phase === "open" && sim.escape.exit?.id === b.e.id;
+      b.a += ((open ? 1.45 : 0) - b.a) * Math.min(1, dt * 3);
+      b.pivot.rotation.z = b.a;
+    }
   }
   addMerged(list, { shadow = false } = {}) {
     if (!list.length) return null;
@@ -130,12 +160,28 @@ export class GeneratedWorld {
         ribbon(flat, [a, { x: a.x + dx * 70, z: a.z + dz * 70 }], 11, 0.06, theme.road);
         // Gate posts at the city edge.
         for (const s of [-1, 1]) cbox(props, a.x + dx * 19 + dz * s * 6.4, 1.6, a.z + dz * 19 + dx * s * 6.4, 0.6, 3.2, 0.6, K.yellow);
+        if (L.modular) {
+          // A guard booth beside the gate; the boom itself (closed until
+          // the escape opens this exit) is drawn by update().
+          cbox(props, a.x + dx * 15.5 + dz * 8.6, 1.3, a.z + dz * 15.5 + dx * 8.6, 2.2, 2.6, 2.2, 0xf2efe6);
+          cbox(props, a.x + dx * 15.5 + dz * 8.6, 2.75, a.z + dz * 15.5 + dx * 8.6, 2.6, 0.3, 2.6, K.red);
+        }
         continue;
       }
       if (e.kind === "overpass") continue; // drawn by overpass.js, up in the air
       // Ordinary streets are the asphalt base itself; alleys get their own
       // darker surface.
       if (e.kind === "alley") ribbon(flat, e.pts, e.width, 0.065, 0x47454c);
+    }
+    // Module city: the low wall along the city edge (solid; open only at
+    // the exits), concrete with a red-and-white cap.
+    for (const o of L.obstacles) {
+      if (o.kind !== "edge-wall") continue;
+      cbox(props, o.x, 0.75, o.z, o.w, 1.5, o.d, 0xc9c3b6);
+      cbox(props, o.x, 1.56, o.z, o.w + 0.1, 0.12, o.d + 0.1, 0xe8e2d4);
+      const long = o.w > o.d, len = long ? o.w : o.d;
+      for (let t = -len / 2 + 1; t < len / 2 - 0.5; t += 4)
+        cbox(props, o.x + (long ? t : 0), 0.75, o.z + (long ? 0 : t), long ? 0.25 : o.w + 0.04, 1.5, long ? o.d + 0.04 : 0.25, 0xb0aa9d);
     }
     // Junction surfaces: the polygon the corner kerb arcs bound.
     const J = junctionGeometry(L);

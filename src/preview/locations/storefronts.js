@@ -119,18 +119,25 @@ export class Storefronts {
     this.hooks = hooks;
     this.faces = [];
     for (const b of buildings) {
-      const cx = Math.round((b.x - 15) / 30) * 30 + 15, cz = Math.round((b.z - 15) / 30) * 30 + 15;
+      if (b.destructible) continue;
       const seed = Math.abs(Math.round(b.x * 7 + b.z * 13 + b.h * 3));
-      const out = [Math.sign(b.x - cx), Math.sign(b.z - cz)];
+      // Street faces: a generated city marks them (b.street: +z, -z, +x,
+      // -x); downtown, the faces pointing away from the block centre.
+      let st = b.street;
+      if (!st) {
+        const cx = Math.round((b.x - 15) / 30) * 30 + 15, cz = Math.round((b.z - 15) / 30) * 30 + 15;
+        const out = [Math.sign(b.x - cx), Math.sign(b.z - cz)];
+        st = [out[1] > 0, out[1] < 0, out[0] > 0, out[0] < 0];
+      }
       [
-        { ry: 0, street: out[1] > 0 },
-        { ry: Math.PI, street: out[1] < 0 },
-        { ry: Math.PI / 2, street: out[0] > 0 },
-        { ry: -Math.PI / 2, street: out[0] < 0 },
+        { ry: 0, street: st[0], span: b.w, half: b.d / 2 },
+        { ry: Math.PI, street: st[1], span: b.w, half: b.d / 2 },
+        { ry: Math.PI / 2, street: st[2], span: b.d, half: b.w / 2 },
+        { ry: -Math.PI / 2, street: st[3], span: b.d, half: b.w / 2 },
       ].forEach((f, k) => {
-        if (!f.street) return;
+        if (!f.street || f.span < 5) return;
         this.faces.push({
-          b, ry: f.ry, nx: Math.sin(f.ry), nz: Math.cos(f.ry),
+          b, ry: f.ry, nx: Math.sin(f.ry), nz: Math.cos(f.ry), span: f.span, half: f.half,
           sign: SHOP_COLORS[(seed + k) % SHOP_COLORS.length],
           wall: WALLS[seed % WALLS.length],
           burns: (seed + k) % 4 === 0,
@@ -176,8 +183,7 @@ export class Storefronts {
     }
     this.faces.forEach((f, i) => {
       f.index = i;
-      this.q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.ry);
-      this.m.compose(this.v.set(f.b.x, 0, f.b.z), this.q, this.s.set(1, 1, 1));
+      this.faceMatrix(f);
       this.awnings.setMatrixAt(i, this.m);
       this.awnings.setColorAt(i, this.c.setHex(f.sign));
     });
@@ -186,10 +192,16 @@ export class Storefronts {
     this.awnings.instanceColor.needsUpdate = true;
     this.stats = { broken: 0, burning: 0 };
   }
+  // The pieces are modelled for a 7 m face 3.5 m from the centre: stretch
+  // them along the face and move them out to its wall.
+  faceMatrix(f) {
+    this.q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.ry);
+    const o = f.half - 3.5;
+    this.m.compose(this.v.set(f.b.x + f.nx * o, 0, f.b.z + f.nz * o), this.q, this.s.set(f.span / 7, 1, 1));
+  }
   place(mesh, f, color) {
     const i = mesh.count++;
-    this.q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.ry);
-    this.m.compose(this.v.set(f.b.x, 0, f.b.z), this.q, this.s);
+    this.faceMatrix(f);
     mesh.setMatrixAt(i, this.m);
     mesh.instanceMatrix.needsUpdate = true;
     if (color != null) {
@@ -203,10 +215,10 @@ export class Storefronts {
     for (const f of this.faces) {
       if (f.broken) continue;
       const dx = car.x - f.b.x, dz = car.z - f.b.z;
-      if (Math.abs(dx) > 8 || Math.abs(dz) > 8) continue;
+      if (Math.abs(dx) > 14 || Math.abs(dz) > 14) continue;
       const out = dx * f.nx + dz * f.nz; // distance from the centre along the normal
       const side = dx * f.nz - dz * f.nx; // along the face
-      if (out < 3.5 || out > 3.5 + radius + 0.4 || Math.abs(side) > 3.4) continue;
+      if (out < f.half || out > f.half + radius + 0.4 || Math.abs(side) > f.span / 2 - 0.1) continue;
       const closing = -((car.vx || 0) * f.nx + (car.vz || 0) * f.nz);
       if (closing < 6) continue;
       this.breakFace(sim, f, closing);
@@ -226,7 +238,7 @@ export class Storefronts {
     this.m.makeScale(0, 0, 0);
     this.awnings.setMatrixAt(f.index, this.m);
     this.awnings.instanceMatrix.needsUpdate = true;
-    const wx = f.b.x + f.nx * 3.7, wz = f.b.z + f.nz * 3.7;
+    const wx = f.b.x + f.nx * (f.half + 0.2), wz = f.b.z + f.nz * (f.half + 0.2);
     sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: wx, z: wz, strength: 15 });
     this.hooks.glass?.(wx, wz, f.nx, f.nz);
     // A designated shop catches fire after a severe hit.

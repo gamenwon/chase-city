@@ -82,8 +82,8 @@ try {
     theme: startMap.theme,
   });
   sim.cameraRig = renderer.cameraRig;
-  // Explosions throw the loose street furniture too.
-  sim.blastListeners = [(s, e, R, k) => renderer.furniture?.blast(s, e, R, k)];
+  // The facility locations and their destruction (render/scene.js).
+  renderer.attachLocations(sim);
   sim.cameraRig.update(sim.player, 0);
 } catch (error) {
   document.querySelector("#message").textContent =
@@ -109,6 +109,7 @@ function chooseMission(id) {
   document.body.classList.remove("busted");
   sim.reset(id, progress.selectedVehicle);
   renderer.setLayout(sim.layout);
+  renderer.attachLocations(sim);
   showSeed();
   renderer.reset();
   audio.reset();
@@ -125,6 +126,7 @@ ui.start.addEventListener("click", () => {
   if (state === "over") {
     sim.reset();
     renderer.setLayout(sim.layout);
+    renderer.attachLocations(sim);
     showSeed();
     renderer.reset();
     audio.reset();
@@ -333,7 +335,7 @@ function frame(ms) {
     accumulator += dt;
     while (accumulator >= 1 / 60) {
       sim.update(1 / 60, input);
-      renderer?.furniture?.step(sim, 1 / 60);
+      renderer?.locations?.step(sim, 1 / 60);
       accumulator -= 1 / 60;
       if (sim.result) {
         state = "over";
@@ -366,6 +368,7 @@ function frame(ms) {
     frame.taken = taken;
   } else frame.taken = 0;
   ui.update(sim, renderer?.guidanceView);
+  if (state === "running" || state === "ready") renderer?.locations?.render(state === "running" ? dt : 0, sim);
   renderer?.render(
     sim,
     state === "running" || state === "ready" ? dt : 0,

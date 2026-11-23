@@ -23,7 +23,7 @@ const hash = (x, z) => {
 
 export const THEMES = ["memorial", "family", "art", "market"];
 
-export function parkPlan(parks) {
+export function parkPlan(parks, lawnY = 0.49) {
   return parks
     .filter((p) => !(p.x === PARK.x && p.z === PARK.z))
     .map((p, i) => {
@@ -34,7 +34,7 @@ export function parkPlan(parks) {
       const at = (x, z) => ({ x: p.x + x * flip, z: p.z + z });
       const f = { park: p, theme, items: [], flyers: [], vehicles: [], solids: [] };
       // Park lawns (scene.js) are 0.49 m high.
-      const Y = 0.49;
+      const Y = lawnY;
       const add = (kind, x, z, ry = 0, extra = {}) => f.items.push({ kind, ...at(x, z), y: Y, ry: ry * flip, ...extra });
       const seats = (spots) => f.flyers.push(...cafeClusters({ at: (u, v) => at(u, v) }, i * 5 + 3, spots, Y));
       if (theme === "memorial") {

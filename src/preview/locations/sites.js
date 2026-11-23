@@ -50,10 +50,13 @@ function frame(seg) {
   return { ux, uz, vx, vz, ry, at };
 }
 
-export function sitePlan() {
+// segs/order: the generated city passes its own strip segments (same
+// frame: x, z at the segment centre, along "x" or "z", out = [sx, sz]) and
+// a shuffled order; the preview uses the downtown ring.
+export function sitePlan(segs = segments(), order = SITE_ORDER, corners = true) {
   const sites = [];
-  segments().forEach((seg, i) => {
-    const kind = SITE_ORDER[i];
+  segs.forEach((seg, i) => {
+    const kind = seg.kind || order[i % order.length];
     const f = frame(seg);
     const y = { ...seg, kind, ry: f.ry, items: [], flyers: [], vehicles: [], solids: [], at: f.at, h: hash(seg.x, seg.z) };
     const Y = 0.05;
@@ -170,7 +173,7 @@ export function sitePlan() {
     sites.push(y);
   });
   // Corners: a billboard tower on two legs (solid), benches, planters.
-  for (const sx of [-1, 1])
+  if (corners) for (const sx of [-1, 1])
     for (const sz of [-1, 1]) {
       const x = sx * 101.75, z = sz * 101.75;
       const ry = Math.atan2(sx, sz) + Math.PI; // board faces the city

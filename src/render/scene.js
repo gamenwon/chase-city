@@ -16,7 +16,8 @@ import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
 import { BuildingCellsRenderer } from "./cells.js";
-import { StreetFurniture } from "./furniture.js";
+import { LocationsRuntime } from "../preview/locations/runtime.js";
+import { setLocations } from "../preview/locations/layout-consts.js";
 import { TargetRenderer } from "./target.js";
 import { PickupRenderer } from "./pickups.js";
 import { MAPS, DEFAULT_MAP } from "../world/maps.js";
@@ -122,9 +123,10 @@ export class CityRenderer {
     // V2.1 destructible low-rise buildings (wall cells).
     this.cells = new BuildingCellsRenderer(this.scene);
     this.cells.setLayout(layout);
-    // Loose breakable street furniture of a generated city.
-    this.furniture = new StreetFurniture(this.scene, this.renderer);
-    this.furniture.setLayout(layout);
+    // The facility locations (gas station, court, fountain park, gas
+    // depot, yard sites, storefronts, loose furniture, parked vehicles)
+    // and their destruction: built per city by attachLocations(sim).
+    this.locations = null;
     // V1.8 driver's-view PIP, drawn into the #pip frame when switched on.
     this.bonnet = new BonnetCamera();
     this.pipFrame = document.querySelector("#pip");
@@ -248,8 +250,25 @@ export class CityRenderer {
     this.night.setLayout(layout);
     this.overpass.setLayout(layout);
     this.cells.setLayout(layout);
-    this.furniture.setLayout(layout);
     this.layout = layout;
+  }
+  // Core recovery pass: the stable build's locations and all their
+  // destruction run in the game, rebuilt for every new generated city.
+  attachLocations(sim) {
+    if (this.locations && this.locations.layout === sim.layout) return;
+    this.locations?.dispose();
+    this.locations = null;
+    this.extraLamps = null;
+    if (!sim.layout.locations) return;
+    setLocations(sim.layout.locations);
+    const loc = new LocationsRuntime(this.scene, sim, this, sim.layout);
+    loc.layout = sim.layout;
+    this.locations = loc;
+    // Night: the park and yard lamps light up too.
+    this.extraLamps = () =>
+      loc.items
+        .filter((it) => (it.kind === "lampPole" || it.kind === "lamp") && it.state === "stand")
+        .map((it) => ({ x: it.spec.x, z: it.spec.z, y: (it.spec.y ?? 0.4) + (it.kind === "lamp" ? 3.95 : 6.4), ground: (it.spec.y ?? 0.4) - 0.2 }));
   }
   batchStatic() {
     const groups = new Map();
@@ -310,6 +329,7 @@ export class CityRenderer {
   }
   render(sim, dt, running = sim.started && !sim.result) {
     const p = sim.player;
+    this.world?.update?.(sim, dt);
     this.player.position.set(p.x, p.y || 0, p.z);
     this.player.rotation.y = p.angle;
     this.player.rotation.z +=
