@@ -338,6 +338,7 @@ export class Simulation {
       let contact = false;
       for (const b of near)
         if (resolveBuilding(body, b, radius)) {
+          if (b.kind === "wreck" && body === this.player) (this.pushedWrecks ||= new Set()).add(b);
           contact = true;
           body.lastObstacleKind = b.kind || "wall";
           body.lastObstacle = b;
@@ -407,6 +408,32 @@ export class Simulation {
           }
         }
       }
+    }
+    // Core recovery pass: the player's car shoves a wreck it drives into
+    // (a burnt-out police car is far lighter than a car under power), so
+    // wrecks piled against a building never close a pocket for good. The
+    // wreck slides along the car's heading, never into anything solid.
+    // Only once the car has been pressing wrecks for a while (a pocket,
+    // not a passing bump) and never while the police hold it (an arrest
+    // countdown: a real immobilization stays one).
+    if (body === this.player && !this.pushedWrecks?.size && this.elapsed - (body.wreckPressLast ?? -9) > 0.5) body.wreckPressSince = null;
+    if (body === this.player && this.pushedWrecks?.size) {
+      body.wreckPressLast = this.elapsed;
+      body.wreckPressSince ??= this.elapsed;
+      const sp = Math.hypot(v0.x, v0.z);
+      if (sp > 2.5 && this.elapsed - body.wreckPressSince > 1.2 && !(this.arrest > 0)) {
+        const ux = v0.x / sp, uz = v0.z / sp, step = Math.min(0.3, sp * dt * 0.45);
+        for (const w of this.pushedWrecks) {
+          const nx = w.x + ux * step, nz = w.z + uz * step;
+          const blocked = Math.max(Math.abs(nx), Math.abs(nz)) > 104 || this.nearSolids(nx, nz, 5).some((q) => q !== w && Math.abs(q.x - nx) < (q.w + w.w) / 2 - 0.05 && Math.abs(q.z - nz) < (q.d + w.d) / 2 - 0.05);
+          if (blocked) continue;
+          w.x = nx;
+          w.z = nz;
+          this.wreckMovedAt = this.elapsed;
+          this.solidGridFor = null; // re-bin the solids
+        }
+      }
+      this.pushedWrecks.clear();
     }
     // A hard hit on an overpass pillar damages it (V2.1).
     if (body.lastObstacle?.kind === "pillar" && body.lastImpact > 0) {
@@ -822,6 +849,11 @@ export class Simulation {
     this.hitCooldown -= dt;
     const p = this.player;
     updateWrecks(this);
+    // A shoved wreck: the police re-route round it once it has settled.
+    if (this.wreckMovedAt != null && this.elapsed - this.wreckMovedAt > 0.6) {
+      this.wreckMovedAt = null;
+      this.refreshNavigation();
+    }
     this.previousPlayer = { x: p.x, z: p.z };
     if (
       this.escape.phase === "locked" &&

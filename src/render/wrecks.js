@@ -181,6 +181,7 @@ export class WreckRenderer {
         slot.body.rotation.set(Math.PI, w.angle, WRECK_ROLL);
         slot.body.position.y = WRECK_LIFT;
       }
+      slot.group.position.set(w.x, 0, w.z); // (a wreck can be shoved)
       const reentered = !slot.group.visible;
       if (!slot.group.parent) this.scene.add(slot.group);
       slot.group.visible = true;
