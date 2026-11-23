@@ -151,7 +151,7 @@ export class Storefronts {
         // Big commercial corner buildings (about one in fourteen fronts)
         // are the major ones.
         const major = b.district === "commercial" && b.h >= 13 && (seed + k) % 7 === 0;
-        const type = major ? "major" : TYPES[(seed * 7 + k * 3) % TYPES.length];
+        const type = b.shopType || (major ? "major" : TYPES[(seed * 7 + k * 3) % TYPES.length]);
         this.faces.push({
           b, ry: f.ry, nx: Math.sin(f.ry), nz: Math.cos(f.ry), span: f.span, half: f.half,
           sign: SHOP_COLORS[(seed + k) % SHOP_COLORS.length],

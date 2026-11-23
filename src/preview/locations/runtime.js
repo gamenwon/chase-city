@@ -17,6 +17,7 @@ import { GAS, COURT, PARK, FOUNTAIN_R } from "./layout.js";
 import * as P from "./props.js";
 import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
+import { dinerDecor } from "./diner.js";
 import { siteDecor } from "./sites-decor.js";
 import { PERIMETER, perimeterBuilding } from "./perimeter.js";
 import { Storefronts } from "./storefronts.js";
@@ -79,7 +80,7 @@ export class LocationsRuntime {
     this.renderer = renderer;
     this.gas = buildGas(scene);
     this.collapse = new GasCollapse(this.gas, { x: GAS.x, y: 0, z: GAS.z });
-    this.gantries = new Gantries(scene, layout.yards);
+    this.gantries = new Gantries(scene, [...(layout.yards || []), ...(layout.arches || [])]);
     this.court = buildCourt(scene);
     this.park = buildPark(scene);
     this.m = new THREE.Matrix4();
@@ -104,6 +105,7 @@ export class LocationsRuntime {
     for (const f of layout.features || []) {
       const decor = new THREE.Group();
       for (const it of f.items) if (it.kind === "statue") P.plinth(G(decor, it.x, it.y, it.z, it.ry));
+      if (f.kind === "diner") dinerDecor(decor, f);
       if (decor.children.length) scene.add(bake(decor));
     }
     (layout.yards || []).forEach((y, i) => {

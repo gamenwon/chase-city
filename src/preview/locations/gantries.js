@@ -76,6 +76,7 @@ export class Gantries {
     for (const a of this.list) {
       a.state = "up";
       a.anim = null;
+      a.landed = false;
       a.wobble = null;
       a.posts.forEach((m, i) => {
         m.position.set(a.gt.cx + a.gt.posts[i], 0, a.gt.lz);
@@ -174,6 +175,22 @@ export class Gantries {
         else {
           if (!s2.from) s2.from = this.read(a.beam);
           this.applyFrom(a.beam, s2, t, s2.from, fall);
+        }
+        // The beam lands: whatever is under it takes the blow (a police
+        // car under a big sign is wrecked, the player is hurt and shoved).
+        if (!a.landed && t >= s2.start + s2.dur * 0.85 && sim && a.pendingSolid) {
+          a.landed = true;
+          const b = a.pendingSolid;
+          const under = (c) => Math.abs(c.x - b.x) < b.w / 2 + 0.9 && Math.abs(c.z - b.z) < b.d / 2 + 0.9 && !(c.level > 0);
+          for (const c of sim.police) if (c.state === "active" && under(c)) { c.health -= 55; c.lastDamageCause = "sign"; this.stats.crushed = (this.stats.crushed || 0) + 1; }
+          for (const c of sim.city?.traffic || []) if (c.state !== "wreck" && under(c)) c.health = (c.health ?? 100) - 60;
+          if (under(sim.player)) {
+            sim.damage?.(8);
+            const dx = sim.player.x - b.x, dz = sim.player.z - b.z, d = Math.hypot(dx, dz) || 1;
+            sim.player.vx += (dx / d) * 5;
+            sim.player.vz += (dz / d) * 5;
+          }
+          sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: b.x, z: b.z, strength: 15, sound: "topple" });
         }
         if (t > s2.start + s2.dur && a.anim.posts.every((k) => t > k.start + k.dur)) {
           a.anim = null;

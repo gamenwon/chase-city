@@ -22,6 +22,16 @@ export function boardHalf(g) {
   B(g, 0.5, 0.7, 0.02, 0xffffff, 0, -0.43, 0.025); // the menu (tinted)
   B(g, 0.36, 0.06, 0.02, 0x232227, 0, -0.05, 0.04);
 }
+// Restaurant plaza: a menu sign on a tall pole (the board in the shop's
+// colour); a car knocks it flying, bent pole and all.
+export function poleSign(g) {
+  B(g, 0.5, 0.12, 0.5, 0x55535c, 0, 0, 0);
+  B(g, 0.12, 3.2, 0.12, 0x8a8d93, 0, 0.1, 0);
+  B(g, 1.7, 1.0, 0.14, 0x232227, 0, 3.1, 0);
+  B(g, 1.5, 0.8, 0.03, 0xffffff, 0, 3.2, 0.08);
+  B(g, 1.5, 0.8, 0.03, 0xffffff, 0, 3.2, -0.08);
+  B(g, 1.1, 0.14, 0.04, 0xfff6d2, 0, 3.35, 0.1);
+}
 // Display rack outside a shop: a wire stand with goods on three shelves.
 export function displayRack(g) {
   for (const x of [-0.4, 0.4]) for (const z of [-0.2, 0.2]) B(g, 0.04, 1.4, 0.04, 0x9da1a8, x, 0, z);
@@ -206,6 +216,7 @@ export function shard(g) {
 // flies; breakAt: impact speed (m/s) that breaks it; shatter: pieces
 // [kind, x, y, z] in its own frame; bits: small pieces sprayed out.
 export const SMALL_FLYERS = {
+  poleSign: { build: poleSign, tint: true, mass: 1.1, r: 0.45, side: 0.3, bits: "paper", bitN: 6, bounces: 1 },
   sandwichBoard: { build: sandwichBoard, tint: true, mass: 0.2, r: 0.4, side: 0.05, breakAt: 7, shatter: [["boardHalf", 0, 1.1, -0.2], ["boardHalf", 0, 1.1, 0.2]], bits: "paper", bitN: 3 },
   boardHalf: { build: boardHalf, mass: 0.15, r: 0.35, side: 0.04, spawnOnly: true, tintFrom: true },
   displayRack: { build: displayRack, mass: 0.45, r: 0.5, side: 0.25, breakAt: 6, shatter: [["rackFrame", 0, 1.4, 0]], bits: "bottle", bitN: 10, bounces: 2 },

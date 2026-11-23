@@ -33,6 +33,7 @@ import { locationSolids } from "../preview/locations/layout.js";
 import { depotFlyers } from "../preview/locations/gasdepot.js";
 import { parkPlan } from "../preview/locations/plan.js";
 import { sitePlan } from "../preview/locations/sites.js";
+import { dinerPlan } from "../preview/locations/diner.js";
 
 export const CITY_HALF = 108; // city edge (|x|, |z|)
 export const RING = 90; // ring road centre line
@@ -563,6 +564,14 @@ export function buildCity(seed) {
     loc[name] = { x: b.cx, z: b.cz };
   }
   setLocations(loc);
+  // Destruction pass: a restaurant plaza block in every city.
+  const specials = [];
+  {
+    const b = spreadPick((x) => fits(x));
+    if (!b) return { failed: "no block for the restaurant plaza" };
+    b.type = "diner";
+    specials.push(b);
+  }
   const parks = [], trees = [];
   for (let k = 0; k < 2; k++) {
     const b = spreadPick((x) => fits(x, 20.5, 40));
@@ -571,10 +580,19 @@ export function buildCity(seed) {
   }
   for (const b of free) b.type = "built";
   // ---- raster and contents per block.
-  const buildings = [], alleys = [];
-  const counts = { landmark: 0, park: 0, built: 0, alley: 0, shortcut: 0 };
+  const buildings = [], alleys = [], arches = [], specialFeatures = [];
+  const counts = { landmark: 0, park: 0, built: 0, alley: 0, shortcut: 0, diner: 0 };
   for (const b of blocks) {
     const S = SIDEWALK;
+    if (b.type === "diner") {
+      counts.diner++;
+      cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
+      const plan = dinerPlan(b, R);
+      buildings.push(...plan.buildings);
+      arches.push(...plan.arches);
+      specialFeatures.push(plan.feature);
+      continue;
+    }
     if (LANDMARKS.includes(b.type)) {
       counts.landmark++;
       // The module's own 20 x 20 m ground; any margin round it is paving.
@@ -675,7 +693,7 @@ export function buildCity(seed) {
   for (const y of yards) if (y.kind !== "corner" && R() < 0.45) y.perimeter = PER[y.kind] || "shops";
   // ---- solids: the landmarks, park features, yards, the edge wall.
   const obstacles = [...ramps, ...locationSolids()];
-  const features = parkPlan(parks, 0.4);
+  const features = [...parkPlan(parks, 0.4), ...specialFeatures];
   features.push({ kind: "gasdepot", items: [], vehicles: [], flyers: depotFlyers(), solids: [] });
   features.push({ kind: "strip", items: stripItems, vehicles: [], flyers: stripFlyers, solids: [] });
   for (const f of [...features, ...yards]) obstacles.push(...f.solids);
@@ -696,7 +714,8 @@ export function buildCity(seed) {
   for (const e of exits) allEdges.push({ id: allEdges.length, kind: "exit", width: 11, pts: [{ ...e.anchor }, { x: e.anchor.x + e.dx * 18, z: e.anchor.z + e.dz * 18 }], a: null, b: null });
   // Street furniture, clear of the modules and of every solid.
   const modules = LANDMARKS.map((k) => loc[k]);
-  const clearOf = (x, z, pad) => !modules.some((m) => Math.abs(m.x - x) < 10 + pad && Math.abs(m.z - z) < 10 + pad) && !obstacles.some((q) => Math.abs(q.x - x) < q.w / 2 + pad && Math.abs(q.z - z) < q.d / 2 + pad);
+  const inSpecial = (x, z) => specials.some((b) => x > b.kx0 + SIDEWALK - 0.3 && x < b.kx1 - SIDEWALK + 0.3 && z > b.kz0 + SIDEWALK - 0.3 && z < b.kz1 - SIDEWALK + 0.3);
+  const clearOf = (x, z, pad) => !inSpecial(x, z) && !modules.some((m) => Math.abs(m.x - x) < 10 + pad && Math.abs(m.z - z) < 10 + pad) && !obstacles.some((q) => Math.abs(q.x - x) < q.w / 2 + pad && Math.abs(q.z - z) < q.d / 2 + pad);
   const streetProps = placeStreetProps(graph, kind, near, R, buildings).filter((p) => clearOf(p.x, p.z, 0.2));
   const flyers = placeFlyers({ graph, kind, near, R, buildings, streetProps, plazas: [], markets: [], lots: [], stations: [], parks: [] }).filter((f) => clearOf(f.x, f.z, 0.4));
   // The shop-front clutter joins the locations' loose pieces (one system).
@@ -728,6 +747,7 @@ export function buildCity(seed) {
     locations: { gas: { ...loc.gas }, court: { ...loc.court }, park: { ...loc.park }, gasDepot: { ...loc.gasDepot } },
     features,
     yards,
+    arches,
     raster: { kind, near, N, CELL, half: CITY_HALF },
   };
 }
@@ -1092,6 +1112,7 @@ export function validateCity(L) {
   //    running out to the edge except the gated exits.
   if (L.modular) {
     for (const k of ["gas", "court", "park", "gasDepot"]) if (!L.locations?.[k]) problems.push(`missing ${k}`);
+    if (!L.features.some((f) => f.kind === "diner")) problems.push("missing restaurant plaza");
     const kinds = new Set((L.yards || []).map((y) => y.kind));
     for (const k of ["parking", "carwash", "construction", "market", "cafe", "depot", "plaza", "corner"]) if (!kinds.has(k)) problems.push(`missing yard ${k}`);
     const content = L.streetProps.length + [...L.features, ...L.yards].reduce((a, f) => a + f.items.length + f.flyers.length + (f.vehicles?.length || 0), 0);
