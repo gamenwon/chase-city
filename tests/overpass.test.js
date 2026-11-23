@@ -6,7 +6,7 @@ import { Simulation } from "../src/game/simulation.js";
 import { generateCity, overpassHeight } from "../src/world/citygen.js";
 import { createLayout, resolveBuilding } from "../src/world/layout.js";
 import { makePath, pointAt } from "../src/game/citygraph.js";
-import { hitPillar, overpassLocal } from "../src/game/overpass.js";
+import { hitPillar, breakPillar, overpassLocal, pillarSpan, overpassGapAt } from "../src/game/overpass.js";
 import { makePolice } from "../src/game/police.js";
 import { CONFIG } from "../src/game/config.js";
 
@@ -119,7 +119,7 @@ test("police follow the player up onto the deck and along it (two-level routing)
   }
 });
 
-test("pillars stand in the median, out of every crossing street; they do not break in this phase", () => {
+test("pillars stand in the median, out of every crossing street; weak (striped) ones crack and break, strong ones do not", () => {
   for (let seed = 1; seed <= 12; seed++) {
     const L = generateCity(seed), op = L.overpasses[0];
     if (!op) continue;
@@ -133,7 +133,53 @@ test("pillars stand in the median, out of every crossing street; they do not bre
         }
   }
   const s = make(STRAIGHT), op = s.overpasses[0];
-  hitPillar(s, op.pillars[0], 40, 1.5);
-  hitPillar(s, op.pillars[0], 40, 1.5);
-  assert.ok(op.pillars[0].alive && op.state === "up");
+  const weak = op.pillars.find((q) => q.weak), strong = op.pillars.find((q) => !q.weak);
+  // One light hit: a crack, still standing; repeated hard hits (heavier
+  // car: fewer) bring it down.
+  hitPillar(s, weak, 12, 1);
+  assert.ok(weak.alive && weak.health < 100);
+  let hits = 0;
+  while (weak.alive && hits < 20) hitPillar(s, weak, 26, 1.5), hits++;
+  assert.ok(!weak.alive && hits <= 4, `${hits} hits`);
+  if (strong) {
+    for (let k = 0; k < 10; k++) hitPillar(s, strong, 40, 2);
+    assert.ok(strong.alive, "a strong pillar never gives");
+  }
+});
+
+test("a broken pillar brings down only its own span: cars on it fall, cars under it are crushed, the rest stands; police re-route", () => {
+  for (const seed of [STRAIGHT, CURVED]) {
+    const s = make(seed), op = s.overpasses[0];
+    const path = makePath(op.pts);
+    const weak = op.pillars.filter((q) => q.weak)[Math.floor(op.pillars.filter((q) => q.weak).length / 2)];
+    const span = pillarSpan(op, weak);
+    // A police car on the deck in that span, one under it, one on the deck
+    // outside it (on a part still standing).
+    const on = pointAt(path, (span.s0 + span.s1) / 2), safeS = span.s1 + 6 < op.L - op.solidTo ? span.s1 + 6 : span.s0 - 6;
+    const off = pointAt(path, safeS);
+    const mk = (q, level, k) => Object.assign(makePolice(k), { x: q.x, z: q.z, level, op: level ? 0 : null, y: level ? op.H : 0, angle: Math.atan2(-q.ux, -q.uz), vx: 0, vz: 0, speed: 0 });
+    s.police = [mk(on, 1, 0), mk({ ...on, x: on.x - on.uz * 0.5, z: on.z + on.ux * 0.5 }, 0, 1), mk(off, 1, 2)];
+    for (const c of s.police) c.cooldown = 99, c.routeTimer = 99;
+    s.player.x = op.a.x - op.u.x * 60;
+    s.player.z = op.a.z - op.u.z * 60;
+    breakPillar(s, weak);
+    assert.equal(op.gaps.length, 1);
+    assert.ok(Math.abs(op.gaps[0].s0 - span.s0) < 0.01 && Math.abs(op.gaps[0].s1 - span.s1) < 0.01);
+    assert.ok(span.s1 - span.s0 < op.L * 0.6, "only part of the road");
+    // Nobody routes over the elevated road any more.
+    const mid = pointAt(path, op.L / 2);
+    assert.ok(!s.navigation.findPath({ x: op.a.x - op.u.x * 14, z: op.a.z - op.u.z * 14 }, { x: mid.x, z: mid.z, level: 1 }).some((q) => q.level === 1 && q.op === 0 && !q.dead));
+    let fell = false;
+    for (let f = 0; f < 60 * 2.5; f++) {
+      for (const c of s.police) Object.assign(c, { vx: c.vx * 0.5, vz: c.vz * 0.5 });
+      s.update(1 / 60, {});
+      if (s.police[0].falling || s.police[0].level === 0) fell = true;
+    }
+    assert.ok(fell, "the car on the span fell");
+    assert.equal(op.gaps[0].state, "down");
+    assert.ok(op.gaps[0].crushed >= 1, "the car under it was crushed");
+    // The deck outside the span is still there.
+    assert.ok(!overpassGapAt(op, safeS));
+    assert.ok(op.debris.length >= 2 && op.debris.every((d) => d.solid));
+  }
 });

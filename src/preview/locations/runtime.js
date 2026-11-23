@@ -353,6 +353,11 @@ export class LocationsRuntime {
     for (const e of sim.city?.events || []) {
       if (e.id <= (this.seenCity ?? 0)) continue;
       this.seenCity = e.id;
+      if (e.type === "pillar" && e.action === "crack") {
+        // Concrete chips and a puff of dust off a cracked pillar.
+        this.fx.push({ kind: "dust", x: e.x, z: e.z, born: sim.elapsed, size: 0.5 });
+        for (let i = 0; i < 5; i++) this.throwChunk(1, e.x, e.z, 2 + Math.random() * 3, Math.random() * 6.3);
+      }
       if (e.type === "jump" && e.action === "land") {
         this.fx.push({ kind: "dust", x: e.x, z: e.z, born: sim.elapsed, size: 0.6 + Math.min(0.8, (e.strength - 6) / 10) });
         for (let i = 0; i < 4; i++) this.throwChunk(1, e.x, e.z, 2 + Math.random() * 2, Math.random() * 6.3);

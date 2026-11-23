@@ -560,7 +560,8 @@ export class SoundSystem {
       for (const event of sim.events)
         if (event.id > this.lastExplosion) {
           this.lastExplosion = event.id;
-          if (event.type === "explosion")
+          if (event.type === "explosion" && event.dust) this.voice("rumble", 1 - Math.min(0.8, Math.hypot(event.x - sim.player.x, event.z - sim.player.z) / 120), 200, event.delay || 0);
+          else if (event.type === "explosion")
             this.voice(
               // A gas station or a structure going up is a bigger sound
               // than a car (a layered blast, see bigExplosion).

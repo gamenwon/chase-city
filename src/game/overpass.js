@@ -1,6 +1,17 @@
 // V2.1 elevated road (world/citygen.js places one over an avenue
 // junction): two driving levels, destructible pillars, collapse.
 //
+// Destruction pass: partial collapse. Every other pillar (hazard-striped)
+// is a weak one: hard or repeated hits crack it (by impact and the car's
+// mass), blasts wear it down, and when it gives way only the deck span it
+// carries comes down: from the pillar before it to the pillar after it
+// (or the end of the ramp embankment). The rest of the road stays up. A
+// car on that span falls with it, a car driving up to the broken edge
+// drops off onto the street; what is under the span when it lands is
+// crushed; the elevated road leaves the route network (the police and the
+// target drive round on the ground); the fallen span stays where it fell
+// (drivable rubble, a few solid chunks at its sides) until restart.
+//
 // Levels: every car (player, police, traffic, target) has `level` 0
 // (ground) or 1 (on the overpass) and a height `y`. A car driving onto a
 // ramp foot along the avenue goes to level 1 and follows the ramp/deck
@@ -23,15 +34,23 @@ import { makePath, project, pointAt } from "./citygraph.js";
 export const PILLAR = Object.freeze({ health: 100, hitMin: 5, hitScale: 3.4, collapseAt: 2, fall: 1.1 });
 
 export function createOverpasses(layout) {
-  return (layout.overpasses || []).map((op, id) => ({
-    ...op,
-    id,
-    state: "up", // up | falling | down
-    fellAt: null,
-    pillars: op.pillars.map((q, k) => ({ ...q, id: k, op: id, kind: "pillar", health: PILLAR.health, alive: true })),
-    debris: [],
-  }));
+  return (layout.overpasses || []).map((op, id) => {
+    // Where the ramp embankment ends (the deck beyond rests on pillars).
+    let solidTo = op.R;
+    for (let s = 0; s < op.R; s += 0.25) if (overpassHeight(op, s) >= 3.6) { solidTo = s; break; }
+    const pillars = op.pillars.map((q, k) => ({ ...q, id: k, op: id, kind: "pillar", health: PILLAR.health, alive: true })).sort((a, b) => a.s - b.s);
+    pillars.forEach((q, k) => (q.weak = pillars.length <= 3 || k % 2 === 0));
+    return { ...op, id, state: "up", fellAt: null, solidTo, pillars, debris: [], gaps: [], broken: false };
+  });
 }
+// The span a pillar carries: from the pillar before it to the one after it
+// (or the end of the embankment at either end).
+export function pillarSpan(op, q) {
+  const ps = op.pillars, k = ps.indexOf(q);
+  return { s0: k > 0 ? ps[k - 1].s : op.solidTo, s1: k < ps.length - 1 ? ps[k + 1].s : op.L - op.solidTo };
+}
+// Is the deck missing at s (a span that has fallen or is falling)?
+export const overpassGapAt = (op, s) => !!op.gaps?.some((g) => s > g.s0 - 0.2 && s < g.s1 + 0.2);
 // Solid pillars still standing (the simulation's dynamic solids).
 export function pillarSolids(sim) {
   const out = [];
@@ -69,7 +88,7 @@ export function constrainLevels(sim, body, radius) {
         body.y = 0;
         return false;
       }
-      if (op.state !== "up" && onDeckSection(op, s)) {
+      if (overpassGapAt(op, s)) {
         // The deck is gone under it: it drops to the street below.
         body.level = 0;
         body.op = null;
@@ -119,10 +138,12 @@ export const sameLevel = (a, b) => (a.level || 0) === (b.level || 0);
 // A car that hit a pillar: damage by closing speed and mass.
 export function hitPillar(sim, pillar, impact, mass = 1) {
   if (!pillar.alive || impact < PILLAR.hitMin) return;
-  // (Map quality pass: the elevated road does not come down for now.)
-  if (sim.overpasses[pillar.op]?.destructible === false) return;
+  // Only the weak (striped) pillars give; the others shrug it off.
+  if (!pillar.weak) return;
   pillar.health -= (impact - PILLAR.hitMin * 0.5) * PILLAR.hitScale * mass;
+  pillar.lastHit = sim.elapsed;
   sim.impacts?.push({ id: ++sim.impactId, type: "collision", x: pillar.x, z: pillar.z, strength: impact, kind: "pillar", time: sim.elapsed });
+  sim.city?.events.push({ id: ++sim.city.eventId, type: "pillar", action: "crack", x: pillar.x, z: pillar.z, strength: Math.min(15, impact), sound: "crack" });
   if (pillar.health <= 0) breakPillar(sim, pillar);
 }
 export function breakPillar(sim, pillar) {
@@ -133,14 +154,14 @@ export function breakPillar(sim, pillar) {
   sim.stats.pillarsBroken = (sim.stats.pillarsBroken || 0) + 1;
   sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: pillar.x, z: pillar.z, strength: 14, byPlayer: true });
   const op = sim.overpasses[pillar.op];
-  if (op.state === "up" && op.pillars.filter((q) => !q.alive).length >= PILLAR.collapseAt) collapse(sim, op);
+  collapseSpan(sim, op, pillarSpan(op, pillar), pillar);
   sim.refreshNavigation();
 }
 // Blasts hurt pillars near them (blast.js listener).
 export function blastPillars(sim, e, R, s) {
   for (const op of sim.overpasses || [])
     for (const q of op.pillars) {
-      if (!q.alive || op.destructible === false) continue;
+      if (!q.alive || !q.weak) continue;
       const d = Math.hypot(q.x - e.x, q.z - e.z);
       if (d < R) {
         q.health -= 85 * (1 - d / R) * s;
@@ -149,25 +170,37 @@ export function blastPillars(sim, e, R, s) {
     }
 }
 
-function collapse(sim, op) {
-  op.state = "falling";
+// A span starts to fall (merged with a gap next to it).
+function collapseSpan(sim, op, span, pillar) {
+  const gap = { id: op.gaps.length, s0: span.s0, s1: span.s1, state: "falling", fellAt: sim.elapsed, pillar: pillar?.id };
+  op.gaps.push(gap);
+  op.broken = true;
   op.fellAt = sim.elapsed;
   sim.stats.overpassCollapses = (sim.stats.overpassCollapses || 0) + 1;
-  sim.events.push({ id: ++sim.eventId, type: "collapse", op: op.id, x: op.junction.x, z: op.junction.z, time: sim.elapsed });
-  if (sim.events.length > 64) sim.events.shift();
-  // The deck leaves the road network at once (nobody routes onto it).
+  const mid = spanPoint(op, (gap.s0 + gap.s1) / 2);
+  sim.events.push({ id: ++sim.eventId, type: "collapse", op: op.id, gap: gap.id, x: mid.x, z: mid.z, time: sim.elapsed });
+  // Dust off the broken pillar at once.
+  if (pillar) sim.events.push({ id: ++sim.eventId, type: "explosion", dust: true, strength: 1.0, x: pillar.x, z: pillar.z, angle: 0, time: sim.elapsed, delay: 0, chainDepth: 0, playerX: sim.player.x, playerZ: sim.player.z });
+  while (sim.events.length > 64) sim.events.shift();
+  // The elevated road is no longer a route (nobody routes onto it).
   sim.navigation.killOverpass?.(op.id);
 }
+// Point s along the elevated road (and its direction).
+export function spanPoint(op, s) {
+  let path = pathCache.get(op);
+  if (!path) pathCache.set(op, (path = makePath(op.pts || [op.a, { x: op.a.x + op.u.x * op.L, z: op.a.z + op.u.z * op.L }])));
+  return pointAt(path, Math.max(0, Math.min(path.len, s)));
+}
 
-// Every step: the falling deck lands (crushing what is under it), cars
-// that dropped off reach the ground.
+// Every step: falling spans land (crushing what is under them), cars that
+// dropped off reach the ground.
 export function updateOverpasses(sim, dt) {
-  for (const op of sim.overpasses || []) {
-    if (op.state === "falling" && sim.elapsed - op.fellAt >= PILLAR.fall) {
-      op.state = "down";
-      landDeck(sim, op);
-    }
-  }
+  for (const op of sim.overpasses || [])
+    for (const g of op.gaps || [])
+      if (g.state === "falling" && sim.elapsed - g.fellAt >= PILLAR.fall) {
+        g.state = "down";
+        landSpan(sim, op, g);
+      }
   for (const b of [sim.player, ...sim.police, ...(sim.city?.traffic || []), ...(sim.target ? [sim.target] : [])]) {
     if (!b.falling) continue;
     b.vy = (b.vy || 0) - 18 * dt;
@@ -179,38 +212,36 @@ export function updateOverpasses(sim, dt) {
     }
   }
 }
-function landDeck(sim, op) {
-  const s0 = op.R, s1 = op.L - op.R;
+function landSpan(sim, op, g) {
   const inside = (o) => {
     const { s, lat } = local(op, o.x, o.z);
-    return (o.level || 0) === 0 && s > s0 - 1 && s < s1 + 1 && Math.abs(lat) < op.W / 2 + 0.5;
+    return (o.level || 0) === 0 && s > g.s0 - 0.5 && s < g.s1 + 0.5 && Math.abs(lat) < op.W / 2 + 0.5;
   };
-  // Crushed: police and civilian cars under it are wrecked; the player is
-  // badly hurt and shoved out sideways.
-  for (const c of sim.police) if (c.state === "active" && inside(c)) { c.health = 0; c.lastDamageCause = "collapse"; }
-  for (const t of sim.city?.traffic || []) if (inside(t)) { t.state = "wreck"; t.health = 0; }
+  // Crushed: police and civilian cars under it are wrecked (a police car
+  // goes up); the player is hurt and shoved out sideways.
+  let crushed = 0;
+  for (const c of sim.police) if (c.state === "active" && inside(c)) { c.health = 0; c.lastDamageCause = "collapse"; crushed++; }
+  for (const t of sim.city?.traffic || []) if (t.state !== "wreck" && inside(t)) { t.state = "wreck"; t.health = 0; crushed++; }
+  if (sim.target?.state === "fleeing" && inside(sim.target)) sim.target.health = Math.max(1, sim.target.health - 60);
   if (inside(sim.player)) {
-    sim.damage?.(35);
+    sim.damage?.(30);
     const { lat } = local(op, sim.player.x, sim.player.z);
-    const sg = Math.sign(lat) || 1;
-    sim.player.vx += op.n.x * sg * 10;
-    sim.player.vz += op.n.z * sg * 10;
+    const q = spanPoint(op, (g.s0 + g.s1) / 2), sg = Math.sign(lat) || 1;
+    sim.player.vx += -q.uz * sg * 10;
+    sim.player.vz += q.ux * sg * 10;
   }
-  // The crash: a big blast-like event at the middle (shake, dust, sound).
-  sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "collapse", major: true, x: op.junction.x, z: op.junction.z, angle: 0, time: sim.elapsed, delay: 0, chainDepth: 1, playerX: sim.player.x, playerZ: sim.player.z, noBlast: false });
-  if (sim.events.length > 64) sim.events.shift();
-  // What stays: the two broken deck halves lying on the street (drivable
-  // rubble) and four solid chunks at the sides, clear of the crossing.
-  const mid = (s0 + s1) / 2;
-  for (const s of [s0 + 1.5, s1 - 1.5])
+  g.crushed = crushed;
+  sim.stats.crushedByDeck = (sim.stats.crushedByDeck || 0) + crushed;
+  // The crash: a long cloud of concrete dust along the span, a rumble.
+  const m = spanPoint(op, (g.s0 + g.s1) / 2);
+  sim.events.push({ id: ++sim.eventId, type: "explosion", dust: true, strength: 2.2, x: m.x, z: m.z, along: { x: m.ux, z: m.uz }, len: g.s1 - g.s0, angle: 0, time: sim.elapsed, delay: 0, chainDepth: 1, playerX: sim.player.x, playerZ: sim.player.z });
+  while (sim.events.length > 64) sim.events.shift();
+  // What stays solid: chunks at the span's ends, out at the deck's sides
+  // (the lanes beside and under the middle stay drivable).
+  for (const s of [g.s0 + 1.2, g.s1 - 1.2])
     for (const side of [-1, 1]) {
-      const lat = side * (op.W / 2 - 0.4);
-      const x = op.a.x + op.u.x * s + op.n.x * lat, z = op.a.z + op.u.z * s + op.n.z * lat;
-      op.debris.push({ x, z, w: 1.6, d: 1.6, kind: "rubble", solid: true });
+      const q = spanPoint(op, s), lat = side * (op.W / 2 - 0.4);
+      op.debris.push({ x: q.x - q.uz * lat, z: q.z + q.ux * lat, w: 1.4, d: 1.4, kind: "rubble", solid: true, gap: g.id });
     }
-  op.slabs = [
-    { s: (s0 + mid) / 2, len: mid - s0, tilt: 0.12, roll: -0.05 },
-    { s: (mid + s1) / 2, len: s1 - mid, tilt: -0.1, roll: 0.06 },
-  ];
   sim.refreshNavigation();
 }

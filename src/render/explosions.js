@@ -256,6 +256,35 @@ export class ExplosionEffects {
     const R = () => this.rand();
     const x = event.x,
       z = event.z;
+    if (event.dust) {
+      // A structure coming down (an elevated road span, a pillar): no
+      // fire, a rolling cloud of concrete dust and broken concrete.
+      this.onStart?.(event, s * 0.7);
+      const n = Math.round(26 * Math.sqrt(s)), sq = Math.sqrt(s);
+      const along = event.along || { x: 0, z: 0 }, len = event.len || 0;
+      for (let i = 0; i < n; i++) {
+        const a = R() * Math.PI * 2, sp = (2 + R() * 5) * sq, t = (R() - 0.5) * len;
+        this.smoke.add({
+          x: x + along.x * t + Math.sin(a) * 1.5, y: 0.5 + R() * 2.5, z: z + along.z * t + Math.cos(a) * 1.5,
+          vx: Math.sin(a) * sp, vy: 0.8 + R() * 2.2, vz: Math.cos(a) * sp,
+          born: now + R() * 0.25, life: 1.9 + R() * 1.1,
+          s0: 0.8 * sq, s1: 2.1 * sq, drag: 2.4, lift: 0.5,
+          c0: 0xc4bdb1, c1: 0x9a948b, rx: R() * 6, ry: R() * 6, spin: 0.6,
+        });
+      }
+      const nChunk = Math.round(chunkCount(s) * 0.8);
+      for (let i = 0; i < nChunk; i++) {
+        const a = R() * Math.PI * 2, sp = (3 + R() * 5) * Math.pow(s, 0.4), t = (R() - 0.5) * len;
+        this.chunks.add({
+          x: x + along.x * t, y: 1.5, z: z + along.z * t,
+          vx: Math.sin(a) * sp, vy: 3 + R() * 5, vz: Math.cos(a) * sp,
+          born: now, material: 0, color: [0x9f9a91, 0xbab5ac, 0x7d7870][i % 3],
+          scale: 0.9 + R() * (0.6 + s * 0.3), rx: R() * 6, ry: R() * 6, rz: R() * 6,
+          wx: (R() - 0.5) * 8, wy: (R() - 0.5) * 8,
+        });
+      }
+      return;
+    }
     this.onStart?.(event, s);
     // 1. Flash: a bright white-yellow core and a ground glow, a fraction of
     // a second.

@@ -1,7 +1,7 @@
 import { CONFIG, clamp } from "./config.js";
 import { buildLanes, buildWalks, pointAt, project, nearestWalk } from "./citygraph.js";
 import { overpassHeight } from "../world/citygen.js";
-import { overpassLocal } from "./overpass.js";
+import { overpassLocal, overpassGapAt } from "./overpass.js";
 import { resolveBuilding } from "../world/layout.js";
 
 // V1.9 city life: destructible street props, pedestrians and civilian
@@ -1177,7 +1177,7 @@ function driveGraphLane(sim, city, t, dt) {
   const pr = project(lane, t.x, t.z);
   t.s = Math.max(t.s ?? 0, pr.s);
   if (t.s >= lane.len - 1.5) {
-    const next = (life.from.get(lane.end) || []).filter((l) => l.edge !== lane.edge && (!opOf(l) || opOf(l).state === "up"));
+    const next = (life.from.get(lane.end) || []).filter((l) => l.edge !== lane.edge && (!opOf(l) || !opOf(l).broken));
     const pick = next.length ? next[Math.floor(city.random() * next.length)] : life.lanes.find((l) => l.edge === lane.edge && l.dir !== lane.dir);
     if (pick) {
       t.lane = lane = pick;
@@ -1200,7 +1200,7 @@ function driveGraphLane(sim, city, t, dt) {
   const op = opOf(lane);
   if (op) {
     const s = overpassLocal(op, t.x, t.z).s;
-    if (op.state !== "up" && s > op.R - 0.5 && s < op.L - op.R + 0.5) {
+    if (overpassGapAt(op, s)) {
       t.state = "wreck";
       t.health = 0;
       t.level = 0;

@@ -45,6 +45,12 @@ export function updateBlasts(sim) {
   const later = (seconds, run) => (sim.blastQueue ||= []).push({ at: now + seconds, run });
   for (const e of sim.events) {
     if (e.type !== "explosion" || e.blasted) continue;
+    // A dust cloud (a structure coming down) is not a blast: what it hits
+    // is handled where it falls (overpass.js).
+    if (e.dust) {
+      e.blasted = true;
+      continue;
+    }
     if (now + 1e-9 < e.time + (e.delay || 0)) continue;
     e.blasted = true;
     applyBlast(sim, e, later);
