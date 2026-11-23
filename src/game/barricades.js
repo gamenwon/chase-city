@@ -1,4 +1,4 @@
-import { RoadNavigation, distance } from "./navigation.js";
+import { RoadNavigation, distance, clearSegment } from "./navigation.js";
 export const BARRICADE_TIMES = Object.freeze([10, 20, 30, 40, 50]);
 export function overlap(a, b, margin = 0) {
   return (
@@ -28,14 +28,30 @@ export function planBarricade(player, navigation, solids, active, fleet, id) {
       horizontal = Math.abs(b.x - a.x) / L > 0.97;
       across = e.width + 0.2;
     }
+    // Generated city: the barricade reaches across everything drivable
+    // there (pavements, open frontage) up to the buildings either side,
+    // so it cannot be driven round over the pavement.
+    let shift = 0;
+    if (graph && (vertical || horizontal)) {
+      const probe = (o) => {
+        const q = vertical ? { x: node.x + o, z: node.z } : { x: node.x, z: node.z + o };
+        return clearSegment(q, q, solids, 0.15);
+      };
+      let lo = 0, hi = 0;
+      while (lo > -14 && probe(lo - 0.25)) lo -= 0.25;
+      while (hi < 14 && probe(hi + 0.25)) hi += 0.25;
+      if (lo <= -14 || hi >= 14) continue; // open ground beside: cannot seal
+      across = Math.max(across, hi - lo + 0.3);
+      shift = (lo + hi) / 2;
+    }
     if (!vertical && !horizontal) continue;
     const dist = distance(node, player),
       forward = (node.x - player.x) * fx + (node.z - player.z) * fz;
     if (dist < 25 || dist > 80) continue;
     const b = {
       id,
-      x: node.x,
-      z: node.z,
+      x: node.x + (vertical ? shift : 0),
+      z: node.z + (vertical ? 0 : shift),
       w: vertical ? across : 1.2,
       d: vertical ? 1.2 : across,
       kind: "barricade",
@@ -44,7 +60,7 @@ export function planBarricade(player, navigation, solids, active, fleet, id) {
       forward: { x: fx, z: fz },
     };
     if (
-      solids.some((box) => overlap(b, box, 0.8)) ||
+      solids.some((box) => overlap(b, box, graph ? -0.05 : 0.8)) ||
       active.some((box) => distance(box, b) < 20) ||
       fleet.some(
         (c) =>

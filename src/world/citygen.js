@@ -272,7 +272,7 @@ function placeOverpass(nodes, edges, R, { I, J, ia, ja, at }) {
   for (const e of edges)
     if (e.avenue && e.kind === "road") {
       const m = { x: (e.pts[0].x + e.pts.at(-1).x) / 2, z: (e.pts[0].z + e.pts.at(-1).z) / 2 };
-      if (polyDist(m.x, m.z, c.pts) < 1 || polyDist(e.pts[0].x, e.pts[0].z, c.pts) < 1 && polyDist(e.pts.at(-1).x, e.pts.at(-1).z, c.pts) < 1) e.width = 18;
+      if (polyDist(m.x, m.z, c.pts) < 1 || footNodes.some((f) => f.id === e.a || f.id === e.b)) e.width = 18;
     }
   // The polyline, its length and directions at the ends.
   let L = 0;
@@ -511,7 +511,7 @@ function buildCity(seed) {
   choose(1 + Math.floor(R() * 3), (o) => o.b.area >= 240 && o.b.area <= 1500); mark("park");
   choose(1 + (R() < 0.5 ? 1 : 0), (o) => o.rw.w >= 14 && o.rw.d >= 14 && o.b.area <= 700); mark("parking");
   // A street market (stalls, crates, parasols) in every city.
-  choose(1, (o) => o.rw.w >= 13 && o.rw.d >= 11 && o.b.area >= 180 && o.b.area <= 900); mark("market");
+  choose(1, (o) => o.rw.w >= 11 && o.rw.d >= 9 && o.b.area >= 120 && o.b.area <= 1200); mark("market");
   for (const o of order) {
     const { b, inB, inSet, rect, rw } = o;
     if (o.type === "sliver") {

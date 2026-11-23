@@ -155,8 +155,9 @@ export function sidewalkBands(L, J) {
     const path = makePath(e.pts);
     for (const side of ["L", "R"]) {
       const sg = side === "L" ? 1 : -1;
-      const s0 = J.trims.get(`${e.id}:a:${side}`) ?? 0;
-      const s1 = path.len - (J.trims.get(`${e.id}:b:${side}`) ?? 0);
+      const ta = J.trims.get(`${e.id}:a:${side}`) ?? 0, tb = J.trims.get(`${e.id}:b:${side}`) ?? 0;
+      const s0 = ta > 0 ? ta + 0.6 : 0;
+      const s1 = path.len - (tb > 0 ? tb + 0.6 : 0);
       if (s1 - s0 < 0.3) continue;
       // Alley mouths crossing this side.
       const cuts = [];

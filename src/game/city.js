@@ -1310,7 +1310,10 @@ function updateTraffic(sim, city, dt) {
   const lvl = (o) => o.level || 0;
   for (const t of city.traffic) {
     const m = t.parked || t.state === "wreck" ? 1.6 : 1;
-    let closing = lvl(p) === lvl(t) ? bump(p, CONFIG.radius, 1.3, t, 1.1, m) : 0;
+    // The player's car is heavier the sturdier it is (a heavy car shoves
+    // a civilian car further and loses less itself).
+    const pm = 1.3 * ((sim.vehicle?.stats.durability || 100) / 100);
+    let closing = lvl(p) === lvl(t) ? bump(p, CONFIG.radius, pm, t, 1.1, m) : 0;
     if (closing > 0) {
       p.speed = Math.max(0, p.speed - closing * 0.4);
       if (closing > 6) sim.damage(5);
