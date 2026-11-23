@@ -65,6 +65,8 @@ function cellMesh(scene, geometry, material, count, cell) {
   return m;
 }
 
+// Debris pieces per kind (instanced; settled pieces cost nothing to update).
+const CHUNKS = 160;
 export class LocationsRuntime {
   constructor(scene, sim, renderer, layout = sim.layout) {
     // Everything this builds hangs off one group, so a new generated city
@@ -159,7 +161,27 @@ export class LocationsRuntime {
         // Flames out of the shop window, smoke up the facade.
         for (const s of [-1.4, 1.2]) this.fx.push({ kind: "burn", x: x + nz * s, z: z - nx * s, y: TOP + 0.6, born: this.sim?.elapsed ?? 0, size: 1.1, decay: true, long: true });
       },
+      // The shop's stock thrown out over the pavement (coloured boxes).
+      stock: (x, z, nx, nz, n) => {
+        for (let i = 0; i < n; i++) this.throwChunk(2, x + nz * (Math.random() - 0.5) * 4, z - nx * (Math.random() - 0.5) * 4, 2.5 + Math.random() * 4, Math.atan2(nx, nz) + (Math.random() - 0.5) * 1.4);
+      },
+      // Sparks from torn wiring at the top of the window, a few seconds.
+      sparks: (x, z, nx, nz) => {
+        this.fx.push({ kind: "spark", x, z, nx, nz, born: this.sim?.elapsed ?? 0 });
+      },
+      // A gas-bottle blast in a shop, or the big one in a major building:
+      // a real explosion (the shared blast system: it sets off what is
+      // near it), smaller for a shop.
+      blast: (x, z, k, cause) => {
+        const sim = this.sim;
+        if (!sim) return;
+        sim.events.push({ id: ++sim.eventId, type: "explosion", cause, strength: k, x, z, angle: 0, time: sim.elapsed, delay: 0.05, chainDepth: 1, playerX: sim.player.x, playerZ: sim.player.z });
+        if (sim.events.length > 64) sim.events.shift();
+        sim.stats.explosions = (sim.stats.explosions || 0) + 1;
+        for (let i = 0; i < 8 * k; i++) this.throwChunk(i % 2, x, z, 4 + Math.random() * 5 * k, Math.random() * 6.3);
+      },
     });
+    this.storefronts.later = (sec, run) => this.pending.push({ at: (this.sim?.elapsed ?? 0) + sec, run });
     this.flyers = new FlyerSystem(this.batch, groups.flatMap((f) => f.flyers || []), {
       outside: (it) => {
         const sim = this.sim;
@@ -194,8 +216,14 @@ export class LocationsRuntime {
       B(g, 0.94, 0.08, 0.74, C.yellow, 0, -0.06, 0);
     });
     const shardGeo = pieceGeometry((g) => B(g, 0.6, 0.12, 0.45, 0x9a9da3, 0, -0.06, 0));
-    this.chunkKinds = [chunkGeo, shardGeo].map((geo) => {
-      const m = new THREE.InstancedMesh(geo, bakedMaterial, 48);
+    // A shop's stock: a carton, a blue tin, a white pack.
+    const goodsGeo = pieceGeometry((g) => {
+      B(g, 0.42, 0.32, 0.36, 0xc79a5c, -0.18, -0.16, 0);
+      B(g, 0.2, 0.28, 0.2, 0x2f7fe0, 0.2, -0.14, 0.08);
+      B(g, 0.26, 0.14, 0.2, 0xf4f1ea, 0.12, -0.07, -0.18);
+    });
+    this.chunkKinds = [chunkGeo, shardGeo, goodsGeo].map((geo) => {
+      const m = new THREE.InstancedMesh(geo, bakedMaterial, CHUNKS);
       m.castShadow = true;
       m.frustumCulled = false;
       m.count = 0;
@@ -244,7 +272,7 @@ export class LocationsRuntime {
     this.pending = [];
     this.fx = []; // bursts and burning spots
     this.chunks = []; // flying debris; settled ones stay put, not updated
-    this.chunkCounts = [0, 0];
+    this.chunkCounts = [0, 0, 0];
     this.chunkKinds.forEach((m) => {
       m.count = 0;
       m.visible = false;
@@ -522,8 +550,13 @@ export class LocationsRuntime {
     }
   }
   throwChunk(kind, x, z, speed, heading) {
-    if (this.chunkCounts[kind] >= 48) return;
-    const index = this.chunkCounts[kind]++;
+    let index;
+    if (this.chunkCounts[kind] >= CHUNKS) {
+      // Full: the oldest piece of this kind is picked up and thrown anew.
+      const old = this.chunks.findIndex((c) => c.kind === kind);
+      index = this.chunks[old].index;
+      this.chunks.splice(old, 1);
+    } else index = this.chunkCounts[kind]++;
     this.chunkKinds[kind].count = this.chunkCounts[kind];
     this.chunkKinds[kind].visible = true;
     this.chunks.push({ kind, index, x, y: TOP + 1.2, z, vx: Math.sin(heading) * speed * 0.5, vy: 6 + speed * 0.4, vz: Math.cos(heading) * speed * 0.5, rx: 0, rz: 0, spin: 4 + Math.random() * 6, done: false });
@@ -674,6 +707,17 @@ export class LocationsRuntime {
         for (let i = 0; i < 3; i++) {
           const ph = ((now * 0.3 + i / 3) % 1 + 1) % 1;
           puff(fx + ph * 0.5, TOP + 1.8 + ph * 4, fz, f.size * (0.4 + ph) * (1 - ph));
+        }
+        continue;
+      }
+      if (f.kind === "spark") {
+        // Bright flickering bits at the top of the window for ~3 s.
+        if (t > 3) continue;
+        const on = Math.sin(now * 53 + f.x) > -0.2;
+        for (let i = 0; i < 4 && on; i++) {
+          const ph = ((now * 7 + i * 0.37) % 1 + 1) % 1;
+          const side = Math.sin(i * 2.3 + f.z) * 2.2;
+          flame(f.x + f.nz * side + f.nx * (0.3 + ph * 0.8), TOP + 2.4 - ph * 1.8, f.z - f.nx * side + f.nz * (0.3 + ph * 0.8), 0.09 + 0.05 * (1 - ph), 2);
         }
         continue;
       }

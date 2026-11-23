@@ -29,6 +29,8 @@ export const BLAST = Object.freeze({
 // pump 2.6, a major blast (a depot tank, the collapsing canopy) 3.4. The
 // renderer draws them to the same scale.
 export function blastStrength(e) {
+  // An explicit strength (a shop's gas bottles 0.9, a major building 2.2).
+  if (e.strength) return e.strength;
   if (e.major) return 3.4;
   if (e.cause === "gas") return 2.6;
   return 1.4 + Math.min(e.chainDepth || 0, 3) * 0.15;

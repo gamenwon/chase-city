@@ -36,6 +36,17 @@ export const MUSIC = {
   idle: 0.1,
 };
 // Sound effects are synthesized locally; the music is the only file.
+const SFX = {
+  glass: { type: "highpass", f0: 3200, rate: 1.7, dur: 0.42, amp: 0.16, attack: 0.004, gap: 0.08 },
+  spark: { type: "highpass", f0: 6500, rate: 2.2, dur: 0.16, amp: 0.08, attack: 0.002, gap: 0.12 },
+  crack: { type: "lowpass", f0: 900, f1: 160, rate: 0.55, dur: 0.55, amp: 0.2, attack: 0.004, gap: 0.1 },
+  metal: { type: "bandpass", f0: 1900, f1: 900, q: 3, rate: 1.1, dur: 0.32, amp: 0.15, attack: 0.003, gap: 0.08 },
+  wood: { type: "bandpass", f0: 700, q: 1.5, rate: 0.9, dur: 0.18, amp: 0.14, attack: 0.003, gap: 0.06 },
+  thud: { type: "lowpass", f0: 320, f1: 80, rate: 0.5, dur: 0.32, amp: 0.26, attack: 0.004, gap: 0.15 },
+  whoosh: { type: "bandpass", f0: 500, f1: 1600, q: 1.2, rate: 0.8, dur: 0.38, amp: 0.1, attack: 0.08, gap: 0.3 },
+  rumble: { type: "lowpass", f0: 260, f1: 60, rate: 0.35, dur: 2.2, amp: 0.34, attack: 0.05, gap: 0.6 },
+  topple: { type: "lowpass", f0: 700, f1: 120, rate: 0.6, dur: 0.9, amp: 0.22, attack: 0.02, gap: 0.2 },
+};
 export class SoundSystem {
   constructor(
     factory = () => {
@@ -312,7 +323,38 @@ export class SoundSystem {
       voice.dispose();
     }
   }
+  // Short filtered-noise effects with their own character (destruction
+  // pass): glass, sparks, concrete, metal, a landing, a take-off, a
+  // collapse rumble, a big sign coming down.
+  sfx(kind, strength = 1, delay = 0) {
+    const d = SFX[kind];
+    if (!d || !this.context || this.muted || !this.available || this.context.state !== "running") return;
+    const c = this.context, start = c.currentTime + delay;
+    if (Math.abs(start - (this.cooldowns[kind] ?? -100)) < d.gap) return;
+    if (this.voices.size >= 7) return;
+    this.cooldowns[kind] = start;
+    const source = c.createBufferSource(), gain = c.createGain(), filter = c.createBiquadFilter();
+    source.buffer = this.noise;
+    source.playbackRate.value = d.rate;
+    filter.type = d.type;
+    filter.frequency.setValueAtTime(d.f0, start);
+    if (d.f1) filter.frequency.exponentialRampToValueAtTime(d.f1, start + d.dur);
+    if (d.q) filter.Q.value = d.q;
+    const amp = (d.amp * clamp(strength, 0.1, 1)) / Math.sqrt(1 + this.voices.size);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(amp, start + d.attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + d.dur);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.compressor);
+    const voice = { source, dispose: () => { source.disconnect(); filter.disconnect(); gain.disconnect(); this.voices.delete(voice); } };
+    source.onended = voice.dispose;
+    this.voices.add(voice);
+    source.start(start, Math.random() * 0.5);
+    source.stop(start + d.dur + 0.03);
+  }
   voice(kind, strength = 1, frequency = 200, delay = 0) {
+    if (SFX[kind]) return this.sfx(kind, strength, delay);
     if (kind === "explosion") this.duck(0.35, 0.2);
     if (kind === "bigExplosion") {
       this.duck(0.6, 0.6);
@@ -522,7 +564,7 @@ export class SoundSystem {
             this.voice(
               // A gas station or a structure going up is a bigger sound
               // than a car (a layered blast, see bigExplosion).
-              event.cause === "gas" || event.major ? "bigExplosion" : "explosion",
+              event.cause === "gas" || event.major || (event.strength || 0) >= 2 ? "bigExplosion" : "explosion",
               1 -
                 Math.min(
                   0.8,
@@ -544,7 +586,8 @@ export class SoundSystem {
           if (event.type === "traffic" && event.action === "honk") {
             this.voice("horn", near, 392);
             this.voice("horn", near, 494, 0.02);
-          } else if (event.action === "break" || event.action === "crash")
+          } else if (event.sound) this.voice(event.sound, near * Math.min(1, (event.strength || 10) / 12));
+          else if (event.action === "break" || event.action === "crash")
             this.voice("collision", near * Math.min(1, event.strength / 15));
           else if (event.action === "land")
             this.voice("collision", near * 0.6, 200, 0);

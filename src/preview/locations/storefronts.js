@@ -1,3 +1,15 @@
+// Shop types (destruction pass): what a smashed shop does besides the
+// glass, frame, door, awning and sign. By the shop's type, how hard it was
+// hit, and a controlled random roll (so the same street never plays out
+// the same way twice):
+//   plain     glass and frame only
+//   goods     its stock thrown out over the pavement
+//   electric  sparks from the wiring (a few seconds), stock
+//   diner     a kitchen fire after a hard hit (burns on, smoke thins)
+//   bottles   a small gas-bottle blast after a hard hit (sets off more)
+//   major     a few big commercial buildings: a hard hit sets off a large
+//             explosion that also blows in the building's other fronts
+const TYPES = ["plain", "plain", "goods", "goods", "electric", "diner", "plain", "goods", "electric", "diner", "bottles", "goods"];
 // Ground-floor storefront damage. Every street-facing shopfront has a
 // striped awning and is breakable; about a quarter of them can catch fire
 // after a severe hit. A car that slams into one
@@ -136,11 +148,16 @@ export class Storefronts {
         { ry: -Math.PI / 2, street: st[3], span: b.d, half: b.w / 2 },
       ].forEach((f, k) => {
         if (!f.street || f.span < 5) return;
+        // Big commercial corner buildings (about one in fourteen fronts)
+        // are the major ones.
+        const major = b.district === "commercial" && b.h >= 13 && (seed + k) % 7 === 0;
+        const type = major ? "major" : TYPES[(seed * 7 + k * 3) % TYPES.length];
         this.faces.push({
           b, ry: f.ry, nx: Math.sin(f.ry), nz: Math.cos(f.ry), span: f.span, half: f.half,
           sign: SHOP_COLORS[(seed + k) % SHOP_COLORS.length],
           wall: WALLS[seed % WALLS.length],
-          burns: (seed + k) % 4 === 0,
+          type,
+          burns: type === "diner" || type === "major" || (seed + k) % 4 === 0,
         });
       });
     }
@@ -190,7 +207,7 @@ export class Storefronts {
     this.awnings.count = this.faces.length;
     this.awnings.instanceMatrix.needsUpdate = true;
     this.awnings.instanceColor.needsUpdate = true;
-    this.stats = { broken: 0, burning: 0 };
+    this.stats = { broken: 0, burning: 0, sparks: 0, blasts: 0, majors: 0, stock: 0 };
   }
   // The pieces are modelled for a 7 m face 3.5 m from the centre: stretch
   // them along the face and move them out to its wall.
@@ -225,7 +242,7 @@ export class Storefronts {
     }
   }
   breakFace(sim, f, speed) {
-    if (this.front.count >= CAP) return;
+    if (f.broken || this.front.count >= CAP) return;
     f.broken = true;
     this.stats.broken++;
     this.place(this.front, f);
@@ -239,10 +256,34 @@ export class Storefronts {
     this.awnings.setMatrixAt(f.index, this.m);
     this.awnings.instanceMatrix.needsUpdate = true;
     const wx = f.b.x + f.nx * (f.half + 0.2), wz = f.b.z + f.nz * (f.half + 0.2);
-    sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: wx, z: wz, strength: 15 });
+    sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: wx, z: wz, strength: 15, sound: "glass" });
     this.hooks.glass?.(wx, wz, f.nx, f.nz);
-    // A designated shop catches fire after a severe hit.
-    if (f.burns && speed >= 12) {
+    // What else happens: the shop's type, the hit, a roll.
+    const roll = Math.random();
+    const hard = speed >= 12, severe = speed >= 17;
+    let fire = false;
+    if (f.type === "goods" || f.type === "electric" || f.type === "diner" || (f.type === "plain" && roll < 0.25)) {
+      this.stats.stock++;
+      this.hooks.stock?.(wx, wz, f.nx, f.nz, hard ? 9 : 5);
+    }
+    if (f.type === "electric" || (f.type !== "plain" && roll < 0.15)) {
+      this.stats.sparks++;
+      this.hooks.sparks?.(wx, wz, f.nx, f.nz);
+      sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: wx, z: wz, strength: 8, sound: "spark" });
+    }
+    if (f.type === "bottles" && hard && roll < 0.85) {
+      this.stats.blasts++;
+      fire = true;
+      this.hooks.blast?.(wx + f.nx * 0.6, wz + f.nz * 0.6, 0.9, "shop");
+    } else if (f.type === "major" && (severe || (hard && roll < 0.5))) {
+      // The large one: a big blast inside, the other fronts blown out.
+      this.stats.majors++;
+      fire = true;
+      this.hooks.blast?.(f.b.x + f.nx * (f.half - 1), f.b.z + f.nz * (f.half - 1), 2.2, "building");
+      for (const g of this.faces) if (g.b === f.b && !g.broken) this.later?.(0.35, () => this.breakFace(sim, g, 10));
+    } else if (f.burns && hard && (f.type === "diner" ? roll < 0.9 : roll < 0.55)) fire = true;
+    // A burning shop: flames out of the window, soot up the front.
+    if (fire) {
       this.place(this.soot, f);
       this.stats.burning++;
       this.hooks.fire?.(wx, wz, f.nx, f.nz);
