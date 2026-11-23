@@ -118,7 +118,7 @@ export class CityRenderer {
     this.targetView = new TargetRenderer(this.scene);
     this.water = new WaterJets(this.scene);
     // V2.1 elevated road(s) of a generated city.
-    this.overpass = new OverpassRenderer(this.scene);
+    this.overpass = new OverpassRenderer(this.scene, theme);
     this.overpass.setLayout(layout);
     // V2.1 destructible low-rise buildings (wall cells).
     this.cells = new BuildingCellsRenderer(this.scene);

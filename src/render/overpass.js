@@ -10,7 +10,12 @@ import { overpassHeight, OVERPASS } from "../world/citygen.js";
 import { makePath, pointAt } from "../game/citygraph.js";
 import { overpassLocal } from "../game/overpass.js";
 
-const CONCRETE = 0xcac6be, SIDE = 0xa8a299, PARAPET = 0xe9e5dd, LINE = 0xf2b705, UNDER = 0x8d877f;
+// The driving surface (deck and both ramps) is the same asphalt and the
+// same markings as the streets (world.js: theme.road, a white dashed
+// centre line 2 m on / 2 m off); the structure (sides, underside,
+// parapets, pillars) stays concrete.
+const SIDE = 0xa8a299, PARAPET = 0xe9e5dd, LINE = 0xf2efe6, UNDER = 0x8d877f;
+const ASPHALT = 0x37363b;
 
 // Flat-coloured triangles into position/colour arrays.
 function quad(pos, col, a, b, c, d, hex) {
@@ -29,10 +34,13 @@ function geometry(pos, col) {
 }
 
 export class OverpassRenderer {
-  constructor(scene) {
+  constructor(scene, theme = {}) {
     this.scene = scene;
+    this.road = theme.road ?? ASPHALT;
     this.items = [];
-    this.deckMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true, side: THREE.DoubleSide });
+    // Same material settings as the ground (world.js), so day and night
+    // light it the same way.
+    this.deckMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true, side: THREE.DoubleSide });
     this.pillarMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     this.opacity = 1;
   }
@@ -66,7 +74,7 @@ export class OverpassRenderer {
     for (let i = 1; i < P.length; i++) {
       const a = P[i - 1], b = P[i];
       // Deck top, underside, sides.
-      quad(pos, col, pt(a, -W / 2, a.top), pt(b, -W / 2, b.top), pt(b, W / 2, b.top), pt(a, W / 2, a.top), CONCRETE);
+      quad(pos, col, pt(a, -W / 2, a.top), pt(b, -W / 2, b.top), pt(b, W / 2, b.top), pt(a, W / 2, a.top), this.road);
       quad(pos, col, pt(a, -W / 2, a.bot), pt(a, W / 2, a.bot), pt(b, W / 2, b.bot), pt(b, -W / 2, b.bot), UNDER);
       for (const side of [-1, 1]) {
         quad(pos, col, pt(a, (side * W) / 2, a.bot), pt(b, (side * W) / 2, b.bot), pt(b, (side * W) / 2, b.top), pt(a, (side * W) / 2, a.top), SIDE);
@@ -75,8 +83,8 @@ export class OverpassRenderer {
         for (const d of [-0.15, 0.15]) quad(pos, col, pt(a, o + d, a.top), pt(b, o + d, b.top), pt(b, o + d, b.top + 0.9), pt(a, o + d, a.top + 0.9), PARAPET);
         quad(pos, col, pt(a, o - 0.15, a.top + 0.9), pt(b, o - 0.15, b.top + 0.9), pt(b, o + 0.15, b.top + 0.9), pt(a, o + 0.15, a.top + 0.9), PARAPET);
       }
-      // Dashed centre line.
-      if (Math.floor(a.s / 3) % 2 === 0) quad(pos, col, pt(a, -0.08, a.top + 0.015), pt(b, -0.08, b.top + 0.015), pt(b, 0.08, b.top + 0.015), pt(a, 0.08, a.top + 0.015), LINE);
+      // Dashed centre line, as on the streets (2 m dash every 4 m, 0.12 m).
+      if (Math.floor(a.s / 2) % 2 === 0) quad(pos, col, pt(a, -0.06, a.top + 0.015), pt(b, -0.06, b.top + 0.015), pt(b, 0.06, b.top + 0.015), pt(a, 0.06, a.top + 0.015), LINE);
     }
     // End faces of the solid embankments are at ground level (nothing to
     // close). Pillars with a cap beam under the deck.
