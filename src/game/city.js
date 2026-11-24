@@ -302,6 +302,7 @@ function breakProp(sim, city, prop, car, impact) {
       prop.jet = true;
       city.jets.push({ x: prop.x, z: prop.z, born: sim.elapsed, id: prop.id });
       city.stats.hydrants = (city.stats.hydrants || 0) + 1;
+      event(city, sim, { type: "hydrant", action: "burst", x: prop.x, z: prop.z, strength: 10, sound: "water" });
     }
   } else if (prop.kind === "trash") {
     prop.state = "tumble";
@@ -1260,9 +1261,14 @@ function blowCar(sim, city, t) {
   if (sim.events.length > 64) sim.events.shift();
   sim.stats.explosions = (sim.stats.explosions || 0) + 1;
   // It hops and turns a little on its own blast.
-  t.vx += (Math.random() - 0.5) * 3;
-  t.vz += (Math.random() - 0.5) * 3;
+  t.vx += (rnd(sim) - 0.5) * 3;
+  t.vz += (rnd(sim) - 0.5) * 3;
   t.pop = sim.elapsed;
+}
+
+// Something else hit a civilian car (a falling sculpture, debris).
+export function damageCar(sim, t, closing) {
+  if (sim.city) damageTraffic(sim, sim.city, t, closing, false);
 }
 
 // byPlayer: the player hit this car, or shoved a car into it moments ago.
@@ -1280,9 +1286,10 @@ export const CAR_FIRE = Object.freeze({ fireAt: 30, delay: [2.4, 5.2], chance: 0
 const carStage = (t) => (t.burned ? 5 : t.state === "wreck" ? 4 : t.health < CAR_FIRE.fireAt ? 3 : t.health < 60 ? 2 : t.health < 90 ? 1 : 0);
 export { carStage };
 // A burning car hit again (or caught by a blast) goes up soon.
+const rnd = (sim) => (sim.city?.random ? sim.city.random() : Math.random());
 function hurryBlow(sim, t) {
   if (t.exploded || !(t.fireSince != null || t.state === "wreck")) return;
-  const soon = sim.elapsed + CAR_FIRE.nudge[0] + Math.random() * (CAR_FIRE.nudge[1] - CAR_FIRE.nudge[0]);
+  const soon = sim.elapsed + CAR_FIRE.nudge[0] + rnd(sim) * (CAR_FIRE.nudge[1] - CAR_FIRE.nudge[0]);
   t.blowAt = Math.min(t.blowAt ?? Infinity, soon);
 }
 function damageTraffic(sim, city, t, closing, byPlayer = false) {
@@ -1302,8 +1309,8 @@ function damageTraffic(sim, city, t, closing, byPlayer = false) {
     // The harder the crash, the likelier (never certain): about one in
     // four at a light wreck, one in two at full speed.
     const chance = Math.min(CAR_FIRE.maxChance, CAR_FIRE.chance + Math.max(0, closing - 12) * CAR_FIRE.perSpeed);
-    if (!t.exploded && Math.random() < chance)
-      t.blowAt = sim.elapsed + CAR_FIRE.delay[0] + Math.random() * (CAR_FIRE.delay[1] - CAR_FIRE.delay[0]);
+    if (!t.exploded && rnd(sim) < chance)
+      t.blowAt = sim.elapsed + CAR_FIRE.delay[0] + rnd(sim) * (CAR_FIRE.delay[1] - CAR_FIRE.delay[0]);
     city.stats.trafficWrecks++;
     event(city, sim, {
       type: "traffic",

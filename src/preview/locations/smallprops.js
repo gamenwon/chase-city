@@ -263,7 +263,50 @@ export const SMALL_FLYERS = {
   vacuum: { build: vacuum, mass: 0.8, r: 0.35, side: 0.22 },
   bucket: { build: bucket, tint: true, mass: 0.15, r: 0.25, side: 0.2, bounces: 3 },
 };
+// Casual pass: what smashed shops spill (sized to read from the chase
+// camera). Rolling fruit keeps rolling along the road for a while;
+// petals flutter down slowly.
+function bigFruit(g) {
+  ico(g, 0.2, 0xffffff, 0, 0, 0);
+  B(g, 0.04, 0.1, 0.04, 0x5a3a24, 0, 0.16, 0);
+}
+function petal(g) {
+  B(g, 0.22, 0.02, 0.16, 0xffffff, 0, 0, 0);
+}
+function bloom(g) {
+  B(g, 0.05, 0.5, 0.05, 0x3da04a, 0, -0.25, 0);
+  ico(g, 0.13, 0xffffff, 0, 0.05, 0);
+  B(g, 0.18, 0.06, 0.08, 0x5cb23a, 0.08, -0.2, 0);
+}
+function cup(g) {
+  cyl(g, 0.12, 0.09, 0.26, 0xf4f1ea, 0, -0.13, 0, 8);
+  B(g, 0.2, 0.04, 0.2, 0x5a3420, 0, 0.12, 0);
+  B(g, 0.15, 0.06, 0.04, 0xd62f2a, 0, 0, 0.11);
+}
+function foodBox(g) {
+  B(g, 0.34, 0.22, 0.3, 0xd62f2a, 0, -0.11, 0);
+  B(g, 0.12, 0.16, 0.12, 0xf5c01a, -0.06, 0.1, 0);
+  B(g, 0.1, 0.18, 0.1, 0xf5c01a, 0.06, 0.1, 0.03);
+}
+function basket(g) {
+  B(g, 0.5, 0.06, 0.38, 0xb07a3a, 0, -0.15, 0);
+  for (const s of [-1, 1]) {
+    B(g, 0.5, 0.22, 0.04, 0xc78a4a, 0, -0.12, s * 0.17);
+    B(g, 0.04, 0.22, 0.34, 0xc78a4a, s * 0.23, -0.12, 0);
+  }
+  B(g, 0.04, 0.26, 0.04, 0x8a5a2a, 0, 0.1, 0);
+}
+function plate(g) {
+  cyl(g, 0.2, 0.16, 0.04, 0xf4f4f0, 0, -0.02, 0, 10);
+}
 export const SMALL_BITS = {
+  bigFruit: { build: bigFruit, cap: 120, tint: true, rolls: true, side: 0.4 },
+  petal: { build: petal, cap: 160, tint: true, palette: [0xff7ab8, 0xffe14a, 0xffffff, 0xe8401c, 0xc86aff], flutter: true, side: 0.04 },
+  bloom: { build: bloom, cap: 60, tint: true, palette: [0xff5a8a, 0xffd23a, 0xffffff, 0xe8401c, 0xb84ac8], side: 0.12 },
+  cup: { build: cup, cap: 60, side: 0.24, rolls: true },
+  foodBox: { build: foodBox, cap: 40, side: 0.3 },
+  basket: { build: basket, cap: 30, side: 0.3 },
+  plate: { build: plate, cap: 40, side: 0.05 },
   paper: { build: paper, cap: 120 },
   tool: { build: tool, cap: 60 },
   bottle: { build: bottle, cap: 120, tint: true },

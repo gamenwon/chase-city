@@ -33,6 +33,7 @@ import { locationSolids } from "../preview/locations/layout.js";
 import { depotFlyers } from "../preview/locations/gasdepot.js";
 import { parkPlan } from "../preview/locations/plan.js";
 import { sitePlan } from "../preview/locations/sites.js";
+import { assignBrands } from "./brands.js";
 import { dinerPlan } from "../preview/locations/diner.js";
 import { bigsitePlan } from "../preview/locations/bigsite.js";
 
@@ -739,8 +740,11 @@ export function buildCity(seed) {
   features.push({ kind: "street", items: [], vehicles: [], flyers, solids: [] });
   const parking = kerbParking(graph, kind, R).filter((p) => clearOf(p.x, p.z, 1.5));
   const start = startPose(graph);
+  // Casual visual pass: shop brands, rooftop sculptures and billboards.
+  const brandStats = assignBrands(buildings, seed, [loc.gasDepot].filter(Boolean));
   return {
     seed,
+    brandStats,
     procedural: true,
     modular: true,
     buildings,

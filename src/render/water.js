@@ -7,7 +7,8 @@
 import * as THREE from "three";
 
 const BASE = 0.36; // sidewalk top
-const HEIGHT = 6.2; // jet height (a car is 1.5)
+const HEIGHT = 8.4; // jet height (a car is 1.5); casual pass: taller
+const BURST = 1.45; // the first second overshoots (the main bursting)
 const DROPS = 34; // per jet up close
 const MAX_JETS = 40;
 
@@ -36,6 +37,13 @@ export class WaterJets {
     const wet = new THREE.CircleGeometry(1, 16);
     wet.rotateX(-Math.PI / 2);
     this.wet = inst(wet, new THREE.MeshBasicMaterial({ color: 0x0e1c2c, transparent: true, opacity: 0.35, depthWrite: false }), MAX_JETS);
+    // Casual pass: the water runs off into the road: a wet sheen spreading
+    // over the asphalt (darker, with a pale glint), and mist puffs.
+    this.road = inst(wet, new THREE.MeshBasicMaterial({ color: 0x0a1622, transparent: true, opacity: 0.32, depthWrite: false }), MAX_JETS);
+    const glint = new THREE.RingGeometry(0.82, 1, 24);
+    glint.rotateX(-Math.PI / 2);
+    this.glint = inst(glint, new THREE.MeshBasicMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.22, depthWrite: false }), MAX_JETS);
+    this.mist = inst(new THREE.IcosahedronGeometry(0.5, 0), new THREE.MeshBasicMaterial({ color: 0xeaf7ff, transparent: true, opacity: 0.35, depthWrite: false }), MAX_JETS * 3);
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
     this.v = new THREE.Vector3();
@@ -43,7 +51,7 @@ export class WaterJets {
     this.counts = { jets: 0, drops: 0 };
   }
   reset() {
-    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet]) {
+    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet, this.road, this.glint, this.mist]) {
       m.count = 0;
       m.visible = false;
     }
@@ -62,8 +70,20 @@ export class WaterJets {
       const age = now - jet.born;
       // Bursts up in the first moments, then holds with a pressure pulse.
       const rise = Math.min(1, age / 0.25);
+      const burst = age < 1.2 ? 1 + (BURST - 1) * Math.sin(Math.min(1, age / 1.2) * Math.PI) : 1;
       const pulse = 1 + 0.06 * Math.sin(now * 13 + j) + 0.04 * Math.sin(now * 29 + j * 2);
-      const h = HEIGHT * rise * pulse;
+      const h = HEIGHT * rise * pulse * burst;
+      // The puddle spreads over the road for half a minute.
+      const spread = 2.2 + Math.min(1, age / 30) * 4.6;
+      this.m.compose(this.v.set(jet.x, 0.03, jet.z), this.q.identity(), this.s.set(spread, 1, spread * 0.85));
+      this.road.setMatrixAt(j, this.m);
+      this.m.compose(this.v.set(jet.x, 0.035, jet.z), this.q, this.s.set(spread * 0.92, 1, spread * 0.8));
+      this.glint.setMatrixAt(j, this.m);
+      for (let k = 0; k < 3; k++) {
+        const ph = (now * 0.4 + k / 3 + j * 0.13) % 1;
+        this.m.compose(this.v.set(jet.x + Math.sin(k * 2.1 + j) * (1 + ph * 1.5), BASE + h * (0.55 + 0.4 * ph), jet.z + Math.cos(k * 2.1 + j) * (1 + ph * 1.5)), this.q, this.s.setScalar(1.2 + ph * 1.8));
+        this.mist.setMatrixAt(j * 3 + k, this.m);
+      }
       this.q.identity();
       this.m.compose(this.v.set(jet.x, BASE, jet.z), this.q, this.s.set(1 + 0.08 * Math.sin(now * 17 + j), h, 1));
       this.columns.setMatrixAt(j, this.m);
@@ -91,10 +111,11 @@ export class WaterJets {
         this.rings.setMatrixAt(nr++, this.m);
       }
     }
-    this.columns.count = this.cores.count = this.wet.count = n;
+    this.columns.count = this.cores.count = this.wet.count = this.road.count = this.glint.count = n;
+    this.mist.count = n * 3;
     this.drops.count = nd;
     this.rings.count = nr;
-    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet]) {
+    for (const m of [this.columns, this.cores, this.drops, this.rings, this.wet, this.road, this.glint, this.mist]) {
       m.instanceMatrix.needsUpdate = true;
       m.visible = m.count > 0;
     }

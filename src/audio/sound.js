@@ -46,6 +46,13 @@ const SFX = {
   whoosh: { type: "bandpass", f0: 500, f1: 1600, q: 1.2, rate: 0.8, dur: 0.38, amp: 0.1, attack: 0.08, gap: 0.3 },
   rumble: { type: "lowpass", f0: 260, f1: 60, rate: 0.35, dur: 2.2, amp: 0.34, attack: 0.05, gap: 0.6 },
   topple: { type: "lowpass", f0: 700, f1: 120, rate: 0.6, dur: 0.9, amp: 0.22, attack: 0.02, gap: 0.2 },
+  // Casual pass: fireworks (a rising whistle, a crackling pop), a water
+  // main bursting, a neon tube buzzing out, a giant sculpture landing.
+  launch: { type: "bandpass", f0: 900, f1: 3200, q: 4, rate: 1.2, dur: 0.6, amp: 0.08, attack: 0.05, gap: 0.12 },
+  pop: { type: "bandpass", f0: 1400, f1: 300, q: 0.8, rate: 1.4, dur: 0.5, amp: 0.2, attack: 0.002, gap: 0.08 },
+  water: { type: "highpass", f0: 900, f1: 2400, rate: 0.7, dur: 1.4, amp: 0.13, attack: 0.03, gap: 0.5 },
+  buzz: { type: "bandpass", f0: 120, q: 6, rate: 0.3, dur: 0.5, amp: 0.1, attack: 0.01, gap: 0.3 },
+  bonk: { type: "lowpass", f0: 600, f1: 90, rate: 0.45, dur: 0.6, amp: 0.3, attack: 0.003, gap: 0.12 },
 };
 export class SoundSystem {
   constructor(

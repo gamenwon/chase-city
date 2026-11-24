@@ -257,7 +257,7 @@ export class FlyerSystem {
     // Spawn pools (table halves, fruit, bricks): instances made up front,
     // hidden until used.
     this.pools = {};
-    const caps = { stallAwning: 12, stallTable: 12, stallBoard: 12, stallPost: 48, produceBox: 36, parasolCanopy: 24, parasolPole: 24, ...SMALL_CAPS };
+    const caps = { stallAwning: 12, stallTable: 12, stallBoard: 12, stallPost: 48, produceBox: 36, parasolCanopy: 24, parasolPole: 24, chair: 30, ...SMALL_CAPS };
     for (const k of ["tableTop", "tableBase", ...Object.keys(BITS), ...Object.keys(caps)]) {
       const cap = BITS[k]?.cap || caps[k] || 40;
       const g = geo(k);
@@ -381,11 +381,13 @@ export class FlyerSystem {
   // A loose piece (table half, fruit, brick) from a pool.
   spawn(sim, kind, x, y, z, car, speed, nx, nz, mass, baseY = 0.05) {
     const pool = this.pools[kind];
-    if (!pool || pool.used >= pool.cap || this.active.length >= 140) return;
+    if (!pool || pool.used >= pool.cap || this.active.length >= 240) return;
     const h = pool.ids[pool.used++];
     this.batch.visible(h, true);
-    if (kind === "fruit" || BITS[kind]?.tint) this.batch.color(h, FRUIT[pool.used % 4]);
-    const it = { spec: { kind, y: baseY }, def: FLYERS[kind] || { mass, side: 0.06 }, h, x, y, z, q: new THREE.Quaternion(), hits: 3, state: "rest" };
+    const pal = BITS[kind]?.palette;
+    if (pal) this.batch.color(h, this.c.setHex(pal[pool.used % pal.length]));
+    else if (kind === "fruit" || BITS[kind]?.tint) this.batch.color(h, FRUIT[pool.used % 4]);
+    const it = { spec: { kind, y: baseY }, def: FLYERS[kind] || (BITS[kind] ? { mass, side: 0.06, ...BITS[kind] } : { mass, side: 0.06 }), h, x, y, z, q: new THREE.Quaternion(), hits: 3, state: "rest" };
     const base = Math.min(1.6, 1 / Math.sqrt(mass));
     const a = Math.random() * Math.PI * 2;
     it.vx = ((car.vx || 0) * 0.35 + Math.cos(a) * speed * 0.25 + nx * speed * 0.2) * base;
@@ -407,8 +409,46 @@ export class FlyerSystem {
     if (!this.active.length) return;
     const keep = [];
     for (const it of this.active) {
-      it.vy -= 15 * dt;
-      const drag = Math.exp(-dt * 1.1);
+      if (it.state === "roll") {
+        // Rolling along the road (fruit, cups): slows, turns over, stops.
+        const f = Math.exp(-dt * 0.55);
+        it.vx *= f;
+        it.vz *= f;
+        it.x += it.vx * dt;
+        it.z += it.vz * dt;
+        if (it.kerb && (it.x - it.kerb.x) * it.kerb.nx + (it.z - it.kerb.z) * it.kerb.nz > 2.4) {
+          it.spec.y = 0.05;
+          it.kerb = null;
+          it.y = 0.05 + (it.def.side ?? 0.1) * 0.5;
+        }
+        const sp = Math.hypot(it.vx, it.vz);
+        this.q2.setFromAxisAngle(this.v.set(it.vz / (sp || 1), 0, -it.vx / (sp || 1)), (sp / 0.2) * dt);
+        it.q.premultiply(this.q2);
+        if (sp < 0.25) {
+          this.hooks.outside?.(it);
+          it.state = "down";
+          this.pose(it);
+          continue;
+        }
+        this.hooks.outside?.(it);
+        this.pose(it);
+        keep.push(it);
+        continue;
+      }
+      // Spilled from a shop: on the pavement near the front, in the road
+      // past the kerb.
+      if (it.kerb && (it.x - it.kerb.x) * it.kerb.nx + (it.z - it.kerb.z) * it.kerb.nz > 2.4) {
+        it.spec.y = 0.05;
+        it.kerb = null;
+      }
+      // Petals and paper flutter down slowly, drifting.
+      const flutter = it.def.flutter;
+      it.vy -= (flutter ? 2.2 : 15) * dt;
+      if (flutter) {
+        it.vy = Math.max(it.vy, -1.4);
+        it.vx += Math.sin(sim.elapsed * 3 + it.x) * dt * 2;
+      }
+      const drag = Math.exp(-dt * (flutter ? 1.8 : 1.1));
       it.vx *= drag;
       it.vz *= drag;
       it.x += it.vx * dt;
@@ -426,6 +466,16 @@ export class FlyerSystem {
           it.vz *= 0.55;
           it.w.rate *= 0.5;
           it.y = floor;
+        } else if (it.def.rolls && Math.hypot(it.vx, it.vz) > 1.2) {
+          // Round things roll on along the road.
+          it.y = floor;
+          it.vy = 0;
+          it.state = "roll";
+          it.vx *= 1.4;
+          it.vz *= 1.4;
+          this.pose(it);
+          keep.push(it);
+          continue;
         } else {
           // Settle: lie on the side nearest to how it came down; never
           // inside a wall or a solid piece (moved to its nearest side).

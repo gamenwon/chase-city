@@ -9,6 +9,13 @@
 //   bottles   a small gas-bottle blast after a hard hit (sets off more)
 //   major     a few big commercial buildings: a hard hit sets off a large
 //             explosion that also blows in the building's other fronts
+// Casual pass (shop brands, world/brands.js), each with its own spill:
+//   fruit     fruit flying and rolling, broken crates
+//   flower    flowers and petals fluttering, broken pots
+//   cafe      cups, café chairs, a parasol, a menu board
+//   market    baskets, crates, produce, a collapsing stall front
+//   diner     also chairs, a table and food boxes thrown out
+//   fireworks the stock goes off (rockets and coloured bursts)
 const TYPES = ["plain", "plain", "goods", "goods", "electric", "diner", "plain", "goods", "electric", "diner", "bottles", "goods"];
 // Ground-floor storefront damage. Every street-facing shopfront has a
 // striped awning and is breakable; about a quarter of them can catch fire
@@ -25,6 +32,7 @@ const TYPES = ["plain", "plain", "goods", "goods", "electric", "diner", "plain",
 import * as THREE from "three";
 import { K } from "../../render/kit.js";
 import { C, B, G, pieceGeometry, bakedMaterial } from "./parts.js";
+import { BRANDS } from "../../world/brands.js";
 
 const BASE = 0.4;
 const SHOP_COLORS = [K.red, K.blue, K.green, K.yellow, K.orange];
@@ -151,7 +159,10 @@ export class Storefronts {
         // Big commercial corner buildings (about one in fourteen fronts)
         // are the major ones.
         const major = b.district === "commercial" && b.h >= 13 && (seed + k) % 7 === 0;
-        const type = b.shopType || (major ? "major" : TYPES[(seed * 7 + k * 3) % TYPES.length]);
+        // Casual pass: a branded shop reacts as its brand says (fruit,
+        // flowers, café, market, fireworks...).
+        const branded = b.brand && BRANDS[b.brand]?.type;
+        const type = b.shopType || (branded === "fireworks" ? "fireworks" : major ? "major" : branded || TYPES[(seed * 7 + k * 3) % TYPES.length]);
         this.faces.push({
           b, ry: f.ry, nx: Math.sin(f.ry), nz: Math.cos(f.ry), span: f.span, half: f.half,
           sign: SHOP_COLORS[(seed + k) % SHOP_COLORS.length],
@@ -262,7 +273,12 @@ export class Storefronts {
     const roll = Math.random();
     const hard = speed >= 12, severe = speed >= 17;
     let fire = false;
-    if (f.type === "goods" || f.type === "electric" || f.type === "diner" || (f.type === "plain" && roll < 0.25)) {
+    // Shop-specific spill (casual pass): each kind of shop throws out its
+    // own things (fruit and crates, flowers and petals, cups and café
+    // chairs, market baskets and stalls, plates and chairs).
+    if (["fruit", "flower", "cafe", "market", "diner", "fireworks"].includes(f.type)) this.hooks.spill?.(f.type, wx, wz, f.nx, f.nz, speed, f);
+    this.hooks.broke?.(f, speed);
+    if (f.type === "goods" || f.type === "electric" || f.type === "diner" || f.type === "market" || (f.type === "plain" && roll < 0.25)) {
       this.stats.stock++;
       this.hooks.stock?.(wx, wz, f.nx, f.nz, hard ? 9 : 5);
     }
@@ -281,6 +297,10 @@ export class Storefronts {
       fire = true;
       this.hooks.blast?.(f.b.x + f.nx * (f.half - 1), f.b.z + f.nz * (f.half - 1), 2.2, "building");
       for (const g of this.faces) if (g.b === f.b && !g.broken) this.later?.(0.35, () => this.breakFace(sim, g, 10));
+    } else if (f.type === "fireworks" && (hard || roll < 0.5)) {
+      // The fireworks shop goes off (ads.js: rockets, coloured bursts).
+      fire = true;
+      this.hooks.fireworks?.(f, speed);
     } else if (f.burns && hard && (f.type === "diner" ? roll < 0.9 : roll < 0.55)) fire = true;
     // A burning shop: flames out of the window, soot up the front.
     if (fire) {

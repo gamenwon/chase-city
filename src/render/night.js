@@ -111,6 +111,7 @@ export class NightLights {
     // Windows: built once; one instance range per building.
     const wins = [];
     this.ranges = [];
+    this.layoutBuildings = layout.buildings || [];
     for (const b of layout.buildings || []) {
       const cx = Math.round((b.x - 15) / 30) * 30 + 15, cz = Math.round((b.z - 15) / 30) * 30 + 15; // (b.street wins when set)
       const list = buildingWindows(b, [Math.sign(b.x - cx), Math.sign(b.z - cz)]);
@@ -145,7 +146,22 @@ export class NightLights {
     for (let k = r.start; k < r.start + r.count; k++) this.placeWindow(k, this.winList[k], 0);
     this.windows.instanceMatrix.needsUpdate = true;
   }
+  // Casual pass: a smashed shopfront's lit window goes dark.
+  hideShopWindow(b, ry) {
+    const i = this.layoutBuildings?.indexOf(b);
+    const r = this.ranges[i];
+    if (!r) return;
+    for (let k = r.start; k < r.start + r.count; k++) {
+      const w = this.winList[k];
+      if (w.kind === "shop" && Math.abs(w.ry - ry) < 1e-3) {
+        w.out = true;
+        this.placeWindow(k, w, 0);
+      }
+    }
+    this.windows.instanceMatrix.needsUpdate = true;
+  }
   placeWindow(i, w, scale) {
+    if (w.out) scale = 0;
     this.q.setFromAxisAngle(this.v.set(0, 1, 0), w.ry);
     this.m.compose(this.v.set(w.x, w.y, w.z), this.q, this.s.set(w.w * scale, w.h * scale, 1));
     this.windows.setMatrixAt(i, this.m);

@@ -22,6 +22,7 @@ import { bigsiteDecor } from "./bigsite.js";
 import { siteDecor } from "./sites-decor.js";
 import { PERIMETER, perimeterBuilding } from "./perimeter.js";
 import { Storefronts } from "./storefronts.js";
+import { AdSystem } from "./ads.js";
 import { PropBatch, PropInstances } from "./batch.js";
 
 const TOP = 0.4;
@@ -169,6 +170,12 @@ export class LocationsRuntime {
       stock: (x, z, nx, nz, n) => {
         for (let i = 0; i < n; i++) this.throwChunk(2, x + nz * (Math.random() - 0.5) * 4, z - nx * (Math.random() - 0.5) * 4, 2.5 + Math.random() * 4, Math.atan2(nx, nz) + (Math.random() - 0.5) * 1.4);
       },
+      // Casual pass: what each kind of shop spills over the pavement and
+      // into the road (fruit rolling away, petals fluttering, cups and
+      // café chairs, market baskets and a stall front, plates and food).
+      spill: (type, x, z, nx, nz, speed, f) => this.spill(type, x, z, nx, nz, speed, f),
+      broke: (f, speed) => this.ads?.shopBroken(this.sim, f, speed),
+      fireworks: (f, speed) => this.ads?.fireworks(this.sim, f, speed),
       // Sparks from torn wiring at the top of the window, a few seconds.
       sparks: (x, z, nx, nz) => {
         this.fx.push({ kind: "spark", x, z, nx, nz, born: this.sim?.elapsed ?? 0 });
@@ -186,6 +193,9 @@ export class LocationsRuntime {
       },
     });
     this.storefronts.later = (sec, run) => this.pending.push({ at: (this.sim?.elapsed ?? 0) + sec, run });
+    // Casual pass: shop signs, neon, billboards, rooftop sculptures,
+    // the fireworks shop.
+    this.ads = new AdSystem(scene, layout, this.storefronts, renderer, this);
     this.flyers = new FlyerSystem(this.batch, groups.flatMap((f) => f.flyers || []), {
       outside: (it) => {
         const sim = this.sim;
@@ -294,6 +304,7 @@ export class LocationsRuntime {
     this.vehicles.reset();
     this.flyers.reset();
     this.storefronts.reset();
+    this.ads?.reset();
     this.balls = this.court.balls.map((b) => ({ ...b, vx: 0, vy: 0, vz: 0, rest: true }));
     this.balls.forEach((b, i) => this.ballPose(b, i));
     this.ballMesh.instanceMatrix.needsUpdate = true;
@@ -363,6 +374,7 @@ export class LocationsRuntime {
         for (let i = 0; i < 4; i++) this.throwChunk(1, e.x, e.z, 2 + Math.random() * 2, Math.random() * 6.3);
       }
     }
+    this.ads.step(sim, dt);
     for (const p of [...this.pending])
       if (sim.elapsed >= p.at) {
         this.pending.splice(this.pending.indexOf(p), 1);
@@ -376,6 +388,7 @@ export class LocationsRuntime {
   blast(sim, e, R, s, later, depth) {
     const jitter = () => 0.25 + Math.random() * 0.55;
     this.vehicles.blast(sim, e.x, e.z, R, s, later, jitter);
+    this.ads?.blast(sim, e, R, s);
     for (const it of this.flyers.items) {
       if (it.state === "fly" || it.hidden || it.hits >= 3) continue;
       const dx = it.x - e.x, dz = it.z - e.z, d = Math.hypot(dx, dz);
@@ -570,6 +583,49 @@ export class LocationsRuntime {
       }
     }
   }
+  spill(type, x, z, nx, nz, speed, f) {
+    const sim = this.sim;
+    if (!sim) return;
+    const out = { vx: nx * speed * 0.55, vz: nz * speed * 0.55 };
+    const sp = Math.max(7, Math.min(16, speed));
+    const along = (k) => (Math.random() - 0.5) * Math.min(5, (f?.span || 6) - 1) * k;
+    const go = (kind, n, mass, y = 1.0, k = 1) => {
+      for (let i = 0; i < n; i++) {
+        const a = along(1);
+        const piece = this.flyers.spawn(sim, kind, x + nz * a + nx * 0.4, TOP + y, z - nx * a + nz * 0.4, out, sp * k, nx, nz, mass, TOP);
+        if (piece) piece.kerb = { x, z, nx, nz };
+      }
+    };
+    if (type === "fruit") {
+      go("bigFruit", 22, 0.2, 0.9, 1.1);
+      go("produceBox", 3, 0.4, 0.7);
+      go("plank", 5, 0.3, 0.7);
+    } else if (type === "flower") {
+      go("bloom", 14, 0.2, 1.0);
+      go("petal", 34, 0.12, 1.6, 0.8);
+      go("shard", 10, 0.3, 0.6);
+    } else if (type === "cafe") {
+      go("cup", 12, 0.15, 1.0);
+      go("plate", 6, 0.2, 1.0);
+      go("chair", 3, 0.25, 0.6, 0.8);
+      go("parasolCanopy", 1, 0.25, 1.4, 0.6);
+      go("boardHalf", 2, 0.15, 0.8);
+    } else if (type === "market") {
+      go("basket", 6, 0.3, 0.8);
+      go("produceBox", 4, 0.4, 0.8);
+      go("bigFruit", 10, 0.2, 0.9);
+      go("stallAwning", 1, 0.4, 2.0, 0.5);
+      go("stallBoard", 1, 0.35, 1.2, 0.6);
+      go("stallPost", 2, 0.3, 1.0, 0.6);
+    } else if (type === "diner") {
+      go("chair", 4, 0.25, 0.6, 0.9);
+      go("tableTop", 1, 0.5, 0.8, 0.7);
+      go("foodBox", 6, 0.2, 1.0);
+      go("plate", 6, 0.2, 1.0);
+    } else if (type === "fireworks") {
+      go("paper", 10, 0.15, 1.2);
+    }
+  }
   throwChunk(kind, x, z, speed, heading) {
     let index;
     if (this.chunkCounts[kind] >= CHUNKS) {
@@ -669,6 +725,7 @@ export class LocationsRuntime {
     if (this.depot && this.sim) this.depot.step(this.sim, this.time, dt);
     this.fxStep(now);
     this.waterStep(dt, now);
+    this.ads.render(dt, sim);
   }
   pose(it, k) {
     const s = it.spec;
