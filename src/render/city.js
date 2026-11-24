@@ -1,5 +1,14 @@
 import * as THREE from "three";
 import { civilianCarGeometry } from "./kit.js";
+import { carStage } from "../game/city.js";
+
+// Civilian car damage drawing (casual destruction pass).
+const SMOKE_MAX = 110, FLAME_MAX = 72;
+// Smoke tint per stage: 1 light, 2 medium, 3 heavy (burning), 4 wreck, 5 burned out.
+const SMOKE_TINT = [0, 0xb7bcbe, 0x6e7173, 0x3d3f42, 0x2a2b2e, 0x4a4b4d];
+// Flame spots along the car (forward = engine bay), lit in this order as
+// the fire spreads.
+const FIRE_SPOTS = [[0, 1.35, 0.55], [0.35, 0.7, 0.75], [-0.35, 0.9, 0.7], [0, -0.1, 1.05], [0.3, -0.95, 0.8], [-0.3, -1.4, 0.65]];
 
 // V1.9 city life renderer. Everything is instanced (one draw call per part
 // type), nothing casts shadows, and props are only re-uploaded when they
@@ -154,12 +163,29 @@ export class CityLifeRenderer {
       140,
     );
     this.particleMesh.count = 0;
+    // Damage smoke (tinted per car stage) and engine fire (casual pass):
+    // two cone layers, an orange body and a yellow core, flickering.
     this.smokeMesh = this.instanced(
       new THREE.IcosahedronGeometry(0.5, 0),
-      this.material(0x6b6f70, { transparent: true, opacity: 0.55 }),
-      40,
+      this.material(0xffffff, { transparent: true, opacity: 0.6, depthWrite: false }),
+      SMOKE_MAX,
     );
     this.smokeMesh.count = 0;
+    const flameGeo = new THREE.ConeGeometry(0.55, 1.7, 6);
+    flameGeo.translate(0, 0.85, 0);
+    this.flameMesh = this.instanced(
+      flameGeo,
+      new THREE.MeshBasicMaterial({ color: 0xff6a1a, transparent: true, opacity: 0.92, depthWrite: false, toneMapped: false }),
+      FLAME_MAX,
+    );
+    this.flameMesh.count = 0;
+    this.coreMesh = this.instanced(
+      flameGeo,
+      new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false }),
+      FLAME_MAX,
+    );
+    this.coreMesh.count = 0;
+    this.coreMesh.renderOrder = 2;
     this.lastEvent = 0;
     this.color = new THREE.Color();
     this.ready = true;
@@ -301,40 +327,82 @@ export class CityLifeRenderer {
   }
   updateCars(city, sim) {
     let n = 0,
-      smoke = 0;
+      smoke = 0,
+      flames = 0;
     const key = city.traffic
-      .map(
-        (t) => `${t.id}${t.state === "wreck" ? "w" : t.health < 60 ? "h" : ""}`,
-      )
+      .map((t) => `${t.id}${carStage(t)}`)
       .join(",");
     const recolor = key !== this.carKey;
     this.carKey = key;
+    const now = sim.elapsed, p = sim.player;
     for (const t of city.traffic) {
       if (n >= 40) break;
+      const stage = carStage(t);
       const wreck = t.state === "wreck";
-      const hurt = t.health < 60;
-      this.e.set(0, t.angle, wreck ? 0.12 : 0, "YXZ");
+      // A car that just went up hops and rolls a little.
+      const pop = t.pop != null ? Math.max(0, 1 - (now - t.pop) / 0.7) : 0;
+      const hop = pop > 0 ? Math.sin((1 - pop) * Math.PI) * 1.6 : 0;
+      this.e.set(wreck ? 0.12 : 0, t.angle + (t.pop != null ? 0.5 * Math.min(1, (now - t.pop) / 0.7) : 0), (t.burned ? 0.1 : 0) + pop * 0.6, "YXZ");
       this.q.setFromEuler(this.e);
-      this.m.compose(this.v.set(t.x, t.y || 0, t.z), this.q, this.s.set(1, 1, 1));
+      this.m.compose(this.v.set(t.x, (t.y || 0) + hop, t.z), this.q, this.s.set(1, t.burned ? 0.9 : 1, 1));
       this.carMesh.setMatrixAt(n, this.m);
       if (recolor) {
         this.color.set(CAR_COLORS[t.color]);
-        if (wreck) this.color.multiplyScalar(0.35);
-        else if (hurt) this.color.multiplyScalar(0.7);
+        // Dented and dirty, scorched, charred.
+        this.color.multiplyScalar([1, 0.9, 0.72, 0.55, 0.32, 0.16][stage]);
         this.carMesh.setColorAt(n, this.color);
       }
       n++;
-      // Smoke from wrecked civilian cars (no fire, no explosion).
-      if (wreck && smoke < 38)
-        for (let k = 0; k < 2; k++) {
-          const age = ((t.smoke || 0) * 0.6 + k * 0.5) % 1;
-          this.m.compose(
-            this.v.set(t.x + Math.sin(age * 9) * 0.3, 1.4 + age * 3, t.z - 0.9),
-            this.q.identity(),
-            this.s.setScalar(0.6 + age * 1.2),
-          );
-          this.smokeMesh.setMatrixAt(smoke++, this.m);
-        }
+      if (!stage) continue;
+      // Effects only where they can be seen (near the player).
+      if (Math.hypot(t.x - p.x, t.z - p.z) > 75) continue;
+      const fx = -Math.sin(t.angle), fz = -Math.cos(t.angle), rx = Math.cos(t.angle), rz = -Math.sin(t.angle);
+      // Light damage only smokes for a while after the hit.
+      const since = now - (t.hitAt ?? -99);
+      if (stage === 1 && since > 6) continue;
+      // Smoke: more, darker and taller with each stage.
+      const puffs = [0, 1, 2, 3, 4, 3][stage];
+      const engine = stage < 4 || t.burned ? 1.3 : 0.6;
+      for (let k = 0; k < puffs && smoke < SMOKE_MAX; k++) {
+        const age = ((now + (t.id % 7) * 0.37) * (0.45 + stage * 0.05) + k / puffs) % 1;
+        const rise = 1.2 + stage * 0.7;
+        this.m.compose(
+          this.v.set(t.x + fx * engine + Math.sin(age * 9 + t.id) * 0.4 + age * 0.8, 1.1 + age * rise * 2.2, t.z + fz * engine + Math.cos(age * 7 + t.id) * 0.3),
+          this.q.identity(),
+          this.s.setScalar((0.5 + age * (1 + stage * 0.35)) * (stage >= 3 ? 1.25 : 1)),
+        );
+        this.smokeMesh.setMatrixAt(smoke, this.m);
+        this.smokeMesh.setColorAt(smoke++, this.color.setHex(SMOKE_TINT[stage]));
+      }
+      // Sparks now and then from a medium-damaged car.
+      if (stage === 2 && Math.random() < 0.012) this.burst(t.x + fx * 1.4, t.z + fz * 1.4, 4, 0xffd84a, 3, 4);
+      if (stage < 3) continue;
+      // Fire: from the engine bay; it spreads over the car with time, is
+      // biggest when the car is wrecked, and burns down to a few low
+      // flames once it has exploded.
+      const burnt = t.fireSince != null ? now - t.fireSince : 0;
+      let spots, size;
+      if (t.burned) {
+        const after = now - (t.burnedAt ?? now);
+        spots = after < 6 ? 6 : after < 25 ? 3 : 2;
+        size = after < 6 ? 1.25 : after < 25 ? 0.85 : 0.6;
+      } else if (wreck) {
+        spots = Math.min(6, 2 + Math.floor(burnt / 1.2));
+        size = 1.05 + (t.blowAt != null ? 0.25 : 0);
+      } else {
+        spots = Math.min(3, 1 + Math.floor(burnt / 2.5));
+        size = 0.8;
+      }
+      for (let k = 0; k < spots && flames < FLAME_MAX; k++) {
+        const [lx, lz, h] = FIRE_SPOTS[k];
+        const f = 0.75 + 0.25 * Math.sin(now * (17 + k * 3) + t.id * 1.7) + 0.12 * Math.sin(now * 31 + k);
+        const x = t.x + fx * lz + rx * lx, z = t.z + fz * lz + rz * lx, y = (t.y || 0) + hop + h;
+        this.q.setFromAxisAngle(this.v.set(0, 1, 0), now * 2 + k);
+        this.m.compose(this.v.set(x, y, z), this.q, this.s.set(size * (0.9 + 0.1 * f), size * f * 1.25, size * (0.9 + 0.1 * f)));
+        this.flameMesh.setMatrixAt(flames, this.m);
+        this.m.compose(this.v.set(x, y, z), this.q, this.s.set(size * 0.55, size * f * 0.8, size * 0.55));
+        this.coreMesh.setMatrixAt(flames++, this.m);
+      }
     }
     if (n || this.carMesh.count) {
       this.carMesh.count = n;
@@ -345,6 +413,11 @@ export class CityLifeRenderer {
     if (smoke || this.smokeMesh.count) {
       this.smokeMesh.count = smoke;
       this.smokeMesh.instanceMatrix.needsUpdate = true;
+      if (this.smokeMesh.instanceColor) this.smokeMesh.instanceColor.needsUpdate = true;
+    }
+    if (flames || this.flameMesh.count) {
+      this.flameMesh.count = this.coreMesh.count = flames;
+      this.flameMesh.instanceMatrix.needsUpdate = this.coreMesh.instanceMatrix.needsUpdate = true;
     }
   }
   burst(x, z, count, color, power, lift = 4) {
@@ -380,6 +453,8 @@ export class CityLifeRenderer {
         if (e.action === "land") this.burst(e.x, e.z, 6, 0xb9a98a, 2, 1.5);
       } else if (e.type === "traffic" && e.action !== "honk") {
         this.burst(e.x, e.z, 10, 0xc9d3d6, 4, 3);
+        // Sparks off the crash, more the harder it was.
+        this.burst(e.x, e.z, Math.min(10, 2 + Math.round((e.strength || 0) / 3)), 0xffc23a, 5, 4);
       }
       if (kick && e.byPlayer && e.strength > 5)
         kick(Math.min(0.3, e.strength / 50));
@@ -422,6 +497,8 @@ export class CityLifeRenderer {
       this.carMesh,
       this.particleMesh,
       this.smokeMesh,
+      this.flameMesh,
+      this.coreMesh,
     ];
     for (const mesh of all) {
       this.scene.remove(mesh);

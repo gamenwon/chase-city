@@ -144,12 +144,30 @@ export class OverpassRenderer {
       // Dashed centre line, as on the streets (2 m dash every 4 m, 0.12 m).
       if (Math.floor((a.s + 1e-6) / 2) % 2 === 0) quad(pos, col, pt(a, -0.06, a.top + 0.015), pt(b, -0.06, b.top + 0.015), pt(b, 0.06, b.top + 0.015), pt(a, 0.06, a.top + 0.015), LINE);
     }
+    // Street lamps on the parapets every 16 m (alternating sides), part of
+    // the piece (they fall with it; the night lights go out with it).
+    const lamps = [];
+    for (const p of P) {
+      const k = Math.round(p.s / 8);
+      if (Math.abs(p.s - k * 8) > 1 || k % 2 || p.s < s0 + 1 || p.s > s1 - 1 || lamps.some((l) => Math.abs(l.s - p.s) < 6)) continue;
+      const side = (k / 2) % 2 ? 1 : -1, o = side * (W / 2 - 0.15), y0 = p.top + 0.9;
+      const post = (lat0, lat1, ya, yb, w) => {
+        // A thin box from (lat0, ya) to (lat1, yb) across the road.
+        const a0 = pt(p, lat0, ya), b0 = pt(p, lat1, yb);
+        const t = [p.nz * w, 0, -p.nx * w];
+        quad(pos, col, [a0[0] - t[0], a0[1], a0[2] - t[2]], [a0[0] + t[0], a0[1], a0[2] + t[2]], [b0[0] + t[0], b0[1], b0[2] + t[2]], [b0[0] - t[0], b0[1], b0[2] - t[2]], 0x5d6168);
+      };
+      post(o, o, y0, y0 + 4.2, 0.09);
+      post(o, o - side * 1.4, y0 + 4.2, y0 + 4.2, 0.09);
+      const h = pt(p, o - side * 1.4, y0 + 4.05);
+      lamps.push({ s: p.s, x: h[0] + c.x, z: h[2] + c.z, y: h[1] + c.y, ground: p.top });
+    }
     // Broken ends: close the piece's end faces (seen once a span has gone).
     for (const e of [P[0], P[P.length - 1]]) quad(pos, col, pt(e, -W / 2, e.bot), pt(e, W / 2, e.bot), pt(e, W / 2, e.top), pt(e, -W / 2, e.top), SIDE);
     const mesh = new THREE.Mesh(geometry(pos, col), this.deckMat);
     mesh.position.set(c.x, c.y, c.z);
     mesh.castShadow = mesh.receiveShadow = true;
-    return { s0, s1, mesh, home: { ...c }, dir: { x: mid.ux, z: mid.uz }, state: "up" };
+    return { s0, s1, mesh, home: { ...c }, dir: { x: mid.ux, z: mid.uz }, state: "up", lamps };
   }
   applyOpacity(o) {
     const m = this.deckMat, t = o < 0.999;
@@ -186,8 +204,20 @@ export class OverpassRenderer {
       for (const pm of it.pillars) {
         const q = op.pillars.find((x) => x.id === pm.q.id) || op.pillars[pm.q.id];
         if (!q) continue;
-        pm.cracks[0].visible = q.health < 75;
-        pm.cracks[1].visible = q.health < 40;
+        const frac = q.health / (q.maxHealth || 100);
+        pm.cracks[0].visible = frac < 0.75;
+        pm.cracks[1].visible = frac < 0.45;
+        if (pm.state === "up") {
+          // A hit shakes it; badly damaged it leans a little (partial
+          // failure), the deck above trembling with it.
+          const since = sim.elapsed - (q.lastHit ?? -9);
+          const shake = since < 0.45 ? Math.sin(since * 70) * 0.12 * (1 - since / 0.45) : 0;
+          const lean = frac < 0.45 ? 0.035 * (1 - frac / 0.45) + 0.012 : 0;
+          pm.mesh.position.x = q.x + shake * Math.cos(pm.ang);
+          pm.mesh.position.z = q.z - shake * Math.sin(pm.ang);
+          pm.mesh.rotation.set(lean, 0, shake * 0.08);
+          pm.mesh.scale.y = 1 - (frac < 0.45 ? 0.03 : 0);
+        }
         if (!q.alive && pm.state === "up") pm.state = "down", (pm.at = q.brokeAt ?? sim.elapsed);
         if (pm.state === "down") {
           const t = Math.min(1, (sim.elapsed - pm.at) / 0.7);
@@ -212,6 +242,12 @@ export class OverpassRenderer {
           pc.mesh.rotateOnWorldAxis(new THREE.Vector3(pc.dir.x, 0, pc.dir.z), 0.05 * pc.tip * t);
         }
     });
+  }
+  // Night: lamp heads on the deck pieces still standing.
+  lampHeads() {
+    const out = [];
+    for (const it of this.items) for (const pc of it.pieces) if (pc.state === "up") out.push(...pc.lamps);
+    return out;
   }
   // The deck fades when the player drives underneath it.
   update(sim, dt = 1 / 60) {

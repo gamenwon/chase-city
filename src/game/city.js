@@ -373,7 +373,10 @@ export function blastCity(sim, city, x, z, R, s) {
     const push = 11 * k * Math.sqrt(s) / (t.parked || t.state === "wreck" ? 1.4 : 1);
     t.vx = (t.vx || 0) + (dx / d) * push;
     t.vz = (t.vz || 0) + (dz / d) * push;
-    if (t.state === "wreck") continue;
+    if (t.state === "wreck") {
+      if (k > 0.25) hurryBlow(sim, t);
+      continue;
+    }
     if (t.state === "drive") {
       t.state = "yield";
       t.timer = 2.5;
@@ -1028,6 +1031,8 @@ function syncParked(sim, city) {
       if (spot.wrecked) {
         spot.car.state = "wreck";
         spot.car.health = 0;
+        spot.car.fireSince = -60; // (back in view: long burning)
+        if (spot.burned) Object.assign(spot.car, { burned: true, exploded: true, burnedAt: -60 });
       }
       city.traffic.push(spot.car);
       active++;
@@ -1041,6 +1046,7 @@ function syncParked(sim, city) {
     t.spot.z = t.z;
     t.spot.angle = t.angle;
     t.spot.wrecked = t.state === "wreck";
+    t.spot.burned = !!t.burned;
     t.spot.car = null;
     return false;
   });
@@ -1241,14 +1247,63 @@ export function bump(a, ra, ma, b, rb, mb) {
   return closing;
 }
 
+// A burning wreck goes up: an ordinary car explosion through the shared
+// blast system (it damages and shoves what is round it, may set off the
+// next one), then it is a charred wreck for good.
+function blowCar(sim, city, t) {
+  t.exploded = true;
+  t.burned = true;
+  t.blowAt = null;
+  t.burnedAt = sim.elapsed;
+  city.stats.carFires = (city.stats.carFires || 0) + 1;
+  sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "traffic", x: t.x, z: t.z, angle: t.angle, time: sim.elapsed, delay: 0, chainDepth: 1, playerX: sim.player.x, playerZ: sim.player.z });
+  if (sim.events.length > 64) sim.events.shift();
+  sim.stats.explosions = (sim.stats.explosions || 0) + 1;
+  // It hops and turns a little on its own blast.
+  t.vx += (Math.random() - 0.5) * 3;
+  t.vz += (Math.random() - 0.5) * 3;
+  t.pop = sim.elapsed;
+}
+
 // byPlayer: the player hit this car, or shoved a car into it moments ago.
+// Casual destruction pass: damage stages on every civilian car (moving or
+// parked), drawn by render/city.js:
+//   light (health < 90): a few sparks on the hit, light smoke;
+//   medium (< 60): darker smoke, now and then a spark, dented colour;
+//   heavy (< 30): flames from the engine bay, thick smoke, burning for good
+//     (it spreads over the car with time);
+//   critical (wrecked): big flames; it may go up a few seconds later
+//     (blowAt; likelier the harder the crash); a blast nearby or another hit
+//     sets off a burning one sooner. After the explosion it stays as a
+//     charred, smouldering wreck. Never more than one explosion per car.
+export const CAR_FIRE = Object.freeze({ fireAt: 30, delay: [2.4, 5.2], chance: 0.22, perSpeed: 0.035, maxChance: 0.65, nudge: [0.35, 0.9] });
+const carStage = (t) => (t.burned ? 5 : t.state === "wreck" ? 4 : t.health < CAR_FIRE.fireAt ? 3 : t.health < 60 ? 2 : t.health < 90 ? 1 : 0);
+export { carStage };
+// A burning car hit again (or caught by a blast) goes up soon.
+function hurryBlow(sim, t) {
+  if (t.exploded || !(t.fireSince != null || t.state === "wreck")) return;
+  const soon = sim.elapsed + CAR_FIRE.nudge[0] + Math.random() * (CAR_FIRE.nudge[1] - CAR_FIRE.nudge[0]);
+  t.blowAt = Math.min(t.blowAt ?? Infinity, soon);
+}
 function damageTraffic(sim, city, t, closing, byPlayer = false) {
-  if (t.state === "wreck") return;
+  t.hitAt = sim.elapsed;
+  if (t.state === "wreck") {
+    if (closing > 7) hurryBlow(sim, t);
+    return;
+  }
   t.health -= closing * 4.5;
+  if (t.health < CAR_FIRE.fireAt && t.fireSince == null) t.fireSince = sim.elapsed;
   if (t.health <= 0) {
     t.health = 0;
     t.state = "wreck";
     t.speed = 0;
+    t.fireSince ??= sim.elapsed;
+    // Critical: a hard crash, or one in a few, goes up a few seconds later.
+    // The harder the crash, the likelier (never certain): about one in
+    // four at a light wreck, one in two at full speed.
+    const chance = Math.min(CAR_FIRE.maxChance, CAR_FIRE.chance + Math.max(0, closing - 12) * CAR_FIRE.perSpeed);
+    if (!t.exploded && Math.random() < chance)
+      t.blowAt = sim.elapsed + CAR_FIRE.delay[0] + Math.random() * (CAR_FIRE.delay[1] - CAR_FIRE.delay[0]);
     city.stats.trafficWrecks++;
     event(city, sim, {
       type: "traffic",
@@ -1279,6 +1334,7 @@ function updateTraffic(sim, city, dt) {
         angle: t.angle,
         color: t.color,
         wrecked: true,
+        burned: !!t.burned,
         car: null,
       });
     return false;
@@ -1302,6 +1358,7 @@ function updateTraffic(sim, city, dt) {
       t.x += t.vx * dt;
       t.z += t.vz * dt;
       if (t.state === "wreck") t.smoke = (t.smoke || 0) + dt;
+      if (t.blowAt != null && !t.exploded && sim.elapsed >= t.blowAt) blowCar(sim, city, t);
       continue;
     }
     driveTraffic(sim, city, t, dt);

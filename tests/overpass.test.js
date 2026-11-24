@@ -119,7 +119,7 @@ test("police follow the player up onto the deck and along it (two-level routing)
   }
 });
 
-test("pillars stand in the median, out of every crossing street; weak (striped) ones crack and break, strong ones do not", () => {
+test("pillars stand in the median, out of every crossing street; weak (striped) ones break in one hard hit or 2-3 ordinary ones, plain ones are tougher", () => {
   for (let seed = 1; seed <= 12; seed++) {
     const L = generateCity(seed), op = L.overpasses[0];
     if (!op) continue;
@@ -133,17 +133,30 @@ test("pillars stand in the median, out of every crossing street; weak (striped) 
         }
   }
   const s = make(STRAIGHT), op = s.overpasses[0];
-  const weak = op.pillars.find((q) => q.weak), strong = op.pillars.find((q) => !q.weak);
-  // One light hit: a crack, still standing; repeated hard hits (heavier
-  // car: fewer) bring it down.
-  hitPillar(s, weak, 12, 1);
-  assert.ok(weak.alive && weak.health < 100);
-  let hits = 0;
-  while (weak.alive && hits < 20) hitPillar(s, weak, 26, 1.5), hits++;
-  assert.ok(!weak.alive && hits <= 4, `${hits} hits`);
-  if (strong) {
-    for (let k = 0; k < 10; k++) hitPillar(s, strong, 40, 2);
-    assert.ok(strong.alive, "a strong pillar never gives");
+  const fresh = () => make(STRAIGHT).overpasses[0];
+  const count = (pick, impact, mass) => {
+    const s2 = make(STRAIGHT), q = pick(s2.overpasses[0]);
+    let hits = 0;
+    while (q.alive && hits < 20) hitPillar(s2, q, impact, mass), hits++;
+    return { hits, q };
+  };
+  const weakOf = (o) => o.pillars.find((q) => q.weak), strongOf = (o) => o.pillars.find((q) => !q.weak);
+  // A light hit: a crack, still standing.
+  const s1 = make(STRAIGHT), w1 = weakOf(s1.overpasses[0]);
+  hitPillar(s1, w1, 10, 1);
+  assert.ok(w1.alive && w1.health < 100);
+  // Casual pass: one hard high-speed hit takes a weak pillar out; two or
+  // three ordinary ones do; a heavier car needs no more; a police car
+  // (mass 1.2) wears it down too.
+  assert.equal(count(weakOf, 22, 1).hits, 1);
+  const ord = count(weakOf, 13, 1).hits;
+  assert.ok(ord >= 2 && ord <= 3, `${ord} ordinary hits`);
+  assert.ok(count(weakOf, 13, 1.5).hits <= ord);
+  assert.ok(count(weakOf, 14, 1.2).hits <= 3, "police wear it down");
+  // Plain pillars are tougher but give in the end.
+  if (strongOf(fresh())) {
+    const st = count(strongOf, 22, 1).hits;
+    assert.ok(st >= 2 && st <= 4, `${st} hits on a plain pillar`);
   }
 });
 

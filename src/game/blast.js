@@ -116,7 +116,9 @@ export function applyBlast(sim, e, later) {
     for (const c of wrecked) {
       if (c.exploded || Math.hypot(c.x - e.x, c.z - e.z) > R * 0.8) continue;
       c.exploded = true;
+      c.blowAt = null;
       later(jitter(sim) + 0.08, () => {
+        Object.assign(c, { burned: true, burnedAt: sim.elapsed, pop: sim.elapsed, fireSince: c.fireSince ?? sim.elapsed });
         sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "traffic", x: c.x, z: c.z, angle: c.angle, time: sim.elapsed, delay: 0, chainDepth: Math.min(3, depth), playerX: p.x, playerZ: p.z });
         if (sim.events.length > 64) sim.events.shift();
         sim.stats.explosions++;

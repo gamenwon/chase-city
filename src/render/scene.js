@@ -266,10 +266,13 @@ export class CityRenderer {
     loc.layout = sim.layout;
     this.locations = loc;
     // Night: the park and yard lamps light up too.
-    this.extraLamps = () =>
-      loc.items
+    this.extraLamps = () => [
+      ...loc.items
         .filter((it) => (it.kind === "lampPole" || it.kind === "lamp") && it.state === "stand")
-        .map((it) => ({ x: it.spec.x, z: it.spec.z, y: (it.spec.y ?? 0.4) + (it.kind === "lamp" ? 3.95 : 6.4), ground: (it.spec.y ?? 0.4) - 0.2 }));
+        .map((it) => ({ x: it.spec.x, z: it.spec.z, y: (it.spec.y ?? 0.4) + (it.kind === "lamp" ? 3.95 : 6.4), ground: (it.spec.y ?? 0.4) - 0.2 })),
+      // The elevated road's lamps (dark once their span has fallen).
+      ...(this.overpass?.lampHeads?.() || []),
+    ];
   }
   batchStatic() {
     const groups = new Map();

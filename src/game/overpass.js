@@ -31,7 +31,12 @@
 import { overpassHeight } from "../world/citygen.js";
 import { makePath, project, pointAt } from "./citygraph.js";
 
-export const PILLAR = Object.freeze({ health: 100, hitMin: 5, hitScale: 3.4, collapseAt: 2, fall: 1.1 });
+// Casual destruction pass: easier. A weak (striped) pillar goes in one
+// hard high-speed hit (closing speed x mass >= power) or two or three
+// ordinary ones; the plain pillars are tougher (about three hard hits) but
+// no longer unbreakable. Police cars wear them down too (mass 1.2), and
+// blasts near them count, so a chain of explosions can bring a span down.
+export const PILLAR = Object.freeze({ health: 100, strong: 150, hitMin: 5, hitScale: 4.4, power: 20, powerBonus: 1.7, strongScale: 0.75, blast: 125, collapseAt: 2, fall: 1.1 });
 
 export function createOverpasses(layout) {
   return (layout.overpasses || []).map((op, id) => {
@@ -39,7 +44,10 @@ export function createOverpasses(layout) {
     let solidTo = op.R;
     for (let s = 0; s < op.R; s += 0.25) if (overpassHeight(op, s) >= 3.6) { solidTo = s; break; }
     const pillars = op.pillars.map((q, k) => ({ ...q, id: k, op: id, kind: "pillar", health: PILLAR.health, alive: true })).sort((a, b) => a.s - b.s);
-    pillars.forEach((q, k) => (q.weak = pillars.length <= 3 || k % 2 === 0));
+    pillars.forEach((q, k) => {
+      q.weak = pillars.length <= 3 || k % 2 === 0;
+      q.health = q.maxHealth = q.weak ? PILLAR.health : PILLAR.strong;
+    });
     return { ...op, id, state: "up", fellAt: null, solidTo, pillars, debris: [], gaps: [], broken: false };
   });
 }
@@ -138,10 +146,14 @@ export const sameLevel = (a, b) => (a.level || 0) === (b.level || 0);
 // A car that hit a pillar: damage by closing speed and mass.
 export function hitPillar(sim, pillar, impact, mass = 1) {
   if (!pillar.alive || impact < PILLAR.hitMin) return;
-  // Only the weak (striped) pillars give; the others shrug it off.
-  if (!pillar.weak) return;
-  pillar.health -= (impact - PILLAR.hitMin * 0.5) * PILLAR.hitScale * mass;
+  // The striped (weak) pillars give much sooner; a really hard hit on one
+  // takes it out at once.
+  let dmg = (impact - PILLAR.hitMin * 0.5) * PILLAR.hitScale * mass;
+  if (pillar.weak && impact * mass >= PILLAR.power) dmg *= PILLAR.powerBonus;
+  if (!pillar.weak) dmg *= PILLAR.strongScale;
+  pillar.health -= dmg;
   pillar.lastHit = sim.elapsed;
+  pillar.lastHitDir = Math.atan2(pillar.x - (sim.player.x), pillar.z - sim.player.z);
   sim.impacts?.push({ id: ++sim.impactId, type: "collision", x: pillar.x, z: pillar.z, strength: impact, kind: "pillar", time: sim.elapsed });
   sim.city?.events.push({ id: ++sim.city.eventId, type: "pillar", action: "crack", x: pillar.x, z: pillar.z, strength: Math.min(15, impact), sound: "crack" });
   if (pillar.health <= 0) breakPillar(sim, pillar);
@@ -161,10 +173,12 @@ export function breakPillar(sim, pillar) {
 export function blastPillars(sim, e, R, s) {
   for (const op of sim.overpasses || [])
     for (const q of op.pillars) {
-      if (!q.alive || !q.weak) continue;
+      if (!q.alive) continue;
       const d = Math.hypot(q.x - e.x, q.z - e.z);
       if (d < R) {
-        q.health -= 85 * (1 - d / R) * s;
+        q.health -= PILLAR.blast * (1 - d / R) * s * (q.weak ? 1 : 0.6);
+        q.lastHit = sim.elapsed;
+        sim.city?.events.push({ id: ++sim.city.eventId, type: "pillar", action: "crack", x: q.x, z: q.z, strength: 12, sound: "crack" });
         if (q.health <= 0) breakPillar(sim, q);
       }
     }
@@ -221,7 +235,21 @@ function landSpan(sim, op, g) {
   // goes up); the player is hurt and shoved out sideways.
   let crushed = 0;
   for (const c of sim.police) if (c.state === "active" && inside(c)) { c.health = 0; c.lastDamageCause = "collapse"; crushed++; }
-  for (const t of sim.city?.traffic || []) if (t.state !== "wreck" && inside(t)) { t.state = "wreck"; t.health = 0; crushed++; }
+  for (const t of sim.city?.traffic || [])
+    if (inside(t)) {
+      // Crushed civilian cars catch fire; some go up a moment later.
+      if (t.state !== "wreck") crushed++;
+      Object.assign(t, { state: "wreck", health: 0, speed: 0, hitAt: sim.elapsed });
+      t.fireSince ??= sim.elapsed;
+      if (!t.exploded && t.blowAt == null && (t.id % 2 === 0)) t.blowAt = sim.elapsed + 0.8 + (t.id % 5) * 0.35;
+    }
+  // Chunks thrown off the sides hit cars just beside the span.
+  const near = (o) => {
+    const { s, lat } = local(op, o.x, o.z);
+    return (o.level || 0) === 0 && s > g.s0 - 2 && s < g.s1 + 2 && Math.abs(lat) >= op.W / 2 + 0.5 && Math.abs(lat) < op.W / 2 + 5;
+  };
+  for (const c of sim.police) if (c.state === "active" && near(c)) c.health -= 45;
+  for (const t of sim.city?.traffic || []) if (t.state !== "wreck" && near(t)) { t.health -= 55; t.hitAt = sim.elapsed; if (t.health < 30) t.fireSince ??= sim.elapsed; if (t.health <= 0) Object.assign(t, { state: "wreck", health: 0, speed: 0 }); }
   if (sim.target?.state === "fleeing" && inside(sim.target)) sim.target.health = Math.max(1, sim.target.health - 60);
   if (inside(sim.player)) {
     sim.damage?.(30);

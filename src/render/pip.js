@@ -49,7 +49,7 @@ export class BonnetCamera {
     const start = performance.now();
     this.camera.aspect = rect.w / rect.h;
     this.camera.updateProjectionMatrix();
-    const faded = buildings.filter((b) => b.mesh.material.opacity < 1);
+    const faded = buildings.filter((b) => b?.mesh?.material && b.mesh.material.opacity < 1);
     const opacities = faded.map((b) => b.mesh.material.opacity);
     for (const b of faded) b.mesh.material.opacity = 1;
     const shadows = renderer.shadowMap.autoUpdate;
