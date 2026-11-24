@@ -86,6 +86,7 @@ export class RepairRenderer {
       this.ring.setMatrixAt(n++, this.m);
     }
     this.box.count = this.ring.count = n;
+    this.box.visible = this.ring.visible = n > 0;
     this.box.instanceMatrix.needsUpdate = this.ring.instanceMatrix.needsUpdate = true;
     for (const f of sim.repairFx || []) {
       if (this.seen.has(f)) continue;
@@ -118,6 +119,7 @@ export class RepairRenderer {
       this.smoke.setColorAt(ns++, this.c.setHex(q.dark));
     }
     this.smoke.count = ns;
+    this.smoke.visible = ns > 0;
     this.smoke.instanceMatrix.needsUpdate = true;
     if (this.smoke.instanceColor) this.smoke.instanceColor.needsUpdate = true;
     let nf = 0;
@@ -130,6 +132,7 @@ export class RepairRenderer {
       }
     }
     this.flames.count = nf;
+    this.flames.visible = nf > 0;
     this.flames.instanceMatrix.needsUpdate = true;
     // Pickup sparks.
     let np = 0;
@@ -144,6 +147,7 @@ export class RepairRenderer {
       this.parts.setColorAt(np++, this.c.setHex(q.color));
     }
     this.parts.count = np;
+    this.parts.visible = np > 0;
     this.parts.instanceMatrix.needsUpdate = true;
     if (this.parts.instanceColor) this.parts.instanceColor.needsUpdate = true;
   }
