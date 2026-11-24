@@ -8,7 +8,7 @@ export const formatTime = (t) =>
     .padStart(2, "0")}:${Math.floor(t % 60)
     .toString()
     .padStart(2, "0")}`;
-const credits = (n) => `${Math.round(n).toLocaleString("ko-KR")} 크레딧`;
+const credits = (n) => `${Math.round(n).toLocaleString("ko-KR")} 코인`;
 const TYPE_TAGS = {
   chase: "CHASE · 추격",
   collect: "COLLECT · 수집",
@@ -27,6 +27,7 @@ export class Interface {
       [
         "time",
         "time-label",
+        "coins",
         "health",
         "health-bar",
         "arrest",
@@ -59,7 +60,16 @@ export class Interface {
   update(sim, escapeView = null) {
     const e = this.elements;
     e.time.textContent = formatTime(sim.elapsed);
-    // (Player durability is disabled: no gauge.)
+    // (Player durability is disabled: no gauge.) Coins this run.
+    const coins = sim.runCoins || 0;
+    if (coins !== this.shownCoins) {
+      e.coins.textContent = String(coins);
+      const box = e.coins.parentElement;
+      box.classList.remove("bump");
+      void box.offsetWidth;
+      if (coins > (this.shownCoins ?? 0)) box.classList.add("bump");
+      this.shownCoins = coins;
+    }
     e["arrest-bar"].style.width =
       `${(sim.arrest / CONFIG.arrestSeconds) * 100}%`;
     e.arrest.textContent =
@@ -180,7 +190,7 @@ export class Interface {
     document.querySelector("#mission-goal").textContent = mission.objective;
     document.querySelector("#mission-limit").textContent = limitText(mission);
     document.querySelector("#mission-reward").textContent =
-      `${mission.reward.amount} 크레딧`;
+      `${mission.reward.amount} 코인`;
     if (vehicle)
       document.querySelector("#mission-vehicle").textContent = vehicle.name;
   }
@@ -210,7 +220,7 @@ export class Interface {
       this.show(
         def.type === "chase" ? "ESCAPED!" : "MISSION CLEAR!",
         def.type === "chase" ? "도시 탈출 성공!" : `${def.title} 성공!`,
-        `${def.title} 완료 · 보상 ${sim.credits} 크레딧 획득`,
+        `${def.title} 완료 · 보상 ${sim.credits} 코인 획득`,
         "다시 도전 →",
       );
     } else {
@@ -255,7 +265,7 @@ export class Interface {
             }),
           ]),
     );
-    e["result-earned"].textContent = `+${credits(info.earned ?? sim.credits)}`;
+    e["result-earned"].textContent = `+${credits(info.earned ?? sim.credits)}` + (sim.runCoins ? ` (주행·파괴 ${sim.runCoins})` : "");
     e["next-mission"].hidden = !info.hasNext;
     e["open-select"].hidden = false;
     this.setAds(info.ads || {});

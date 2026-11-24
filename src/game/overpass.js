@@ -30,6 +30,7 @@
 // street below and drives on: never trapped.
 import { overpassHeight } from "../world/citygen.js";
 import { makePath, project, pointAt } from "./citygraph.js";
+import { awardCoins } from "./coins.js";
 
 // Casual destruction pass: easier. A weak (striped) pillar goes in one
 // hard high-speed hit (closing speed x mass >= power) or two or three
@@ -192,6 +193,7 @@ function collapseSpan(sim, op, span, pillar) {
   op.fellAt = sim.elapsed;
   sim.stats.overpassCollapses = (sim.stats.overpassCollapses || 0) + 1;
   const mid = spanPoint(op, (gap.s0 + gap.s1) / 2);
+  awardCoins(sim, `span:${op.id}:${gap.s0.toFixed(1)}`, "bridge", mid.x, mid.z, 0);
   sim.events.push({ id: ++sim.eventId, type: "collapse", op: op.id, gap: gap.id, x: mid.x, z: mid.z, time: sim.elapsed });
   // Dust off the broken pillar at once.
   if (pillar) sim.events.push({ id: ++sim.eventId, type: "explosion", dust: true, strength: 1.0, x: pillar.x, z: pillar.z, angle: 0, time: sim.elapsed, delay: 0, chainDepth: 0, playerX: sim.player.x, playerZ: sim.player.z });

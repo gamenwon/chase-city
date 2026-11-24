@@ -608,6 +608,19 @@ export class SoundSystem {
       this.parameter(skid.gain.gain, targets.skidGain, targets.skidGain > skid.level ? 0.06 : 0.22);
       skid.level = targets.skidGain;
       skid.pitch(targets.skidHz, 0.08);
+      // Coins: a bright two-note chime per pickup (rapid ones merge), a
+      // brighter run for a destruction reward.
+      this.coinSeen ||= new WeakSet();
+      for (const f of sim.coinFx || []) {
+        if (this.coinSeen.has(f)) continue;
+        this.coinSeen.add(f);
+        const t = this.context.currentTime;
+        if (t - (this.lastCoin ?? -1) < 0.07) continue;
+        this.lastCoin = t;
+        this.voice("tone", 0.55, f.kind === "pick" ? 1319 : 1175, 0);
+        this.voice("tone", 0.5, f.kind === "pick" ? 1760 : 1568, 0.055);
+        if (f.kind !== "pick") this.voice("tone", 0.5, 2093, 0.11);
+      }
       for (const event of sim.events)
         if (event.id > this.lastExplosion) {
           this.lastExplosion = event.id;

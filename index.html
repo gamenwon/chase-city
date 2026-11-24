@@ -18,6 +18,7 @@
       >
       <div class="stats">
         <div><small id="time-label">도주 시간</small><strong id="time">00:00</strong></div>
+        <div class="coins" aria-label="이번 미션 코인"><small>코인</small><strong><i class="coin-icon" aria-hidden="true"></i><span id="coins">0</span></strong></div>
         <button
           id="pip-toggle"
           aria-label="운전자 시점 보조 화면"
@@ -57,8 +58,8 @@
       aria-describedby="message"
     >
       <section id="panel">
-        <div class="wallet" id="wallet" aria-label="보유 크레딧">
-          <span>보유</span> <b id="wallet-credits">0</b> 크레딧
+        <div class="wallet" id="wallet" aria-label="보유 코인">
+          <span>보유</span> <b id="wallet-credits">0</b> 코인
         </div>
         <div class="eyebrow" id="eyebrow">MISSION BRIEFING</div>
         <h1 id="title">도시 탈출</h1>
@@ -74,7 +75,7 @@
           </div>
           <div>
             <dt>성공 보상</dt>
-            <dd id="mission-reward">500 크레딧</dd>
+            <dd id="mission-reward">500 코인</dd>
           </div>
           <div>
             <dt>차량</dt>
@@ -91,7 +92,7 @@
             <dd><ul id="result-destroyed"></ul></dd>
           </div>
           <div>
-            <dt>획득 크레딧</dt>
+            <dt>획득 코인</dt>
             <dd id="result-earned">0</dd>
           </div>
         </dl>

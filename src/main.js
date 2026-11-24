@@ -106,6 +106,7 @@ function briefing() {
 // is being played.
 function chooseMission(id) {
   if (!renderer || state === "running") return;
+  payCoins(); // (a run left mid-way keeps what it collected)
   document.body.classList.remove("busted");
   sim.reset(id, progress.selectedVehicle);
   renderer.setLayout(sim.layout);
@@ -229,11 +230,25 @@ function resultInfo() {
     hasNext: !!nextMission(sim.missionId, order),
   };
 }
+// Coins picked up and earned by destruction this run go into the saved
+// balance when the run ends (success or failure), once: what was already
+// paid for this run (before a continue) is not paid again.
+let coinPaid = { run: null, amount: 0 };
+function payCoins() {
+  if (!sim.runCoins) return 0;
+  const already = coinPaid.run === runKey() ? coinPaid.amount : 0;
+  const due = sim.runCoins - already;
+  if (due <= 0) return 0;
+  const paid = progress.pay(runKey(), `coins-${already}`, due);
+  coinPaid = { run: runKey(), amount: already + paid };
+  return paid;
+}
 // A run just ended: pay the reward once, record it, show the result.
 function finishRun() {
   const success = sim.result === "success";
   const base = success ? sim.credits : 0;
-  const earned = progress.pay(runKey(), "base", base);
+  const coins = payCoins();
+  const earned = progress.pay(runKey(), "base", base) + coins;
   progress.recordRun(sim.missionId, {
     success,
     time: sim.elapsed,

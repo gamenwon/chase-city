@@ -13,6 +13,7 @@
 // Systems outside the simulation (the preview locations) join in through
 // sim.blastListeners: (sim, event, radius, strength, later) => void.
 import { blastCity } from "./city.js";
+import { awardCoins } from "./coins.js";
 import { blastPillars } from "./overpass.js";
 import { blastWalls } from "./buildings.js";
 
@@ -119,6 +120,7 @@ export function applyBlast(sim, e, later) {
       c.blowAt = null;
       later(jitter(sim) + 0.08, () => {
         Object.assign(c, { burned: true, burnedAt: sim.elapsed, pop: sim.elapsed, fireSince: c.fireSince ?? sim.elapsed });
+        awardCoins(sim, `car:${c.id}`, "civilian", c.x, c.z, Math.min(3, depth));
         sim.events.push({ id: ++sim.eventId, type: "explosion", cause: "traffic", x: c.x, z: c.z, angle: c.angle, time: sim.elapsed, delay: 0, chainDepth: Math.min(3, depth), playerX: p.x, playerZ: p.z });
         if (sim.events.length > 64) sim.events.shift();
         sim.stats.explosions++;

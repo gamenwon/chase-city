@@ -31,6 +31,7 @@ import { B, G, cyl, pieceGeometry, bakedMaterial, coloredGeometry } from "./part
 import { BRANDS, BRAND_KEYS, SMALL_SIGNS, ADS } from "../../world/brands.js";
 import { SCULPTURES } from "./sculptures.js";
 import { Tumblers } from "./tumble.js";
+import { awardCoins } from "../../game/coins.js";
 
 const BASE = 0.4;
 const ATLAS = 1024;
@@ -591,6 +592,7 @@ export class AdSystem {
     if (sc.rec?.halo) this.haloOff = [...(this.haloOff || []), { range: sc.rec.halo, at: (sim?.elapsed ?? 0) + 2.4 }];
     sc.glowUntil = (sim?.elapsed ?? 0) + 2.4;
     this.stats.detached++;
+    if (sim) awardCoins(sim, `sculpture:${sc.b.x},${sc.b.z}`, "sculpture", sc.pos.x, sc.pos.z, 0);
     const side = Math.random() - 0.5;
     this.tumblers.launch(sc, nx * (3 + power * 0.18) - nz * side * 2, 3.2 + power * 0.08, nz * (3 + power * 0.18) + nx * side * 2, 3.2);
     this.burst(sc.pos.x, sc.pos.y - sc.def.r, sc.pos.z, 12, [0xffe14a, 0xffffff], 5, 14, 0.6);
@@ -607,6 +609,7 @@ export class AdSystem {
   fireworks(sim, f, speed) {
     if (!sim || this.shows.some((s) => s.b === f.b)) return;
     this.stats.fireworks++;
+    awardCoins(sim, `fireworks:${f.b.x},${f.b.z}`, "fireworks", f.b.x, f.b.z, 0);
     const now = sim.elapsed;
     const n = 16;
     const rockets = Array.from({ length: n }, (_, i) => ({ at: now + 0.15 + i * 0.42 + Math.random() * 0.25, low: i % 4 === 2, launched: false }));

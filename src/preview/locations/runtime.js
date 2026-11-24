@@ -27,6 +27,7 @@ import { PERIMETER, perimeterBuilding } from "./perimeter.js";
 import { Storefronts } from "./storefronts.js";
 import { AdSystem } from "./ads.js";
 import { hitPillar } from "../../game/overpass.js";
+import { awardCoins } from "../../game/coins.js";
 import { PropBatch, PropInstances } from "./batch.js";
 
 const TOP = 0.4;
@@ -444,6 +445,7 @@ export class LocationsRuntime {
   explodeIsland(sim, isl) {
     if (isl.state !== "intact") return;
     isl.state = "wrecked";
+    awardCoins(sim, `island:${isl.x},${isl.z}`, "gas", isl.x, isl.z, 0);
     isl.intact.visible = false;
     isl.wrecked.visible = true;
     this.stats.islands++;

@@ -19,6 +19,7 @@ import { CONTAINER, ROBOT_PARTS } from "./yard.js";
 import { wheelGeometryBuild, gondolaBuild, carouselTopBuild, horseBuild, DINO_PARTS } from "./funpark.js";
 import { Tumblers } from "./tumble.js";
 import { damageCar } from "../../game/city.js";
+import { awardCoins } from "../../game/coins.js";
 
 const UP = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -458,6 +459,7 @@ export class BigProps {
   breakWheel(sim, w, vx, vz) {
     if (w.state !== "mounted") return;
     this.stats.wheels++;
+    awardCoins(sim, `wheel:${w.f.x},${w.f.z}`, "wheel", w.f.x, w.f.z, 0);
     // Off its axle: it rolls away in its own plane, the way the hit pushed.
     const f = w.f;
     const px = -f.axle.z, pz = f.axle.x; // in-plane direction
@@ -528,6 +530,7 @@ export class BigProps {
     if (L.health <= 0) {
       L.state = "broken";
       this.stats.landmarksBroken++;
+      awardCoins(sim, `landmark:${L.spec.x},${L.spec.z}`, "landmark", L.spec.x, L.spec.z, 0);
       for (const p of L.parts) if (p.state === "mounted") this.launchPart(sim, L, p, 1.3);
       sim.city?.events.push({ id: ++sim.city.eventId, type: "landmark", action: "break", x: L.spec.x, z: L.spec.z, strength: 15, sound: "rumble", kick: 0.4 });
     }

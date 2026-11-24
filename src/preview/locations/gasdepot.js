@@ -10,6 +10,7 @@
 // come down, cylinders are thrown out; fires keep burning on the wreckage
 // and everything stays until restart. The tanks' footprints stay solid
 // (their wreckage is there), flung pieces are not (they never block).
+import { awardCoins } from "../../game/coins.js";
 import * as THREE from "three";
 import { C, B, G, cyl, add, bake, signBoard, pieceMesh } from "./parts.js";
 
@@ -315,6 +316,7 @@ export class GasDepot {
     v.state = "burst";
     this.stats.ruptured++;
     const w = this.world(v);
+    awardCoins(sim, `tank:${w.x.toFixed(1)},${w.z.toFixed(1)}`, "depot", w.x, w.z, 0);
     const now = sim.elapsed;
     // The largest blast in the game (major), then the fire and the smoke
     // columns of the explosion system.

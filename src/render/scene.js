@@ -16,6 +16,7 @@ import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
+import { CoinRenderer } from "./coins.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
 import { jumpPitch } from "../game/jumps.js";
@@ -122,6 +123,7 @@ export class CityRenderer {
     // V2.1 elevated road(s) of a generated city.
     this.overpass = new OverpassRenderer(this.scene, theme);
     this.heli = new HelicopterRenderer(this.scene);
+    this.coins = new CoinRenderer(this.scene);
     this.overpass.setLayout(layout);
     // V2.1 destructible low-rise buildings (wall cells).
     this.cells = new BuildingCellsRenderer(this.scene);
@@ -408,6 +410,7 @@ export class CityRenderer {
     // Police helicopter (after the camera has moved this frame).
     this.heli.setSun(this.sun?.position);
     this.heli.update(sim, this.camera, this.tod === "night", dt);
+    this.coins.update(sim, dt, this.tod === "night");
     this.cells.update(sim, dt);
     // A low-rise building with a hole in it: its lit windows go out.
     if (sim.buildingCells?.version !== this.cellsNightVersion) {

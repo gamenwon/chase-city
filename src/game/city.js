@@ -1,3 +1,4 @@
+import { awardCoins } from "./coins.js";
 import { CONFIG, clamp } from "./config.js";
 import { buildLanes, buildWalks, pointAt, project, nearestWalk } from "./citygraph.js";
 import { overpassHeight } from "../world/citygen.js";
@@ -1256,6 +1257,7 @@ export function bump(a, ra, ma, b, rb, mb) {
 // blast system (it damages and shoves what is round it, may set off the
 // next one), then it is a charred wreck for good.
 function blowCar(sim, city, t) {
+  awardCoins(sim, `car:${t.id}`, "civilian", t.x, t.z, 0);
   t.exploded = true;
   t.burned = true;
   t.blowAt = null;
