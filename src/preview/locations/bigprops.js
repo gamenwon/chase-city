@@ -145,6 +145,28 @@ export class BigProps {
       }
       if (f.landmark) this.addLandmark(f.landmark);
     }
+    // String lights over the park lanes (bulbs, glowing at night).
+    for (const f of feats) {
+      if (f.kind !== "funpark") continue;
+      const { cx, cz, L, S, alongX } = f.block;
+      const mat = glowMaterial();
+      this.glowMats.push(mat);
+      const build = (g) => {
+        const cols = [0xffd23a, 0xff5fd8, 0x4ae8ff, 0x7aff6a, 0xffffff];
+        for (const [ax, len] of [[0, L], [1, S]])
+          for (let k = 0; k < Math.floor(len / 0.55); k++) {
+            const t = -len / 2 + 0.3 + k * 0.55;
+            const sag = 6.2 - 0.6 * Math.cos((t / len) * Math.PI) ** 2;
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshBasicMaterial({ color: cols[k % cols.length] }));
+            m.position.set(ax ? 0.6 : t, sag + 0.05, ax ? t : 0.6);
+            g.add(m);
+          }
+      };
+      const mesh = new THREE.Mesh(pieceGeometry(build), mat);
+      mesh.position.set(cx, 0, cz);
+      mesh.rotation.y = alongX ? 0 : Math.PI / 2;
+      scene.add(mesh);
+    }
     // Balloons (spheres + a string), instanced.
     const nb = this.balloonSpots.reduce((a, b) => a + b.n, 0);
     if (nb) {
@@ -569,7 +591,7 @@ export class BigProps {
   }
   render(dt, sim, night) {
     const now = sim.elapsed;
-    for (const m of this.glowMats) m.userData.glow.value = night ? 0.42 : 0;
+    for (const m of this.glowMats) m.userData.glow.value = night ? 0.5 : 0.04;
     // Ferris wheels: turning (gondolas hanging level) or loose.
     for (const w of this.wheels) {
       const f = w.f;

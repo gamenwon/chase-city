@@ -261,10 +261,14 @@ export class AdSystem {
         sign("small", f, [b.x + nx * (f.half + 0.07) + tx * sx, BASE + 1.85, b.z + nz * (f.half + 0.07) + tz * sx], [tx * 0.45, 0, tz * 0.45], [0, 0.225, 0], word, 1.8);
       }
       const commercial = b.district === "commercial" || b.diner;
-      if (commercial && b.h >= 8.5) {
-        // Blade sign at the main face's right corner, both sides.
-        const f = main, tx = Math.cos(f.ry), tz = -Math.sin(f.ry);
-        const lx = f.span / 2 - 0.35;
+      // Blade signs: at the main face's right corner; a second one on the
+      // other street face the camera sees (taller buildings) for a denser
+      // commercial street.
+      const second = faces.filter((f) => f !== main && f.nx * 0.55 + f.nz * 0.85 > 0.2)[0];
+      const blades = commercial && b.h >= 8.5 ? [[main, 1], ...(second && b.h >= 10 ? [[second, -1]] : [])] : [];
+      for (const [f, corner] of blades) {
+        const tx = Math.cos(f.ry), tz = -Math.sin(f.ry);
+        const lx = corner * (f.span / 2 - 0.35);
         const H = Math.min(5.6, b.h - 4.4), W = H / 4;
         const out = f.half + 0.25 + W / 2;
         const c = [b.x + f.nx * out + tx * lx, BASE + 3.7 + H / 2, b.z + f.nz * out + tz * lx];
@@ -339,6 +343,10 @@ export class AdSystem {
         mesh.receiveShadow = true;
         scene.add(mesh);
         const home = new THREE.Vector3(b.x, top + 1.42 + def.mount, b.z);
+        // At night a coloured halo behind it (no light source: a glow quad).
+        const tx = Math.cos(main.ry), tz = -Math.sin(main.ry);
+        const hr = def.r * 1.25;
+        rec.halo = glowQ.add([b.x - main.nx * 0.8, home.y, b.z - main.nz * 0.8], [tx * hr, 0, tz * hr], [0, hr, 0], FULL, neon);
         const q0 = new THREE.Quaternion().setFromAxisAngle(UP, main.ry);
         const sc = { b, kind: b.sculpture, def, mesh, mat, home, q0, face: main, rec, state: "mounted" };
         // A donut that stops rolling topples flat.
@@ -424,6 +432,7 @@ export class AdSystem {
     this.puffList = [];
     this.flicker = new Set();
     this.shows = [];
+    this.haloOff = [];
     this.secondary = 0;
     for (const s of this.signs) Object.assign(s, { state: "on", since: 0, until: 0, lit: 1 });
     const sc = this.signMesh.geometry.attributes.color, sp = this.signMesh.geometry.attributes.position, gc = this.glowMesh.geometry.attributes.color;
@@ -579,6 +588,7 @@ export class AdSystem {
   // ------------------------------------------------------ sculptures --
   detach(sim, sc, nx, nz, power) {
     if (sc.state !== "mounted") return;
+    if (sc.rec?.halo) this.haloOff = [...(this.haloOff || []), { range: sc.rec.halo, at: (sim?.elapsed ?? 0) + 2.4 }];
     sc.glowUntil = (sim?.elapsed ?? 0) + 2.4;
     this.stats.detached++;
     const side = Math.random() - 0.5;
@@ -736,6 +746,15 @@ export class AdSystem {
       }
       if (Math.random() < 0.08) this.sparksAt(s, 3);
     }
+    // Halos of sculptures knocked off go out (after their glow).
+    if (this.haloOff?.length)
+      for (const h of [...this.haloOff])
+        if (now >= h.at) {
+          const gc = this.glowMesh.geometry.attributes.color;
+          for (let i = h.range.start; i < h.range.start + h.range.count; i++) gc.array[i * 3] = gc.array[i * 3 + 1] = gc.array[i * 3 + 2] = 0;
+          gc.needsUpdate = true;
+          this.haloOff.splice(this.haloOff.indexOf(h), 1);
+        }
     // Screens: change ad every 3 s, scrolling into place.
     const cycle = now / 3, frame = Math.floor(cycle), t = Math.min(1, (cycle - frame) * 6);
     this.screenTex.offset.y = 1 - 0.25 * ((frame % 4) + t) - 0.25;
