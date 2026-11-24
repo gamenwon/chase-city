@@ -353,14 +353,20 @@ export class CityRenderer {
   }
   render(sim, dt, running = sim.started && !sim.result) {
     const p = sim.player;
+    // The chosen car's model (vehicle collection; the classic car otherwise).
+    if (this.playerModelId !== (sim.vehicleId || "starter")) this.setPlayerModel(sim.vehicleId || "starter");
     this.world?.update?.(sim, dt);
     this.player.position.set(p.x, p.y || 0, p.z);
     this.player.rotation.order = "YXZ"; // yaw, then pitch and roll in the car's frame
     this.player.rotation.y = p.angle;
     // Nose up off a ramp, down for the landing (jumps.js).
     this.player.rotation.x += (jumpPitch(p) - this.player.rotation.x) * (1 - Math.exp(-dt * 14));
+    // Body roll in turns per car (an ice-cream truck sways, a supercar
+    // stays flat), and a suspension bob on the bouncy ones.
+    const vs = sim.vehicle?.stats || {};
     this.player.rotation.z +=
-      (-p.turn * 0.045 - this.player.rotation.z) * (1 - Math.exp(-dt * 9));
+      (-p.turn * (vs.roll ?? 0.045) - this.player.rotation.z) * (1 - Math.exp(-dt * 9));
+    if (vs.bounce) this.player.position.y += vs.bounce * Math.abs(Math.sin(sim.elapsed * 11)) * Math.min(1, Math.hypot(p.vx, p.vz) / 18);
     for (const wheel of this.player.userData.wheels) {
       wheel.rotation.x = -sim.elapsed * p.speed;
       wheel.rotation.y = wheel.position.z < 0 ? p.turn * 0.15 : 0;

@@ -207,10 +207,11 @@ export function updateCoins(sim) {
   const p = sim.player;
   if (!sim.coins?.length || sim.result) return;
   const py = (p.y || 0) + 0.7;
+  const R = sim.vehicle?.stats.coinRadius || COINS.radius;
   for (const c of sim.coins) {
     if (c.taken) continue;
-    if (Math.abs(c.x - p.x) > COINS.radius || Math.abs(c.z - p.z) > COINS.radius) continue;
-    if (Math.hypot(c.x - p.x, c.z - p.z) > COINS.radius || Math.abs(c.y - py) > COINS.height) continue;
+    if (Math.abs(c.x - p.x) > R || Math.abs(c.z - p.z) > R) continue;
+    if (Math.hypot(c.x - p.x, c.z - p.z) > R || Math.abs(c.y - py) > COINS.height) continue;
     c.taken = true;
     c.takenAt = sim.elapsed;
     sim.runCoins += c.value;

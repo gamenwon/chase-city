@@ -15,9 +15,11 @@ export function soundTargets(sim) {
   const turnLoad = (Math.abs(p.turn || 0) * speed) / 24 + lateral * 0.2;
   const screech =
     clamp((turnLoad - 1.05) / 0.75, 0, 1) * clamp((speed - 9) / 7, 0, 1);
+  // Each car sounds like itself (vehicles.js engine: pitch, gain).
+  const eng = sim.vehicle?.stats.engine || { pitch: 1, gain: 1 };
   return {
-    engineHz: 45 + speed * 6,
-    engineGain: 0.012 + clamp(speed / 24, 0, 1) * 0.035,
+    engineHz: (45 + speed * 6) * eng.pitch,
+    engineGain: (0.012 + clamp(speed / 24, 0, 1) * 0.035) * eng.gain,
     sirenGain: 0.06 * Math.pow(clamp(1 - nearest / 75, 0, 1), 2),
     skidGain: 0.055 * screech,
     // Police helicopter: a thudding rotor, louder the nearer it is.
@@ -608,6 +610,13 @@ export class SoundSystem {
       this.parameter(skid.gain.gain, targets.skidGain, targets.skidGain > skid.level ? 0.06 : 0.22);
       skid.level = targets.skidGain;
       skid.pitch(targets.skidHz, 0.08);
+      // Ice-cream truck: its little tune when it sets off and now and then
+      // after (never more often than every 40 s).
+      if (sim.vehicle?.stats.jingle && sim.elapsed > 0.5 && sim.elapsed - (this.jingleAt ?? -99) > 40 && sim.player.speed > 5) {
+        this.jingleAt = sim.elapsed;
+        [1047, 1319, 1568, 1319, 1175, 1047].forEach((hz, i) => this.voice("tone", 0.4, hz, i * 0.16));
+      }
+      if (sim.elapsed < (this.jingleAt ?? 0)) this.jingleAt = -99;
       // Coins: a bright two-note chime per pickup (rapid ones merge), a
       // brighter run for a destruction reward.
       this.coinSeen ||= new WeakSet();

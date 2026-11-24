@@ -441,9 +441,11 @@ function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
       // Knocking it over costs some speed: more for heavier props.
       const keep =
         prop.kind === "trash" ? 0.96 : prop.kind === "sign" ? 0.9 : 0.75;
-      car.vx *= keep;
-      car.vz *= keep;
-      if (isPlayer) car.speed = (car.speed ?? 0) * keep;
+      // Heavy machines lose much less (vehicles.js propRetain).
+      const k = isPlayer ? keep + (1 - keep) * (sim.vehicle?.stats.propRetain || 0) : keep;
+      car.vx *= k;
+      car.vz *= k;
+      if (isPlayer) car.speed = (car.speed ?? 0) * k;
       if (impact > 6)
         sim.cameraKick = Math.max(
           sim.cameraKick || 0,
@@ -1387,13 +1389,23 @@ function updateTraffic(sim, city, dt) {
     // a civilian car further and loses less itself).
     const pm = 1.3 * ((sim.vehicle?.stats.durability || 100) / 100);
     let closing = lvl(p) === lvl(t) ? bump(p, CONFIG.radius, pm, t, 1.1, m) : 0;
+    const vs = sim.vehicle?.stats || {};
+    // Monster truck: a civilian car hit at speed is climbed over and
+    // flipped (the truck barely slows).
+    if (closing > 5 && vs.climbs && t.state !== "wreck") {
+      t.flip = { at: sim.elapsed, h: 1.6, side: Math.random() < 0.5 ? 1 : -1 };
+      damageTraffic(sim, city, t, 40, true);
+      if (!p.air) Object.assign(p, { air: true, vy: 3.6, y: p.y || 0, jumpFrom: { x: p.x, z: p.z, t: sim.elapsed } });
+      p.speed = Math.max(p.speed, (vs.topSpeed || 24) * 0.8);
+    }
     if (closing > 0) {
-      p.speed = Math.max(0, p.speed - closing * 0.4);
+      p.speed = Math.max(0, p.speed - closing * 0.4 * (1 - (vs.retain ?? 0)));
       if (closing > 6) sim.damage(5);
       if (closing > 3) {
         city.stats.trafficCollisions++;
         t.playerHitAt = sim.elapsed;
-        damageTraffic(sim, city, t, closing, true);
+        // A heavier, harder car wrecks it sooner (vehicle impact power).
+        damageTraffic(sim, city, t, closing * Math.sqrt(vs.impact || 1), true);
         if (t.state === "drive") {
           t.state = "yield";
           t.timer = 2.5;
@@ -1478,7 +1490,8 @@ export function updateCity(sim, dt) {
   if (!city) return;
   sim.cameraKick = 0;
   const p = sim.player;
-  if (!p.level) hitProps(sim, city, p, CONFIG.radius, true);
+  // (Props give way sooner to a car with more destruction power.)
+  if (!p.level) hitProps(sim, city, p, sim.vehicle?.stats.radius || CONFIG.radius, true, 1 / (sim.vehicle?.stats.env || 1));
   for (const c of sim.police)
     if (
       c.state === "active" &&

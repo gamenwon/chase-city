@@ -355,16 +355,20 @@ export class LocationsRuntime {
       this.speeds.set(car, sp);
       const speed = Math.max(sp, before);
       const near = (c, r) => Math.abs(car.x - c.x) < r && Math.abs(car.z - c.z) < r;
-      const radius = car === sim.player ? CONFIG.radius : CONFIG.policeRadius;
+      const radius = car === sim.player ? sim.vehicle?.stats.radius || CONFIG.radius : CONFIG.policeRadius;
+      // The player's car hits as hard as its destruction power says
+      // (vehicles.js env): facilities give way at lower speeds.
+      const env = car === sim.player ? sim.vehicle?.stats.env || 1 : 1;
+      const hit = env === 1 ? car : { x: car.x, z: car.z, vx: car.vx * env, vz: car.vz * env, speed: (car.speed || 0) * env, level: car.level, y: car.y };
       // Every breakable and pushable piece (each test starts with a cheap
       // 6 m box reject, so far pieces cost almost nothing).
-      this.touchItems(car, radius, speed);
+      this.touchItems(hit, radius, speed * env);
       this.vehicles.touch(sim, car, radius, car === sim.player);
-      this.storefronts.touch(sim, car, radius);
-      this.big.touch(sim, car, radius, speed, car === sim.player);
+      this.storefronts.touch(sim, hit, radius);
+      this.big.touch(sim, car, radius, speed * env, car === sim.player);
       this.gantries.touch(sim, car, radius);
       this.depot?.touch(sim, car, radius, speed);
-      this.flyers.touch(sim, car, radius, speed);
+      this.flyers.touch(sim, hit, radius, speed * env);
       if (near(GAS, 13)) this.touchGas(sim, car, radius, speed);
       if (near(PARK, 13)) this.touchFountain(sim, car, radius, speed);
       if (near(GAS, 13) || near(COURT, 13) || near(PARK, 13)) {

@@ -459,12 +459,13 @@ export class Simulation {
     }
     // A hard hit on an overpass pillar damages it (V2.1).
     if (body.lastObstacle?.kind === "pillar" && body.lastImpact > 0) {
-      const mass = body === this.player ? (this.vehicle.stats.durability || 100) / 100 : 1.2;
+      const s = this.vehicle.stats;
+      const mass = body === this.player ? (s.mass || 1) * (s.env || 1) : 1.2;
       hitPillar(this, body.lastObstacle, body.lastImpact, mass);
     }
     // ...or on the wall of a low-rise building: it may break through.
     if (body.lastObstacle?.kind === "bcell" && body.lastImpact > 0) {
-      const mass = body === this.player ? (this.vehicle.stats.durability || 100) / 100 : body.health != null && body.role ? 1.2 : 1;
+      const mass = body === this.player ? (this.vehicle.stats.mass || 1) * (this.vehicle.stats.env || 1) : body.health != null && body.role ? 1.2 : 1;
       if (hitWall(this, body, body.lastObstacle, body.lastImpact, mass, v0)) hit = false;
     }
     body.lastObstacle = null;
@@ -673,13 +674,15 @@ export class Simulation {
   drivePlayer(dt, input) {
     const p = this.player;
     const steering = (input.left ? 1 : 0) - (input.right ? 1 : 0);
+    // Vehicle collection (vehicles.js): steering response, turn rate,
+    // acceleration and top speed per car.
+    const car = this.vehicle.stats;
     p.steering =
       (p.steering || 0) +
-      (steering - (p.steering || 0)) * (1 - Math.exp(-dt * 7));
-    const car = this.vehicle.stats;
+      (steering - (p.steering || 0)) * (1 - Math.exp(-dt * (car.steerResponse || 7)));
     p.turn = p.steering * car.turnRate;
     p.angle += p.turn * dt;
-    p.speed += (car.topSpeed - p.speed) * (1 - Math.exp(-2 * dt));
+    p.speed += (car.topSpeed - p.speed) * (1 - Math.exp(-(car.accel || 2) * dt));
     const grip = 1 - Math.exp(-car.grip * dt);
     p.vx += (-Math.sin(p.angle) * p.speed - p.vx) * grip;
     p.vz += (-Math.cos(p.angle) * p.speed - p.vz) * grip;
@@ -711,9 +714,9 @@ export class Simulation {
       if (r.t >= 1) p.recover = null;
       return;
     }
-    const hitWall = this.move(p, dt);
+    const hitWall = this.move(p, dt, car.radius || CONFIG.radius);
     // Dirt ramps (jumps.js): up the slope, over the crest, through the air.
-    updateJump(this, p, dt, (this.vehicle.stats.durability || 100) / 100);
+    updateJump(this, p, dt, car.mass || 1);
     this.watchWedge(p, hitWall || !!post, steering);
     // Pressed against walls or posts for over a second without getting
     // anywhere (a pocket the sideways slide only shuttles about in): turn
@@ -802,19 +805,46 @@ export class Simulation {
         // V2.0 pin arrest: when the player last touched a police car.
         p.policeContactAt = this.elapsed;
         const { x: nx, z: nz, depth } = contact;
-        // A car holding a roadblock is braced across the road: the player
-        // cannot shove it aside, only bounce off it.
-        const share = c.blockState === "hold" ? 0 : 0.2;
+        // Vehicle collection: who gives way depends on the player car's
+        // weight (vehicles.js). A car holding a roadblock is braced across
+        // the road: only the heaviest cars shove it at all, a little.
+        const car = this.vehicle.stats, mass = car.mass || 1;
+        const braced = c.blockState === "hold";
+        const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
+        // Monster truck: up and over a (not braced) police car, crushing it.
+        if (car.climbs && !braced && closing > 6 && !(c.climbedAt > this.elapsed - 1)) {
+          c.climbedAt = this.elapsed;
+          c.health = 0;
+          c.lastDamageCause = "crushed";
+          this.stats.crushedByPlayer = (this.stats.crushedByPlayer || 0) + 1;
+          if (!p.air) Object.assign(p, { air: true, vy: 4.2, y: p.y || 0, jumpFrom: { x: p.x, z: p.z, t: this.elapsed } });
+          this.recordImpact(p, closing, "player-police");
+          continue;
+        }
+        const share = braced ? (car.breakBlocks ? 0.12 : 0) : Math.min(0.75, Math.max(0.08, 0.2 + ((mass - 1) / 1.5) * 0.5));
         p.x -= nx * (depth * (1 - share) + 0.001);
         p.z -= nz * (depth * (1 - share) + 0.001);
         c.x += nx * depth * share;
         c.z += nz * depth * share;
-        const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
-        p.vx -= nx * closing * 0.9;
-        p.vz -= nz * closing * 0.9;
+        const keep = car.retain ?? 0;
+        p.vx -= nx * closing * 0.9 * (1 - keep);
+        p.vz -= nz * closing * 0.9 * (1 - keep);
+        // A light car bounces back off.
+        if (mass < 1) {
+          p.vx -= nx * closing * 0.3 * (1 - mass);
+          p.vz -= nz * closing * 0.3 * (1 - mass);
+        }
         if (share) {
-          c.vx += nx * closing * 0.1;
-          c.vz += nz * closing * 0.1;
+          // (The classic car: exactly the old 0.1.)
+          const k = Math.max(0.05, 0.1 + (share - 0.2) * 0.6) * Math.sqrt(car.impact || 1);
+          c.vx += nx * closing * k;
+          c.vz += nz * closing * k;
+        }
+        // A heavy car's hit damages the police car (more the stronger).
+        if (closing > 6 && (car.impact || 1) > 1 && this.elapsed - (c.playerHitAt ?? -9) > 0.4) {
+          c.playerHitAt = this.elapsed;
+          c.health -= (closing - 6) * 4 * Math.max(0, (car.impact || 1) - 1);
+          if (c.health <= 0) c.lastDamageCause = "rammed";
         }
         // Only a real hit hurts: a car pressed nose-first against a parked
         // police car (throttle on, not actually moving) takes no damage, the
@@ -824,7 +854,7 @@ export class Simulation {
             this.recordImpact(p, closing, "player-police");
           this.damage(5);
         }
-        p.speed = Math.max(0, p.speed - closing * 0.25);
+        p.speed = Math.max(0, p.speed - closing * 0.25 * (1 - (car.retain ?? 0)));
       }
     }
   }

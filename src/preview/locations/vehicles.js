@@ -251,7 +251,8 @@ export class VehicleSystem {
         const dx = cx - car.x, dz = cz - car.z, d = Math.hypot(dx, dz);
         if (d >= radius + r || d < 1e-6) continue;
         const nx = dx / d, nz = dz / d, push = radius + r - d;
-        const m = v.def.mass, share = m / (m + PLAYER_MASS);
+        const pm = isPlayer ? PLAYER_MASS * (sim.vehicle?.stats.mass || 1) * Math.sqrt(sim.vehicle?.stats.impact || 1) : PLAYER_MASS;
+        const m = v.def.mass, share = m / (m + pm);
         // The car gives way in proportion to the vehicle's mass...
         // (a heavy one hardly creeps when a car leans on it).
         const give = (1 - share) * (1 - share);
