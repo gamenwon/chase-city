@@ -1104,3 +1104,37 @@ body.busted #arrest-countdown {
 @media (prefers-reduced-motion: reduce) {
   .stats .coins strong.bump span { animation: none; }
 }
+
+/* Developer vehicle picker (briefing). */
+.link-button {
+  margin-left: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid #ffcf19;
+  background: transparent;
+  color: #ffcf19;
+  border-radius: 3px;
+}
+#vehicle-picker[hidden] { display: none; }
+#vehicle-picker { margin: 4px 0 12px; }
+.vp-head { font: 700 10px monospace; letter-spacing: 1px; color: #9fbeb9; margin-bottom: 8px; }
+#vehicle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.vp-card {
+  text-align: left;
+  background: #183b45;
+  border: 1px solid #47656c;
+  color: #fff8e7;
+  padding: 7px 8px;
+  border-radius: 3px;
+  min-height: 44px;
+}
+.vp-card.current { border-color: #ffcf19; box-shadow: inset 0 0 0 1px #ffcf19; }
+.vp-card strong { display: block; font-size: 12px; margin-bottom: 4px; }
+.vp-row { display: flex; align-items: center; gap: 4px; font-size: 9px; color: #b9cfca; }
+.vp-row small { width: 22px; flex: none; }
+.vp-row i { display: inline-flex; gap: 2px; }
+.vp-row b, .vp-row u { display: inline-block; width: 7px; height: 5px; background: #ffcf19; }
+.vp-row u { background: #34545c; }
+@media (max-width: 700px) {
+  #vehicle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

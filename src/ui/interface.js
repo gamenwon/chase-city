@@ -194,7 +194,34 @@ export class Interface {
     if (vehicle)
       document.querySelector("#mission-vehicle").textContent = vehicle.name;
   }
+  // Developer vehicle picker (briefing only): a card per car with its
+  // design ratings; onPick(id) is called with the chosen car.
+  showVehiclePicker(list, current, onPick) {
+    const box = document.querySelector("#vehicle-picker"), grid = document.querySelector("#vehicle-grid");
+    if (!box || !grid) return;
+    const labels = [["speed", "속도"], ["accel", "가속"], ["handling", "조향"], ["mass", "중량"], ["destroy", "파괴"]];
+    grid.innerHTML = "";
+    for (const v of list) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "vp-card" + (v.id === current ? " current" : "");
+      b.setAttribute("role", "option");
+      b.setAttribute("aria-selected", String(v.id === current));
+      const bars = labels
+        .map(([k, n]) => `<span class="vp-row"><small>${n}</small><i>${"<b></b>".repeat(v.ratings[k])}${"<u></u>".repeat(5 - v.ratings[k])}</i></span>`)
+        .join("");
+      b.innerHTML = `<strong>${v.name}</strong>${bars}`;
+      b.addEventListener("click", () => onPick(v.id));
+      grid.appendChild(b);
+    }
+    box.hidden = false;
+  }
+  hideVehiclePicker() {
+    const box = document.querySelector("#vehicle-picker");
+    if (box) box.hidden = true;
+  }
   hide() {
+    this.hideVehiclePicker();
     this.overlay.hidden = true;
     document.body.classList.add("playing");
   }

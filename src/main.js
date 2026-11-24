@@ -4,7 +4,7 @@ const audio = new SoundSystem();
 import { Simulation } from "./game/simulation.js";
 import { getMission } from "./game/missions.js";
 import { missionOrder, nextMission } from "./game/catalog.js";
-import { getVehicle } from "./game/vehicles.js";
+import { getVehicle, VEHICLES, COLLECTION, vehicleRatings } from "./game/vehicles.js";
 import { Progress } from "./game/progress.js";
 import { getMap, mapLayout } from "./world/maps.js";
 import { generateCity } from "./world/citygen.js";
@@ -145,6 +145,20 @@ ui.start.addEventListener("click", () => {
   state = "running";
   input.clear();
   ui.hide();
+});
+// Developer vehicle selection: any car of the collection (or the classic
+// car), only between runs (never while one is being played); the mission
+// restarts with it.
+document.querySelector("#pick-vehicle")?.addEventListener("click", () => {
+  if (state !== "ready" && state !== "over") return; // (not from a paused run)
+  const list = ["starter", ...COLLECTION].map((id) => ({ id, name: VEHICLES[id].name, ratings: vehicleRatings(VEHICLES[id]) }));
+  ui.showVehiclePicker(list, progress.selectedVehicle, (id) => {
+    if (state !== "ready" && state !== "over") return;
+    progress.selectVehicle(id);
+    const missionId = sim.missionId;
+    state = "ready";
+    chooseMission(missionId);
+  });
 });
 document.querySelector("#next-mission").addEventListener("click", () => {
   const next = nextMission(sim.missionId, order);

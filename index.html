@@ -79,9 +79,13 @@
           </div>
           <div>
             <dt>차량</dt>
-            <dd id="mission-vehicle">스타터 쿠페</dd>
+            <dd><span id="mission-vehicle">스타터 쿠페</span> <button id="pick-vehicle" class="link-button" type="button">변경</button></dd>
           </div>
         </dl>
+        <div id="vehicle-picker" hidden>
+          <div class="vp-head">개발용 차량 선택 · 출발 전에만 바꿀 수 있습니다</div>
+          <div id="vehicle-grid" role="listbox" aria-label="차량"></div>
+        </div>
         <dl id="result-details" hidden>
           <div>
             <dt>플레이 시간</dt>

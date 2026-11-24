@@ -66,6 +66,12 @@ export class Progress {
   get selectedVehicle() {
     return this.data.vehicles.selected;
   }
+  // Developer vehicle selection (no purchase yet): any defined car.
+  selectVehicle(id) {
+    this.data.vehicles.selected = id;
+    if (!this.data.vehicles.owned.includes(id)) this.data.vehicles.owned.push(id);
+    this.save();
+  }
   setLastMission(id) {
     this.data.lastMission = id;
     this.save();
