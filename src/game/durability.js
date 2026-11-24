@@ -25,7 +25,7 @@
 //     DAMAGE.window seconds, so overlapping chain-reaction blasts are
 //     dangerous but never an instant wreck.
 export const DAMAGE = Object.freeze({
-  cooldown: 1.2,
+  cooldown: 1.0,
   window: 0.8,
   windowCap: 14,
   min: { civilian: 7, police: 6, wall: 14 },
@@ -36,7 +36,7 @@ export const DAMAGE = Object.freeze({
     police: (closing) => (closing < 10 ? 1 : 2 + Math.min(2, (closing - 10) / 7)),
     wall: (impact) => 3 + Math.min(2, (impact - 14) / 6),
   },
-  received: 0.6, // a police car ramming the player hurts this much less
+  received: 0.85, // a police car ramming the player hurts this much less
   // Repair pickups (repairs.js) and the share they restore.
   repair: 0.25,
 });

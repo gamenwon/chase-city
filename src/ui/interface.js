@@ -256,7 +256,7 @@ export class Interface {
     }
     if (sim.result === "success") {
       this.show(
-        def.type === "chase" ? "ESCAPED!" : "MISSION CLEAR!",
+        def.type === "chase" ? "ESCAPED!" : "MISSION COMPLETE!",
         def.type === "chase" ? "도시 탈출 성공!" : `${def.title} 성공!`,
         `${def.title} 완료 · 보상 ${sim.credits} 코인 획득`,
         "다시 도전 →",
@@ -265,7 +265,7 @@ export class Interface {
       const titles = {
         arrested: ["BUSTED!", "경찰에게 체포됨"],
         destroyed: ["WRECKED!", "차량 파괴"],
-        timeout: ["TIME UP!", "시간 초과"],
+        timeout: ["TIME OUT!", "시간 초과"],
       };
       const [eyebrow, title] = titles[sim.result] || ["FAILED", "미션 실패"];
       const why = {

@@ -72,7 +72,7 @@ test("collect mission success: result screen, credits paid once and kept after r
   await page.locator("#start").click();
   await page.waitForTimeout(600);
   await collectAll(page);
-  await expect(page.locator("#eyebrow")).toHaveText("MISSION CLEAR!");
+  await expect(page.locator("#eyebrow")).toHaveText("MISSION COMPLETE!");
   await expect(page.locator("#title")).toHaveText("택배 수거 성공!");
   await expect(page.locator("#result-earned")).toHaveText("+300 크레딧");
   await expect(page.locator("#wallet-credits")).toHaveText("300");
