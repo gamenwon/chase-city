@@ -512,6 +512,13 @@ export class Simulation {
         w.flaredAt = this.elapsed;
     this.refreshNavigation();
   }
+  // Durability lives in hp; health (%) is what the HUD and tests read.
+  // health written directly (debug tools, tests) is honoured.
+  syncHealth() {
+    if (!this.maxHp) return;
+    if (this.health !== this.healthWritten) this.hp = Math.max(0, Math.min(this.maxHp, (this.maxHp * this.health) / 100));
+    this.health = this.healthWritten = (this.hp / this.maxHp) * 100;
+  }
   // V2.0 continue (after a rewarded ad): undo a failure once per run and
   // play on from where it happened. Returns false if not allowed.
   revive() {
@@ -521,9 +528,9 @@ export class Simulation {
     if (!m.definition.continueOn.includes(kind)) return false;
     m.continued = true;
     if (kind === "destroyed") {
-      // Back on the road with half the car's durability.
-      this.hp = this.maxHp * 0.5;
-      this.health = 50;
+      // Back on the road with 60 % of the car's durability.
+      this.hp = this.maxHp * 0.6;
+      this.health = this.healthWritten = 60;
       this.damageLog = [];
     }
     if (kind === "arrested") {
@@ -914,6 +921,7 @@ export class Simulation {
     }
   }
   update(dt, input = {}) {
+    this.syncHealth();
     if (!this.started || this.result || dt <= 0) return;
     dt = Math.min(dt, 0.05);
     this.elapsed += dt;

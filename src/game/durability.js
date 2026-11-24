@@ -45,7 +45,7 @@ export function resetDurability(sim) {
   const s = sim.vehicle?.stats || {};
   sim.maxHp = s.maxHp || 100;
   sim.hp = sim.maxHp;
-  sim.health = 100;
+  sim.health = sim.healthWritten = 100;
   sim.damageLog = []; // { t, base } within the window
   sim.damageKeys = new Map(); // source -> last time
   sim.damageStats = { taken: 0, byKind: {}, blocked: 0, repairs: 0, repaired: 0 };
@@ -77,7 +77,7 @@ export function hurt(sim, kind, base, key = null) {
   const resist = sim.vehicle?.stats.resist?.[kind] ?? 1;
   const hp = base * resist;
   sim.hp = Math.max(0, sim.hp - hp);
-  sim.health = (sim.hp / sim.maxHp) * 100;
+  sim.health = sim.healthWritten = (sim.hp / sim.maxHp) * 100;
   sim.collisions++;
   sim.lastHitAt = now;
   sim.damageStats.taken += hp;
@@ -100,7 +100,7 @@ export function hurtPolice(sim, closing, ownHit, key) {
 export function heal(sim, share) {
   const before = sim.hp;
   sim.hp = Math.min(sim.maxHp, sim.hp + sim.maxHp * share);
-  sim.health = (sim.hp / sim.maxHp) * 100;
+  sim.health = sim.healthWritten = (sim.hp / sim.maxHp) * 100;
   sim.damageStats.repairs++;
   sim.damageStats.repaired += sim.hp - before;
   return sim.hp - before;

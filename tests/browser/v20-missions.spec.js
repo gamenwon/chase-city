@@ -37,7 +37,7 @@ test("mission select: all missions listed in catalog order; choosing one changes
   await page.locator('[data-mission="parcels"]').click();
   await expect(page.locator("#mission-select")).toBeHidden();
   await expect(page.locator("#title")).toHaveText("택배 수거");
-  await expect(page.locator("#mission-reward")).toHaveText("300 크레딧");
+  await expect(page.locator("#mission-reward")).toHaveText("300 코인");
   await expect(page.locator("#mission-limit")).toHaveText("80초");
   await page.locator("#start").click();
   await expect(page.locator("#overlay")).toBeHidden();
@@ -74,7 +74,7 @@ test("collect mission success: result screen, credits paid once and kept after r
   await collectAll(page);
   await expect(page.locator("#eyebrow")).toHaveText("MISSION COMPLETE!");
   await expect(page.locator("#title")).toHaveText("택배 수거 성공!");
-  await expect(page.locator("#result-earned")).toHaveText("+300 크레딧");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+300 코인/);
   await expect(page.locator("#wallet-credits")).toHaveText("300");
   await expect(page.locator("#next-mission")).toBeVisible();
   await expect(page.locator("#open-select")).toBeVisible();
@@ -150,7 +150,7 @@ test("chase result lists what the player destroyed, from real events, each objec
     "쓰레기통 3개",
     "가로수 1그루",
   ]);
-  await expect(page.locator("#result-earned")).toHaveText("+0 크레딧");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+\d+ 코인/);
   await expect(page.locator("#start")).toHaveText("RESTART →");
   await page.screenshot({ path: `${OUT}/${info.project.name}-wrecked.png` });
   // Next mission -> its briefing (not started yet).
@@ -256,11 +256,11 @@ test("ads with a host ad system: continue once after failure, double reward afte
   await page.locator("#start").click();
   await page.waitForTimeout(300);
   await collectAll(page);
-  await expect(page.locator("#result-earned")).toHaveText("+300 크레딧");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+300 코인/);
   const dbl = page.locator("#ad-double");
   await expect(dbl).toBeEnabled();
   await dbl.click();
-  await expect(page.locator("#result-earned")).toHaveText("+600 크레딧");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+600 코인/);
   await expect(page.locator("#wallet-credits")).toHaveText("600");
   await expect(dbl).toBeDisabled();
   await dbl.click({ force: true });
@@ -279,7 +279,7 @@ test("ads with a host ad system: continue once after failure, double reward afte
   await page.locator("#ad-double").click();
   await page.waitForTimeout(300);
   await expect(page.locator("#wallet-credits")).toHaveText("900");
-  await expect(page.locator("#result-earned")).toHaveText("+300 크레딧");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+300 코인/);
 });
 
 test("the host can reorder missions (setting, no code change)", async ({

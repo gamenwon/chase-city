@@ -335,7 +335,7 @@ test("continue: a wrecked car comes back once with half its durability and plays
   assert.equal(s.result, "destroyed");
   assert.equal(s.revive(), true);
   assert.equal(s.result, null);
-  assert.equal(s.health, 50);
+  assert.equal(s.health, 60);
   run(s, 1);
   assert.equal(s.result, null);
   s.hp = 0;
