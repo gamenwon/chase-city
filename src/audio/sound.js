@@ -20,6 +20,8 @@ export function soundTargets(sim) {
     engineGain: 0.012 + clamp(speed / 24, 0, 1) * 0.035,
     sirenGain: 0.06 * Math.pow(clamp(1 - nearest / 75, 0, 1), 2),
     skidGain: 0.055 * screech,
+    // Police helicopter: a thudding rotor, louder the nearer it is.
+    rotorGain: sim.heli ? 0.085 * Math.pow(clamp(1 - Math.hypot(sim.heli.x - p.x, sim.heli.z - p.z) / 140, 0, 1), 1.4) : 0,
     skidHz: 980 + speed * 14 + clamp(turnLoad, 0, 2.5) * 90,
   };
 }
@@ -146,6 +148,46 @@ export class SoundSystem {
       this.loops[name] = { source, gain, filter };
     }
     this.loops.skid = this.buildScreech();
+    // (The rotor voice is made the first time a helicopter is heard.)
+  }
+  // Helicopter rotor: low noise chopped by a ~12 Hz pulse (the blades), a
+  // little thump under it. One voice, level only (update()).
+  buildRotor() {
+    const c = this.context;
+    const out = c.createGain();
+    out.gain.value = 0;
+    out.connect(this.compressor);
+    const am = c.createGain();
+    am.gain.value = 0.55;
+    am.connect(out);
+    const filter = c.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 420;
+    filter.Q.value = 1.2;
+    filter.connect(am);
+    const noise = c.createBufferSource();
+    noise.buffer = this.noise;
+    noise.loop = true;
+    noise.playbackRate.value = 0.6;
+    noise.connect(filter);
+    noise.start();
+    const lfo = c.createOscillator();
+    lfo.type = "square";
+    lfo.frequency.value = 11.5;
+    const depth = c.createGain();
+    depth.gain.value = 0.45;
+    lfo.connect(depth);
+    depth.connect(am.gain);
+    lfo.start();
+    const thump = c.createOscillator();
+    thump.type = "sine";
+    thump.frequency.value = 46;
+    const tg = c.createGain();
+    tg.gain.value = 0.35;
+    thump.connect(tg);
+    tg.connect(am);
+    thump.start();
+    return { gain: out };
   }
   // Tire screech: one sustained voice, never stacked. Modelled on rubber
   // stick-slip on asphalt rather than on oscillators (which sound
@@ -554,6 +596,8 @@ export class SoundSystem {
       );
       for (const name of ["engine", "siren"])
         this.parameter(this.loops[name].gain.gain, targets[`${name}Gain`]);
+      if (targets.rotorGain > 0 && !this.loops.rotor && this.compressor) this.loops.rotor = this.buildRotor();
+      if (this.loops.rotor) this.parameter(this.loops.rotor.gain.gain, targets.rotorGain, 0.3);
       // Screech: fades in fast (0.06 s), out slowly (0.22 s); pitch follows.
       const skid = this.loops.skid;
       const now = this.context.currentTime;

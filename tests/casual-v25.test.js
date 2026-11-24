@@ -112,3 +112,36 @@ test("every city has a container yard and an amusement park with four clear ways
     }
   }
 });
+
+test("police helicopter: only in pursuit missions, after the set time, enters from far off screen, never overhead, no collisions", async () => {
+  const { HELI } = await import("../src/game/helicopter.js");
+  const none = new Simulation(createLayout(), { cityGenerator: generateCity, seed: 3, mission: "parcels" });
+  none.start();
+  for (let i = 0; i < 60 * (HELI.spawnAfter + 5); i++) none.update(1 / 60, {});
+  assert.equal(none.heli, null, "no helicopter without police");
+  const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed: 3, mission: "survival60" });
+  s.start();
+  let first = null, minD = Infinity, tracked = 0, frames = 0, close = 0;
+  for (let i = 0; i < 60 * 55 && !s.result; i++) {
+    s.update(1 / 60, { right: i % 240 < 30 });
+    if (s.heli && !first) first = { t: s.elapsed, d: Math.hypot(s.heli.x - s.player.x, s.heli.z - s.player.z) };
+    if (s.heli && s.heli.mode !== "entry") {
+      // Where it shows on screen (the chase camera looks down from +x/+z:
+      // height shifts it up the screen, as if 0.92 m further per metre).
+      const ax = s.heli.x - 0.55 * 0.92 * s.heli.y, az = s.heli.z - 0.84 * 0.92 * s.heli.y;
+      const dd = Math.hypot(ax - s.player.x, az - s.player.z);
+      minD = Math.min(minD, dd);
+      if (dd < 9) close++;
+      frames++;
+      if (s.heli.tracking) tracked++;
+    }
+    s.arrest = 0;
+  }
+  assert.ok(first, "it comes");
+  assert.ok(first.t >= HELI.spawnAfter - 0.05 && first.d > 120, `entry ${JSON.stringify(first)}`);
+  // Shown near the car on screen only briefly (a hard turn under it; the
+  // renderer fades it out then).
+  assert.ok(close <= frames * 0.05, `near the car on screen ${close}/${frames} frames (min ${minD.toFixed(1)} m)`);
+  assert.ok(tracked > frames * 0.5, "tracks the player");
+  assert.equal(s.health, 100);
+});

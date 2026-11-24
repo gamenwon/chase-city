@@ -91,13 +91,17 @@ export function steerPolice(
   const alongside = Math.abs(along) < 6;
   // With four or more cars the 2nd and 3rd ride on opposite sides, so with
   // the rear pursuer and the front blockers the player is boxed in.
-  const flankers = ranked.length >= 4 ? 2 : 1;
+  // Police helicopter overhead (helicopter.js): the units know where the
+  // car is going, so both sides are covered with three cars already and
+  // the front blockers start sooner (arrest rules are unchanged).
+  const heli = !!player.heliTracked;
+  const flankers = ranked.length >= (heli ? 3 : 4) ? 2 : 1;
   c.role =
     rank === 0 || !playerMoving || (close < 9 && !alongside)
       ? "pursuit"
       : rank <= flankers
         ? "flank"
-        : elapsed >= CONFIG.frontBlockStart
+        : elapsed >= (heli ? Math.min(CONFIG.frontBlockStart, 10) : CONFIG.frontBlockStart)
           ? "front"
           : "pursuit";
   const difficulty = Math.min(1, elapsed / 60);

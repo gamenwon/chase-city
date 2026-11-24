@@ -16,6 +16,7 @@ import { createPin, updatePin, cordonVerdict, clearCordonVerdict } from "./pin.j
 import { updateTarget, resolveTargetContact } from "./target.js";
 import { updateJump } from "./jumps.js";
 import { updateBlasts } from "./blast.js";
+import { updateHelicopter } from "./helicopter.js";
 import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
 import { createBuildingCells, cellSolids, hitWall } from "./buildings.js";
 import { updateRoadblock } from "./roadblock.js";
@@ -124,6 +125,7 @@ export class Simulation {
     this.captureOpenTime = 0;
     this.motionSamples = [];
     this.wrecks = [];
+    this.heli = null;
     this.wreckId = 0;
     this.enclosure = { trapped: false, exits: 1, nearby: 0 };
     this.enclosureTimer = 0;
@@ -1100,6 +1102,8 @@ export class Simulation {
     // Explosions damage, shove and set off what is around them (blast.js).
     updateBlasts(this);
     if (this.overpasses.length) updateOverpasses(this, dt);
+    // Police helicopter (pursuit missions): spawns, follows, tracks.
+    updateHelicopter(this, dt);
     const groundSpeed =
       Math.hypot(p.x - this.previousPlayer.x, p.z - this.previousPlayer.z) / dt;
     p.groundSpeed = groundSpeed;
