@@ -60,7 +60,18 @@ export class Interface {
   update(sim, escapeView = null) {
     const e = this.elements;
     e.time.textContent = formatTime(sim.elapsed);
-    // (Player durability is disabled: no gauge.) Coins this run.
+    // Durability gauge: green, yellow, orange, red (a slow pulse when
+    // critical).
+    const hp = Math.max(0, sim.health);
+    e.health.textContent = `${Math.ceil(hp)}%`;
+    e["health-bar"].style.width = `${hp}%`;
+    const state = hp > 60 ? "ok" : hp > 30 ? "dmg" : hp > 10 ? "low" : "crit";
+    if (state !== this.hpState) {
+      this.hpState = state;
+      const box = document.querySelector("#hp-box");
+      if (box) box.dataset.state = state;
+    }
+    // Coins this run.
     const coins = sim.runCoins || 0;
     if (coins !== this.shownCoins) {
       e.coins.textContent = String(coins);

@@ -630,6 +630,13 @@ export class SoundSystem {
         this.voice("tone", 0.5, f.kind === "pick" ? 1760 : 1568, 0.055);
         if (f.kind !== "pick") this.voice("tone", 0.5, 2093, 0.11);
       }
+      // Repair toolbox: a rising three-note "fixed" arpeggio.
+      this.repairSeen ||= new WeakSet();
+      for (const f of sim.repairFx || []) {
+        if (this.repairSeen.has(f)) continue;
+        this.repairSeen.add(f);
+        [523, 659, 784, 1047].forEach((hz, i) => this.voice("tone", 0.5, hz, i * 0.07));
+      }
       for (const event of sim.events)
         if (event.id > this.lastExplosion) {
           this.lastExplosion = event.id;

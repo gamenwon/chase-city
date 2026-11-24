@@ -17,6 +17,7 @@ import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
+import { RepairRenderer } from "./repairs.js";
 import { TOON_MODELS } from "./toon-vehicles.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
@@ -125,6 +126,7 @@ export class CityRenderer {
     this.overpass = new OverpassRenderer(this.scene, theme);
     this.heli = new HelicopterRenderer(this.scene);
     this.coins = new CoinRenderer(this.scene);
+    this.repairs = new RepairRenderer(this.scene);
     this.overpass.setLayout(layout);
     // V2.1 destructible low-rise buildings (wall cells).
     this.cells = new BuildingCellsRenderer(this.scene);
@@ -433,6 +435,7 @@ export class CityRenderer {
     this.heli.setSun(this.sun?.position);
     this.heli.update(sim, this.camera, this.tod === "night", dt);
     this.coins.update(sim, dt, this.tod === "night");
+    this.repairs.update(sim, dt);
     this.cells.update(sim, dt);
     // A low-rise building with a hole in it: its lit windows go out.
     if (sim.buildingCells?.version !== this.cellsNightVersion) {

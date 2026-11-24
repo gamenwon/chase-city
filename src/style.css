@@ -1138,3 +1138,14 @@ body.busted #arrest-countdown {
 @media (max-width: 700px) {
   #vehicle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Durability gauge (restored): colour by state, a slow pulse when critical. */
+.stats .hp .meter i { transition: width 0.15s, background 0.3s; }
+.stats .hp[data-state="ok"] .meter i { background: #4cd964; }
+.stats .hp[data-state="dmg"] .meter i { background: #ffd120; }
+.stats .hp[data-state="low"] .meter i { background: #ff8a1a; }
+.stats .hp[data-state="crit"] .meter i { background: #ff3b3b; }
+.stats .hp[data-state="low"] strong { color: #ffb36a; }
+.stats .hp[data-state="crit"] strong { color: #ff6b6b; animation: hp-pulse 1.2s ease-in-out infinite; }
+@keyframes hp-pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .stats .hp[data-state="crit"] strong { animation: none; } }

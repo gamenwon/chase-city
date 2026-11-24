@@ -19,6 +19,7 @@ import { updateJump } from "./jumps.js";
 import { updateBlasts } from "./blast.js";
 import { updateHelicopter } from "./helicopter.js";
 import { resetCoins, updateCoins, awardCoins } from "./coins.js";
+import { resetRepairs, updateRepairs } from "./repairs.js";
 import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
 import { createBuildingCells, cellSolids, hitWall } from "./buildings.js";
 import { updateRoadblock } from "./roadblock.js";
@@ -165,6 +166,7 @@ export class Simulation {
     ], this.layout.graph || null);
     // Gold coins for this run (coins.js).
     resetCoins(this);
+    resetRepairs(this);
     const exit = chooseExit(this.staticSolids, this.random, this.lastExitId, this.layout.exits || undefined);
     this.lastExitId = exit.id;
     this.escape = { phase: "locked", exit, openedAt: null };
@@ -1158,8 +1160,9 @@ export class Simulation {
     if (this.overpasses.length) updateOverpasses(this, dt);
     // Police helicopter (pursuit missions): spawns, follows, tracks.
     updateHelicopter(this, dt);
-    // Coins the player drives through.
+    // Coins and repair toolboxes the player drives through.
     updateCoins(this);
+    updateRepairs(this);
     const groundSpeed =
       Math.hypot(p.x - this.previousPlayer.x, p.z - this.previousPlayer.z) / dt;
     p.groundSpeed = groundSpeed;
@@ -1241,7 +1244,12 @@ export class Simulation {
       CONFIG.arrestSeconds,
     );
     // WRECKED (durability gone) or BUSTED (arrested), decided once.
-    if (this.hp <= 0) this.result = "destroyed";
+    if (this.hp <= 0) {
+      this.result = "destroyed";
+      // The getaway car goes up (once: the result ends the run).
+      this.events.push({ id: ++this.eventId, type: "explosion", cause: "player", byPlayerCar: true, x: p.x, z: p.z, angle: p.angle, time: this.elapsed, delay: 0, chainDepth: 0, playerX: p.x, playerZ: p.z });
+      if (this.events.length > 64) this.events.shift();
+    }
     else if (this.arrest >= CONFIG.arrestSeconds) this.result = "arrested";
     updateMission(this);
   }
