@@ -67,7 +67,7 @@ export function updateHelicopter(sim, dt) {
     if (sim.heli) sim.heli.leaving = true;
   }
   if (!sim.heli) {
-    if (!sim.policeEnabled || sim.result || sim.elapsed < HELI.spawnAfter || !sim.police.some((c) => c.state === "active")) {
+    if (!sim.policeEnabled || sim.heliEnabled === false || sim.result || sim.elapsed < HELI.spawnAfter || !sim.police.some((c) => c.state === "active")) {
       p.heliTracked = false;
       return;
     }

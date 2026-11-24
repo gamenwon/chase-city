@@ -41,6 +41,7 @@ export class Simulation {
     this.staticSolids = [...layout.buildings, ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
     this.random = options.random || Math.random;
     this.reinforcementsEnabled = options.reinforcements !== false;
+    this.helicopterOption = options.helicopter;
     this.barricadesEnabled = options.barricades !== false;
     // V1.9 city life (props, pedestrians, traffic). On in the real game
     // (main.js); off by default so older fixed scenarios keep their meaning.
@@ -113,6 +114,7 @@ export class Simulation {
     // Police (chase, cordon, roadblocks, barricades, reinforcements) only in
     // missions that use them.
     this.policeEnabled = missionRules.police !== false;
+    this.heliEnabled = this.helicopterOption !== false;
     this.vehicle = getVehicle(vehicleId);
     this.tally = createTally();
     this.pin = createPin();

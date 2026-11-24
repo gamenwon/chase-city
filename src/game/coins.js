@@ -6,7 +6,8 @@
 // Where they are (placed once per run from the layout, deterministic per
 // seed; never inside a building or any solid):
 //   roads      a few short rows on ordinary streets
-//   alleys     worth more, in the narrow alleys and shortcuts
+//   alleys     worth more, in the narrow alleys, and up on the elevated
+//              road (a risky route: only reached from the deck)
 //   ramps      along the real jump arc over the big dirt ramp (computed
 //              with the same jump physics as the cars) and a few by the
 //              construction site, the plaza, the yard, the park
@@ -18,18 +19,19 @@
 // Only the player collects (police and traffic never do); coins are never
 // solid. A collected coin does not come back in the same run.
 import { groundHeight, updateJump, JUMP } from "./jumps.js";
+import { overpassHeight } from "../world/citygen.js";
 
 export const COINS = Object.freeze({
   radius: 2.6, // forgiving pickup distance (m)
   height: 3.2, // vertical reach (airborne coins)
-  value: { road: 1, alley: 2, ramp: 3, facility: 2 },
+  value: { road: 1, alley: 2, ramp: 2, facility: 2 },
   // Share of the run's coins by source (initial balance, see report):
   // roads 40 %, alleys 25 %, ramps/special 15 %, destruction 20 %.
-  groups: { road: 14, alley: 6, facility: 6 },
-  perGroup: { road: 4, alley: 5, facility: 3 },
+  groups: { road: 20, alley: 8, facility: 6 },
+  perGroup: { road: 4, alley: 5, facility: 2 },
   reward: {
-    police: 4, // a police car blown up
-    civilian: 2, // a civilian car that goes up (not every wreck)
+    police: 2, // a police car blown up
+    civilian: 1, // a civilian car that goes up (not every wreck)
     gas: 10, // a fuel island
     depot: 8, // a gas depot tank
     bridge: 12, // a span of the elevated road
@@ -38,9 +40,9 @@ export const COINS = Object.freeze({
     wheel: 6, // the Ferris wheel off its axle
     fireworks: 5,
     chainLink: 1, // each further link of a chain reaction...
-    chainCap: 12, // ...up to this many per run
+    chainCap: 6, // ...up to this many per run
   },
-  destructionCap: 90, // destruction coins per run at most
+  destructionCap: 40, // destruction coins per run at most
 });
 
 function rng(seed) {
@@ -120,12 +122,30 @@ export function placeCoins(sim) {
     if (coins.length > before) g++;
   }
   // Alleys and shortcuts: worth more.
+  // (One group per 14 m of alley, up to the budget.)
   const alleys = L.alleys || [];
-  for (let g = 0; g < Math.min(COINS.groups.alley, alleys.length); g++) {
-    const a = alleys[(g * 3 + Math.floor(R() * 3)) % alleys.length];
+  let ag = 0;
+  for (const a of alleys) {
     const { len } = along(a.pts, 0, 0, 1);
-    const { pts } = along(a.pts, Math.max(1, len / 2 - 4.5), COINS.perGroup.alley, 3, 0);
-    for (const p of pts) add(p.x, p.z, "alley");
+    const n = Math.max(1, Math.min(3, Math.floor(len / 14)));
+    for (let k = 0; k < n && ag < COINS.groups.alley; k++, ag++) {
+      const { pts } = along(a.pts, (len * (k + 0.5)) / n - 4.5, COINS.perGroup.alley, 2.4, 0);
+      for (const p of pts) add(p.x, p.z, "alley");
+    }
+  }
+  // Risky route: up on the elevated road deck (only a car on the deck
+  // reaches them; one under it does not).
+  for (const op of L.overpasses || []) {
+    const path = op.pts || [op.a, { x: op.a.x + op.u.x * op.L, z: op.a.z + op.u.z * op.L }];
+    const { len } = along(path, 0, 0, 1);
+    for (const at of [0.3, 0.5, 0.7]) {
+      const { pts } = along(path, len * at - 3, 3, 3, 0);
+      for (const p of pts) {
+        const s0 = len * at;
+        const h = overpassHeight(op, Math.max(0, Math.min(op.L, s0)));
+        if (h > 2.5) add(p.x, p.z, "alley", h + 1.0);
+      }
+    }
   }
   // Ramps: along the real jump arc (airborne coins), and one on each
   // small mound.
@@ -143,11 +163,11 @@ export function placeCoins(sim) {
       add(ax ? b.cx + t : b.cx, ax ? b.cz : b.cz + t, "facility");
     }
   };
-  for (const f of feats) if (["containers", "funpark", "diner", "bigsite"].includes(f.kind)) lane(f, COINS.perGroup.facility);
+  for (const f of feats) if (["containers", "funpark", "diner"].includes(f.kind)) lane(f, COINS.perGroup.facility + 1);
   for (const k of ["gas", "gasDepot"]) {
     const l = L.locations?.[k];
     if (!l) continue;
-    for (const [dx, dz] of [[0, 12.5], [12.5, 0], [0, -12.5], [-12.5, 0]]) add(l.x + dx, l.z + dz, "facility");
+    for (const [dx, dz] of [[0, 12.5], [0, -12.5]]) add(l.x + dx, l.z + dz, "facility");
   }
   return coins;
 }
