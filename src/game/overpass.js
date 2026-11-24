@@ -28,6 +28,7 @@
 // deck stays where it fell (drivable rubble, a few solid chunks at the
 // sides). A car going up a ramp to the broken edge drops off it onto the
 // street below and drives on: never trapped.
+import { hurt } from "./durability.js";
 import { overpassHeight } from "../world/citygen.js";
 import { makePath, project, pointAt } from "./citygraph.js";
 import { awardCoins } from "./coins.js";
@@ -103,7 +104,7 @@ export function constrainLevels(sim, body, radius) {
         body.op = null;
         body.vy = 0;
         body.falling = true;
-        if (body === sim.player) sim.damage?.(14);
+        if (body === sim.player) hurt(sim, "fall", 8, `fall:${op.id}`);
         else if (body.health != null) body.health -= 30;
         return false;
       }
@@ -254,7 +255,7 @@ function landSpan(sim, op, g) {
   for (const t of sim.city?.traffic || []) if (t.state !== "wreck" && near(t)) { t.health -= 55; t.hitAt = sim.elapsed; if (t.health < 30) t.fireSince ??= sim.elapsed; if (t.health <= 0) Object.assign(t, { state: "wreck", health: 0, speed: 0 }); }
   if (sim.target?.state === "fleeing" && inside(sim.target)) sim.target.health = Math.max(1, sim.target.health - 60);
   if (inside(sim.player)) {
-    sim.damage?.(30);
+    hurt(sim, "fall", 10 + Math.min(2, (g.s1 - g.s0) / 20), `span:${op.id}:${g.id}`);
     const { lat } = local(op, sim.player.x, sim.player.z);
     const q = spanPoint(op, (g.s0 + g.s1) / 2), sg = Math.sign(lat) || 1;
     sim.player.vx += -q.uz * sg * 10;

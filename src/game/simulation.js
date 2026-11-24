@@ -1,3 +1,4 @@
+import { resetDurability, hurt, hurtImpact, hurtPolice } from "./durability.js";
 import { ChaseCamera } from "../render/camera.js";
 import { CONFIG, clamp, angleDelta } from "./config.js";
 import { RoadNavigation, distance } from "./navigation.js";
@@ -182,6 +183,7 @@ export class Simulation {
       wallContacts: 0,
     };
     this.health = 100;
+    resetDurability(this);
     this.elapsed = 0;
     this.arrest = 0;
     this.hitCooldown = 0;
@@ -280,16 +282,11 @@ export class Simulation {
     });
     if (this.impacts.length > 64) this.impacts.shift();
   }
-  // Player durability is disabled: the getaway car can never be wrecked
-  // (no health loss, no gauge, no "destroyed" end). Hits are still counted
-  // (collision stats, sounds); NPC cars stay fully destructible.
-  damage(amount) {
-    if (this.hitCooldown <= 0) {
-      this.hitCooldown = 1.0;
-      this.collisions++;
-      this.lastHitAmount = amount;
-    }
-    this.health = 100;
+  // Player durability (restored, durability.js): every source of damage
+  // has a category and goes through hurt(); this generic entry is for
+  // anything uncategorised (scaled to the guideline range).
+  damage(amount, kind = "misc", key = null) {
+    return hurt(this, kind, amount * 0.4, key);
   }
   // V1.9 (phones): solids near a point, from a 10 m grid rebuilt whenever
   // the solids list changes. Same boxes in the same order as scanning the
@@ -521,6 +518,12 @@ export class Simulation {
     if (!kind || kind === "success" || m.continued) return false;
     if (!m.definition.continueOn.includes(kind)) return false;
     m.continued = true;
+    if (kind === "destroyed") {
+      // Back on the road with half the car's durability.
+      this.hp = this.maxHp * 0.5;
+      this.health = 50;
+      this.damageLog = [];
+    }
     if (kind === "arrested") {
       // The police pull back: every car near the player drives off (is
       // re-placed off screen like a reinforcement), officers get back in,
@@ -746,6 +749,11 @@ export class Simulation {
         p.vx *= 0.55;
         p.vz *= 0.55;
       }
+      // A building wall at speed hurts (one hurt per wall contact: the
+      // shared "wall" source has its cooldown, scraping along does not).
+      // (Head-on-ish only: a glancing slide along a facade costs nothing.)
+      if (hitWall && p.lastObstacleKind !== "barricade" && (p.lastImpact || 0) > 0.55 * Math.max(1, p.speed + (p.lastImpact || 0)))
+        hurtImpact(this, "wall", p.lastImpact || 0, "wall");
       if (hitWall && this.elapsed - (p.lastWallSound || -1) > 0.5) {
         this.recordImpact(p, p.lastImpact, "player-wall");
         p.lastWallSound = this.elapsed;
@@ -812,7 +820,10 @@ export class Simulation {
         const braced = c.blockState === "hold";
         const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
         // Monster truck: up and over a (not braced) police car, crushing it.
-        if (car.climbs && !braced && closing > 6 && !(c.climbedAt > this.elapsed - 1)) {
+        // (Only driving into it at speed; never a car forming a cordon, so
+        // a monster truck can still be boxed in and arrested.)
+        const ownHit = Math.max(0, p.vx * nx + p.vz * nz);
+        if (car.climbs && !braced && c.mode !== "contain" && ownHit > 12 && closing > 6 && !(c.climbedAt > this.elapsed - 1)) {
           c.climbedAt = this.elapsed;
           c.health = 0;
           c.lastDamageCause = "crushed";
@@ -821,7 +832,11 @@ export class Simulation {
           this.recordImpact(p, closing, "player-police");
           continue;
         }
-        const share = braced ? (car.breakBlocks ? 0.12 : 0) : Math.min(0.75, Math.max(0.08, 0.2 + ((mass - 1) / 1.5) * 0.5));
+        // (A car closing a cordon round the player holds its place against
+        // any vehicle, as for the classic car: heavy cars are not immune to
+        // a legitimate arrest.)
+        const cordon = c.mode === "contain" || this.arrest > 0;
+        const share = braced ? (car.breakBlocks && !cordon ? 0.12 : 0) : cordon ? Math.min(0.2, 0.2 * mass) : Math.min(0.75, Math.max(0.08, 0.2 + ((mass - 1) / 1.5) * 0.5));
         p.x -= nx * (depth * (1 - share) + 0.001);
         p.z -= nz * (depth * (1 - share) + 0.001);
         c.x += nx * depth * share;
@@ -841,18 +856,21 @@ export class Simulation {
           c.vz += nz * closing * k;
         }
         // A heavy car's hit damages the police car (more the stronger).
-        if (closing > 6 && (car.impact || 1) > 1 && this.elapsed - (c.playerHitAt ?? -9) > 0.4) {
+        // (Only the player's own hit, not a police car ramming it.)
+        if (ownHit > 8 && closing > 8 && (car.impact || 1) > 1 && c.mode !== "contain" && this.elapsed - (c.playerHitAt ?? -9) > 0.4) {
           c.playerHitAt = this.elapsed;
-          c.health -= (closing - 6) * 4 * Math.max(0, (car.impact || 1) - 1);
+          c.health -= (Math.min(closing, ownHit) - 8) * 2.6 * Math.max(0, (car.impact || 1) - 1);
           if (c.health <= 0) c.lastDamageCause = "rammed";
         }
         // Only a real hit hurts: a car pressed nose-first against a parked
         // police car (throttle on, not actually moving) takes no damage, the
         // same as pressing against a building.
         if (closing > 3 && (p.groundSpeed ?? closing) > 3) {
-          if (this.hitCooldown <= 0)
+          if (this.hitCooldown <= 0) {
             this.recordImpact(p, closing, "player-police");
-          this.damage(5);
+            this.hitCooldown = 0.8;
+          }
+          hurtPolice(this, closing, Math.max(0, p.vx * nx + p.vz * nz), `police:${c.id}`);
         }
         p.speed = Math.max(0, p.speed - closing * 0.25 * (1 - (car.retain ?? 0)));
       }
@@ -1222,8 +1240,9 @@ export class Simulation {
       0,
       CONFIG.arrestSeconds,
     );
-    this.health = 100; // (player durability disabled)
-    if (this.arrest >= CONFIG.arrestSeconds) this.result = "arrested";
+    // WRECKED (durability gone) or BUSTED (arrested), decided once.
+    if (this.hp <= 0) this.result = "destroyed";
+    else if (this.arrest >= CONFIG.arrestSeconds) this.result = "arrested";
     updateMission(this);
   }
 }

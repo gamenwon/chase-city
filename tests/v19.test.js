@@ -133,7 +133,7 @@ test("a big tree never breaks and damages the car that hits it", () => {
   });
   run(s, 0.3);
   assert.equal(prop.state, "stand");
-  assert.ok(s.collisions > 0, "the hit counts (player durability is disabled)");
+  assert.ok(s.health < 100, "the player car is damaged");
   const police = Object.assign(makePolice(0), {
     x: prop.x,
     z: prop.z - (CONFIG.policeRadius + PROPS.bigTree.r + 0.25),

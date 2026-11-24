@@ -7,6 +7,7 @@
 // Never a trap: the broken posts stop being solid, the beam always falls
 // away from the road (into the market, out to the city edge for the
 // depot) and only becomes solid once no car is inside where it lies.
+import { hurt } from "../../game/durability.js";
 import * as THREE from "three";
 import { B, G, bake, pieceMesh, signBoard, ico } from "./parts.js";
 
@@ -185,7 +186,7 @@ export class Gantries {
           for (const c of sim.police) if (c.state === "active" && under(c)) { c.health -= 55; c.lastDamageCause = "sign"; this.stats.crushed = (this.stats.crushed || 0) + 1; }
           for (const c of sim.city?.traffic || []) if (c.state !== "wreck" && under(c)) c.health = (c.health ?? 100) - 60;
           if (under(sim.player)) {
-            sim.damage?.(8);
+            hurt(sim, "heavy", 5, "gantry");
             const dx = sim.player.x - b.x, dz = sim.player.z - b.z, d = Math.hypot(dx, dz) || 1;
             sim.player.vx += (dx / d) * 5;
             sim.player.vz += (dz / d) * 5;

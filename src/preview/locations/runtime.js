@@ -4,6 +4,7 @@
 // location objects and breaks them; each frame it animates what is
 // falling or burning. Everything broken stays broken until the run is
 // restarted (sim.runNumber changes). Settled pieces stop updating.
+import { hurt } from "../../game/durability.js";
 import * as THREE from "three";
 import { CONFIG } from "../../game/config.js";
 import { C, B, G, bake, pieceGeometry, bakedMaterial, parkBench, lampPost, binPair } from "./parts.js";
@@ -478,7 +479,7 @@ export class LocationsRuntime {
       }
     }
     const pd = Math.hypot(sim.player.x - isl.x, sim.player.z - isl.z);
-    if (pd < 10) sim.damage(24 * (1 - pd / 10));
+    if (pd < 10) hurt(sim, "blast", 10 * (1 - pd / 10), `island:${isl.x},${isl.z}`);
     for (const it of this.items)
       if (it.state === "stand") {
         const dx = it.spec.x - isl.x, dz = it.spec.z - isl.z, d = Math.hypot(dx, dz);

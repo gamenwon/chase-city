@@ -143,5 +143,4 @@ test("police helicopter: only in pursuit missions, after the set time, enters fr
   // renderer fades it out then).
   assert.ok(close <= frames * 0.05, `near the car on screen ${close}/${frames} frames (min ${minD.toFixed(1)} m)`);
   assert.ok(tracked > frames * 0.5, "tracks the player");
-  assert.equal(s.health, 100);
 });

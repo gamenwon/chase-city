@@ -1,3 +1,4 @@
+import { hurt, hurtImpact } from "./durability.js";
 import { awardCoins } from "./coins.js";
 import { CONFIG, clamp } from "./config.js";
 import { buildLanes, buildWalks, pointAt, project, nearestWalk } from "./citygraph.js";
@@ -477,7 +478,7 @@ function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
       });
     // A big tree does real damage; posts and small trees only shake you.
     if (prop.kind === "bigTree" && impact > 7) {
-      if (isPlayer) sim.damage(Math.round(4 + impact * 0.35));
+      if (isPlayer) hurtImpact(sim, "wall", impact + 4, `tree:${prop.id}`);
       else {
         car.health = Math.max(0, car.health - impact * 1.2);
         if (car.health <= 0) car.lastDamageCause = "tree";
@@ -1387,7 +1388,7 @@ function updateTraffic(sim, city, dt) {
     const m = t.parked || t.state === "wreck" ? 1.6 : 1;
     // The player's car is heavier the sturdier it is (a heavy car shoves
     // a civilian car further and loses less itself).
-    const pm = 1.3 * ((sim.vehicle?.stats.durability || 100) / 100);
+    const pm = 1.3 * (sim.vehicle?.stats.mass || 1);
     let closing = lvl(p) === lvl(t) ? bump(p, CONFIG.radius, pm, t, 1.1, m) : 0;
     const vs = sim.vehicle?.stats || {};
     // Monster truck: a civilian car hit at speed is climbed over and
@@ -1400,7 +1401,7 @@ function updateTraffic(sim, city, dt) {
     }
     if (closing > 0) {
       p.speed = Math.max(0, p.speed - closing * 0.4 * (1 - (vs.retain ?? 0)));
-      if (closing > 6) sim.damage(5);
+      hurtImpact(sim, "civilian", closing, `car:${t.id}`);
       if (closing > 3) {
         city.stats.trafficCollisions++;
         t.playerHitAt = sim.elapsed;

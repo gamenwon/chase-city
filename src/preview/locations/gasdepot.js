@@ -10,6 +10,7 @@
 // come down, cylinders are thrown out; fires keep burning on the wreckage
 // and everything stays until restart. The tanks' footprints stay solid
 // (their wreckage is there), flung pieces are not (they never block).
+import { hurt } from "../../game/durability.js";
 import { awardCoins } from "../../game/coins.js";
 import * as THREE from "three";
 import { C, B, G, cyl, add, bake, signBoard, pieceMesh } from "./parts.js";
@@ -370,7 +371,7 @@ export class GasDepot {
     }
     const pd = Math.hypot(sim.player.x - w.x, sim.player.z - w.z);
     if (pd < 12) {
-      sim.damage(26 * (1 - pd / 12));
+      hurt(sim, "blast", 10 * (1 - pd / 12), `tank:${w.x.toFixed(0)},${w.z.toFixed(0)}`);
       const k = 1 - pd / 12;
       sim.player.vx += ((sim.player.x - w.x) / (pd || 1)) * 9 * k;
       sim.player.vz += ((sim.player.z - w.z) / (pd || 1)) * 9 * k;

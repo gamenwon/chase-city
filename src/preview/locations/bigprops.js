@@ -13,6 +13,7 @@
 //               their big pieces, which tumble and hit cars.
 // Everything is lit up at night (vertex-colour glow), and stays as it is
 // until restart.
+import { hurt } from "../../game/durability.js";
 import * as THREE from "three";
 import { pieceGeometry, bakedMaterial } from "./parts.js";
 import { CONTAINER, ROBOT_PARTS } from "./yard.js";
@@ -308,7 +309,7 @@ export class BigProps {
       const nx = nlx * cs + nlz * sn, nz = -nlx * sn + nlz * cs; // world normal, container -> car
       const push = radius - d;
       const stackN = 1 + this.above(c).length;
-      const M = 4 * stackN, carM = isPlayer ? 1.3 * ((sim.vehicle?.stats.durability || 100) / 100) : 1.2;
+      const M = 4 * stackN, carM = isPlayer ? 1.3 * (sim.vehicle?.stats.mass || 1) : 1.2;
       const share = M / (M + carM);
       car.x += nx * push * share;
       car.z += nz * push * share;
@@ -327,7 +328,7 @@ export class BigProps {
       if (closing > 4 && sim.elapsed - c.hitAt > 0.5) {
         c.hitAt = sim.elapsed;
         sim.city?.events.push({ id: ++sim.city.eventId, type: "container", action: "hit", x: c.x, z: c.z, strength: Math.min(15, closing), sound: "metal", byPlayer: isPlayer });
-        if (isPlayer) sim.damage?.(Math.min(10, closing * 0.35));
+        if (isPlayer) hurt(sim, "heavy", Math.min(5, 1 + closing * 0.2), `container:${c.spec.x},${c.spec.z}`);
         else if (car.health != null) car.health -= closing * 1.5;
         // What falls: the upper ones off the stack, away from the car;
         // a lone one rolls over when hit very hard.
@@ -377,7 +378,7 @@ export class BigProps {
     for (const p of sim.police) if (p.state === "active" && !(p.level) && under(p)) (p.health -= 70), (p.lastDamageCause = "container"), this.stats.crushed++;
     for (const t of sim.city?.traffic || []) if (!(t.level) && under(t)) (damageCar(sim, t, 30), this.stats.crushed++);
     if (!(sim.player.level) && under(sim.player)) {
-      sim.damage?.(12);
+      hurt(sim, "heavy", 6, `containerland:${c.spec.x},${c.spec.z}`);
       sim.player.vx += sn * 5;
       sim.player.vz += cs * 5;
     }

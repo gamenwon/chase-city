@@ -9,6 +9,7 @@
 //
 // piece: { mesh, def: { r, lift, mass, rolls, wheel }, pos, vel, q, w,
 //          state: "mounted" | "fall" | "roll" | "slide" | "rest" }
+import { hurt } from "../../game/durability.js";
 import * as THREE from "three";
 import { damageCar } from "../../game/city.js";
 
@@ -172,7 +173,7 @@ export class Tumblers {
       const k = Math.min(1.6, speed / 10) * Math.min(4, def.mass) * (landing ? 1.4 : 1);
       const ux = dx / (d || 1), uz = dz / (d || 1);
       if (car === sim.player) {
-        sim.damage?.(Math.min(18, 6 * k));
+        hurt(sim, "heavy", Math.min(6, 3 + 1.5 * k), `tumble:${pc.def.r}:${Math.round(pc.home?.x ?? 0)}`);
         car.vx += ux * 4 * Math.min(2, k);
         car.vz += uz * 4 * Math.min(2, k);
       } else if (sim.police.includes(car)) {

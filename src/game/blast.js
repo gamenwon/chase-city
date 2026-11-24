@@ -12,6 +12,7 @@
 //
 // Systems outside the simulation (the preview locations) join in through
 // sim.blastListeners: (sim, event, radius, strength, later) => void.
+import { hurt } from "./durability.js";
 import { blastCity } from "./city.js";
 import { awardCoins } from "./coins.js";
 import { blastPillars } from "./overpass.js";
@@ -100,7 +101,9 @@ export function applyBlast(sim, e, later) {
   const pd = Math.hypot(p.x - e.x, p.z - e.z);
   if (pd < R * 0.75 && !e.byPlayerCar) {
     const k = 1 - pd / (R * 0.75);
-    sim.damage?.(BLAST.player * k * Math.sqrt(s));
+    // A major blast close by: 5-10 HP (once per explosion event; the
+    // damage window caps overlapping chain blasts).
+    hurt(sim, "blast", k * (5 + Math.min(5, s * 2.2)), `blast:${e.id}`);
     p.vx += ((p.x - e.x) / (pd || 1)) * 6 * k;
     p.vz += ((p.z - e.z) / (pd || 1)) * 6 * k;
   }

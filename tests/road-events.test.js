@@ -74,11 +74,10 @@ test("a premature gate position does not clear; open escape failure wins over ga
     vz: e.dz * 24,
     angle: Math.atan2(-e.dx, -e.dz),
   });
-  s.health = 0;
+  s.hp = 0;
   s.update(0.016, {});
-  // Player durability is disabled: never "destroyed".
-  assert.notEqual(s.result, "destroyed");
-  assert.equal(s.health, 100);
+  assert.equal(s.result, "destroyed");
+  assert.equal(s.credits, 0);
 });
 test("outside shoulders clamp locally instead of teleporting the player back into the city", () => {
   const e = EXIT_CANDIDATES.find((e) => e.id === "east-0"),
