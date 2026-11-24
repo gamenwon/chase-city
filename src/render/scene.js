@@ -17,6 +17,7 @@ import { GeneratedWorld } from "./world.js";
 import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
+import { TOON_MODELS } from "./toon-vehicles.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
 import { jumpPitch } from "../game/jumps.js";
@@ -256,6 +257,21 @@ export class CityRenderer {
     this.overpass.setLayout(layout);
     this.cells.setLayout(layout);
     this.layout = layout;
+  }
+  // Vehicle collection: swap the player's car model (TOON_MODELS id, or
+  // the classic car).
+  setPlayerModel(id) {
+    const make = TOON_MODELS[id] || playerCar;
+    if (this.playerModelId === id) return;
+    this.playerModelId = id;
+    const old = this.player;
+    this.player = make();
+    if (old) {
+      this.player.position.copy(old.position);
+      this.player.rotation.copy(old.rotation);
+      this.scene.remove(old);
+    }
+    this.scene.add(this.player);
   }
   // Core recovery pass: the stable build's locations and all their
   // destruction run in the game, rebuilt for every new generated city.

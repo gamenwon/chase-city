@@ -52,7 +52,7 @@ export function mat(color, opts = {}) {
     );
   return mats.get(key);
 }
-function add(p, geo, color, x = 0, y = 0, z = 0, opts) {
+export function add(p, geo, color, x = 0, y = 0, z = 0, opts) {
   const m = new THREE.Mesh(geo, mat(color, opts));
   m.position.set(x, y, z);
   m.castShadow = true;
@@ -88,7 +88,7 @@ function frustum(p, w, d, h, taper, c, x, y, z) {
   return add(p, g, c, x, y + h / 2, z);
 }
 // A box between two points in the y-z plane.
-function slant(p, x, a, b, w, t, c, o) {
+export function slant(p, x, a, b, w, t, c, o) {
   const dy = b.y - a.y,
     dz = b.z - a.z;
   const m = add(p, new THREE.BoxGeometry(w, t, Math.hypot(dy, dz)), c, x, (a.y + b.y) / 2, (a.z + b.z) / 2, o);
@@ -257,7 +257,7 @@ const isLit = (o) => o.material.emissive && o.material.emissive.getHex() !== 0;
 // mesh, one mesh per lamp material, one mesh per wheel (wheels keep their
 // groups so they still spin and steer) and the parts in `keep` (the
 // blinking light-bar lenses) as they are.
-function bakeVehicle(inner, keep = []) {
+export function bakeVehicle(inner, keep = []) {
   const wheels = new Set(inner.userData.wheels);
   inner.updateMatrixWorld(true);
   const inv = inner.matrixWorld.clone().invert();
@@ -310,7 +310,7 @@ export function bakeStatic(group) {
 }
 // The game's car shapes are 2.1 x 3.6 m: the models are scaled to fit.
 export const CAR_SCALE = 0.86;
-function scaled(inner) {
+export function scaled(inner) {
   const outer = new THREE.Group();
   inner.scale.setScalar(CAR_SCALE);
   outer.add(inner);
