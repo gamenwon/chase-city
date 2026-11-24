@@ -59,8 +59,7 @@ export class Interface {
   update(sim, escapeView = null) {
     const e = this.elements;
     e.time.textContent = formatTime(sim.elapsed);
-    e.health.textContent = `${Math.ceil(sim.health)}%`;
-    e["health-bar"].style.width = `${sim.health}%`;
+    // (Player durability is disabled: no gauge.)
     e["arrest-bar"].style.width =
       `${(sim.arrest / CONFIG.arrestSeconds) * 100}%`;
     e.arrest.textContent =

@@ -273,14 +273,16 @@ export class Simulation {
     });
     if (this.impacts.length > 64) this.impacts.shift();
   }
+  // Player durability is disabled: the getaway car can never be wrecked
+  // (no health loss, no gauge, no "destroyed" end). Hits are still counted
+  // (collision stats, sounds); NPC cars stay fully destructible.
   damage(amount) {
     if (this.hitCooldown <= 0) {
-      // V2.0: a tougher car takes proportionally less (starter car: x1).
-      const scale = 100 / this.vehicle.stats.durability;
-      this.health = Math.max(0, this.health - amount * scale);
       this.hitCooldown = 1.0;
       this.collisions++;
+      this.lastHitAmount = amount;
     }
+    this.health = 100;
   }
   // V1.9 (phones): solids near a point, from a 10 m grid rebuilt whenever
   // the solids list changes. Same boxes in the same order as scanning the
@@ -510,10 +512,6 @@ export class Simulation {
     if (!kind || kind === "success" || m.continued) return false;
     if (!m.definition.continueOn.includes(kind)) return false;
     m.continued = true;
-    if (kind === "destroyed") {
-      this.health = 60;
-      this.hitCooldown = 2;
-    }
     if (kind === "arrested") {
       // The police pull back: every car near the player drives off (is
       // re-placed off screen like a reinforcement), officers get back in,
@@ -1182,8 +1180,8 @@ export class Simulation {
       0,
       CONFIG.arrestSeconds,
     );
-    if (this.health <= 0) this.result = "destroyed";
-    else if (this.arrest >= CONFIG.arrestSeconds) this.result = "arrested";
+    this.health = 100; // (player durability disabled)
+    if (this.arrest >= CONFIG.arrestSeconds) this.result = "arrested";
     updateMission(this);
   }
 }

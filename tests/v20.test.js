@@ -31,7 +31,7 @@ test("every mission carries its own goal, limit, conditions, reward and map", ()
     assert.ok(["short", "challenge"].includes(m.durationClass));
     assert.equal(m.reward.type, "credits");
     assert.ok(m.reward.amount > 0);
-    assert.ok(m.failOn.length > 0);
+    assert.ok(Array.isArray(m.failOn) && !m.failOn.includes("destroyed"));
     assert.equal(typeof m.update, "function");
     assert.equal(typeof m.hud, "function");
   }
@@ -207,7 +207,7 @@ test("a civilian car the player wrecks counts once, however often it is hit afte
 
 // --------------------------------------------------------------- vehicles --
 
-test("starter car stats are exactly the pre-V2.0 values; durability scales damage", () => {
+test("starter car stats are exactly the pre-V2.0 values; the player car takes no damage", () => {
   const v = getVehicle("starter");
   assert.equal(v.stats.topSpeed, CONFIG.playerSpeed);
   assert.equal(v.stats.turnRate, CONFIG.turnRate);
@@ -215,11 +215,11 @@ test("starter car stats are exactly the pre-V2.0 values; durability scales damag
   assert.equal(getVehicle("nope").id, "starter");
   const s = new Simulation(layout);
   s.damage(20);
-  assert.equal(s.health, 80);
+  assert.equal(s.health, 100);
   const tough = new Simulation(layout, { vehicle: "boxy" });
   assert.equal(tough.player.speed, VEHICLES.boxy.stats.topSpeed);
   tough.damage(20);
-  assert.equal(tough.health, 84);
+  assert.equal(tough.health, 100);
   assert.equal(VEHICLES.boxy.unlock.type, "credits");
 });
 
@@ -325,24 +325,18 @@ test("ads: rewarded only when the provider says so; errors and closes are not re
 
 // ---------------------------------------------------------------- continue --
 
-test("continue: a wrecked car comes back once with 60% and plays on", () => {
+test("player durability is disabled: heavy hits never wreck the car or end the run", () => {
   const s = new Simulation(layout, { mission: "survival60" });
   s.start();
-  s.health = 0;
-  s.update(1 / 60);
-  assert.equal(s.result, "destroyed");
-  assert.equal(s.revive(), true);
-  assert.equal(s.result, null);
-  assert.equal(s.health, 60);
-  run(s, 1);
-  assert.equal(s.result, null);
-  s.health = 0;
-  s.hitCooldown = 0;
-  s.update(1 / 60);
-  assert.equal(s.result, "destroyed");
-  // Only once per run.
-  assert.equal(s.revive(), false);
-  assert.equal(s.result, "destroyed");
+  for (let i = 0; i < 30; i++) {
+    s.hitCooldown = 0;
+    s.damage(80);
+    s.update(1 / 60);
+  }
+  assert.equal(s.health, 100);
+  assert.notEqual(s.result, "destroyed");
+  assert.ok(s.collisions >= 30, "hits are still counted");
+  assert.ok(!s.mission.definition.failOn.includes("destroyed"));
 });
 
 test("continue after BUSTED: the cordon pulls back and the player can drive away", () => {

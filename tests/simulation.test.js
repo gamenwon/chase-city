@@ -194,11 +194,12 @@ test("wrecks stop chasing and respawn on roads away from player after delay", ()
   assert.equal(c.health, 100);
   assert.ok(Math.hypot(c.x - s.player.x, c.z - s.player.z) > 25);
 });
-test("destroyed, arrested, and reset lifecycle is retained", () => {
+test("the player's car is never destroyed (durability disabled); reset lifecycle is retained", () => {
   const s = create();
   s.health = 0;
   s.update(0.016, none);
-  assert.equal(s.result, "destroyed");
+  assert.notEqual(s.result, "destroyed");
+  assert.equal(s.health, 100);
   s.reset();
   assert.equal(s.health, 100);
   assert.equal(s.result, null);
@@ -257,14 +258,13 @@ test("60 seconds opens escape without success; crossing the gate pays once and f
   assert.equal(s.credits, 0);
   assert.equal(s.mission.rewardGranted, false);
 });
-test("destroyed car cannot earn success on the same tick as mission deadline", () => {
+test("hits never end the run: the car survives to the mission deadline", () => {
   const s = create();
   s.elapsed = 59.99;
-  s.health = 0;
+  for (let i = 0; i < 20; i++) (s.hitCooldown = 0), s.damage(50);
   s.update(0.05, none);
-  assert.equal(s.result, "destroyed");
-  assert.equal(s.mission.status, "failed");
-  assert.equal(s.credits, 0);
+  assert.notEqual(s.result, "destroyed");
+  assert.equal(s.health, 100);
 });
 test("full city pursuit stays finite with intact building colliders", () => {
   const s = create(createLayout());
