@@ -103,7 +103,7 @@ export function assignBrands(buildings, seed = 1, avoid = []) {
   // some are animated digital screens.
   let boards = 0, digital = 0;
   for (const b of shops) {
-    if (b.sculpture || b.district !== "commercial" || b.h < 10 || R() > 0.45 || boards >= 14) continue;
+    if (b.sculpture || b.district !== "commercial" || b.h < 10 || R() > 0.6 || boards >= 14) continue;
     b.billboard = digital < 5 && R() < 0.5 ? "digital" : "painted";
     if (b.billboard === "digital") digital++;
     boards++;

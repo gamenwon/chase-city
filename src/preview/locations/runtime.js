@@ -19,10 +19,14 @@ import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
 import { dinerDecor } from "./diner.js";
 import { bigsiteDecor } from "./bigsite.js";
+import { yardDecor } from "./yard.js";
+import { funparkDecor } from "./funpark.js";
+import { BigProps } from "./bigprops.js";
 import { siteDecor } from "./sites-decor.js";
 import { PERIMETER, perimeterBuilding } from "./perimeter.js";
 import { Storefronts } from "./storefronts.js";
 import { AdSystem } from "./ads.js";
+import { hitPillar } from "../../game/overpass.js";
 import { PropBatch, PropInstances } from "./batch.js";
 
 const TOP = 0.4;
@@ -109,6 +113,8 @@ export class LocationsRuntime {
       for (const it of f.items) if (it.kind === "statue") P.plinth(G(decor, it.x, it.y, it.z, it.ry));
       if (f.kind === "diner") dinerDecor(decor, f);
       if (f.kind === "bigsite") bigsiteDecor(decor, f);
+      if (f.kind === "containers") yardDecor(decor, f);
+      if (f.kind === "funpark") funparkDecor(decor, f);
       if (decor.children.length) scene.add(bake(decor));
     }
     (layout.yards || []).forEach((y, i) => {
@@ -196,6 +202,8 @@ export class LocationsRuntime {
     // Casual pass: shop signs, neon, billboards, rooftop sculptures,
     // the fireworks shop.
     this.ads = new AdSystem(scene, layout, this.storefronts, renderer, this);
+    // Container yard, amusement park, landmark statues.
+    this.big = new BigProps(scene, layout, this, this.storefronts);
     this.flyers = new FlyerSystem(this.batch, groups.flatMap((f) => f.flyers || []), {
       outside: (it) => {
         const sim = this.sim;
@@ -305,6 +313,7 @@ export class LocationsRuntime {
     this.flyers.reset();
     this.storefronts.reset();
     this.ads?.reset();
+    this.big?.reset();
     this.balls = this.court.balls.map((b) => ({ ...b, vx: 0, vy: 0, vz: 0, rest: true }));
     this.balls.forEach((b, i) => this.ballPose(b, i));
     this.ballMesh.instanceMatrix.needsUpdate = true;
@@ -351,6 +360,7 @@ export class LocationsRuntime {
       this.touchItems(car, radius, speed);
       this.vehicles.touch(sim, car, radius, car === sim.player);
       this.storefronts.touch(sim, car, radius);
+      this.big.touch(sim, car, radius, speed, car === sim.player);
       this.gantries.touch(sim, car, radius);
       this.depot?.touch(sim, car, radius, speed);
       this.flyers.touch(sim, car, radius, speed);
@@ -375,6 +385,7 @@ export class LocationsRuntime {
       }
     }
     this.ads.step(sim, dt);
+    this.big.step(sim, dt);
     for (const p of [...this.pending])
       if (sim.elapsed >= p.at) {
         this.pending.splice(this.pending.indexOf(p), 1);
@@ -389,6 +400,7 @@ export class LocationsRuntime {
     const jitter = () => 0.25 + Math.random() * 0.55;
     this.vehicles.blast(sim, e.x, e.z, R, s, later, jitter);
     this.ads?.blast(sim, e, R, s);
+    this.big?.blast(sim, e, R, s);
     for (const it of this.flyers.items) {
       if (it.state === "fly" || it.hidden || it.hits >= 3) continue;
       const dx = it.x - e.x, dz = it.z - e.z, d = Math.hypot(dx, dz);
@@ -583,6 +595,10 @@ export class LocationsRuntime {
       }
     }
   }
+  // A big loose piece (sculpture, wheel, container) slamming a pillar.
+  hitPillar(sim, pillar, impact, mass) {
+    if (pillar.alive) hitPillar(sim, pillar, impact, mass);
+  }
   spill(type, x, z, nx, nz, speed, f) {
     const sim = this.sim;
     if (!sim) return;
@@ -726,6 +742,7 @@ export class LocationsRuntime {
     this.fxStep(now);
     this.waterStep(dt, now);
     this.ads.render(dt, sim);
+    this.big.render(dt, sim, this.renderer?.tod === "night");
   }
   pose(it, k) {
     const s = it.spec;

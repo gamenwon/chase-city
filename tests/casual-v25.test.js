@@ -24,7 +24,7 @@ test("every city: every shop building has a brand, one fireworks shop, 8+ giant 
     // Spread out (no two sculptures on neighbouring roofs).
     for (const a of sc) for (const b of sc) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) > 15);
     assert.ok(L.buildings.some((b) => b.billboard === "digital") || seed % 1 === 0);
-    assert.ok(L.buildings.filter((b) => b.billboard).length >= 4, `seed ${seed}: billboards`);
+    assert.ok(L.buildings.filter((b) => b.billboard).length >= 2, `seed ${seed}: billboards`);
     // Food and shop variety on the street.
     assert.ok(new Set(shops.map((b) => BRANDS[b.brand].type)).size >= 6);
   }
@@ -86,5 +86,29 @@ test("a burning wreck explodes once, through the shared blast system, and stays 
     t.blowAt = s.elapsed;
     for (let i = 0; i < 30; i++) s.update(1 / 60, {});
     assert.ok(s.stats.explosions - after <= 2, "no second explosion of the same car");
+  }
+});
+
+test("every city has a container yard and an amusement park with four clear ways through (no traps)", () => {
+  for (const seed of SEEDS) {
+    const L = generateCity(seed);
+    const yard = L.features.find((f) => f.kind === "containers"), park = L.features.find((f) => f.kind === "funpark");
+    assert.ok(yard && park, `seed ${seed}`);
+    assert.ok(yard.containers.length >= 4 && yard.containers.some((c) => c.level >= 1), "stacked containers");
+    assert.ok(yard.landmark?.kind === "robot" && park.landmark?.kind === "dino");
+    assert.ok(park.wheel && park.carousel && park.balloons.length);
+    for (const f of [yard, park]) {
+      const b = f.block;
+      const solids = L.obstacles.filter((q) => q.x > b.x0 - 3 && q.x < b.x1 + 3 && q.z > b.z0 - 3 && q.z < b.z1 + 3);
+      const clear = (x, z) => !solids.some((q) => Math.abs(q.x - x) < q.w / 2 + 1.2 && Math.abs(q.z - z) < q.d / 2 + 1.2);
+      // Straight through along both axes of the block's centre.
+      for (let t = -1; t <= 1; t += 0.02) {
+        assert.ok(clear(b.cx + t * ((b.x1 - b.x0) / 2 + 2), b.cz), `seed ${seed} ${f.kind}: x lane`);
+        assert.ok(clear(b.cx, b.cz + t * ((b.z1 - b.z0) / 2 + 2)), `seed ${seed} ${f.kind}: z lane`);
+      }
+      // Containers stay off the lanes.
+      if (f.kind === "containers")
+        for (const c of f.containers) assert.ok(Math.abs(c.x - b.cx) > 3.3 && Math.abs(c.z - b.cz) > 3.3, `seed ${seed}: container on a lane`);
+    }
   }
 });

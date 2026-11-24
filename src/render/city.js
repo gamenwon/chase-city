@@ -341,8 +341,24 @@ export class CityLifeRenderer {
       const wreck = t.state === "wreck";
       // A car that just went up hops and rolls a little.
       const pop = t.pop != null ? Math.max(0, 1 - (now - t.pop) / 0.7) : 0;
-      const hop = pop > 0 ? Math.sin((1 - pop) * Math.PI) * 1.6 : 0;
-      this.e.set(wreck ? 0.12 : 0, t.angle + (t.pop != null ? 0.5 * Math.min(1, (now - t.pop) / 0.7) : 0), (t.burned ? 0.1 : 0) + pop * 0.6, "YXZ");
+      let hop = pop > 0 ? Math.sin((1 - pop) * Math.PI) * 1.6 : 0;
+      // Casual pass: flipped by a big hit or a blast: up in the air, a
+      // roll (a wreck lands on its roof and stays so; a live car rolls all
+      // the way round and drives on).
+      let roll = (t.burned ? 0.1 : 0) + pop * 0.6;
+      if (t.flip) {
+        const ft = Math.min(1, (now - t.flip.at) / 0.9);
+        const full = t.state === "wreck" ? Math.PI : Math.PI * 2;
+        const a = full * (1 - (1 - ft) * (1 - ft));
+        roll = a * (t.flip.side || 1);
+        hop += Math.sin(ft * Math.PI) * t.flip.h + 1.45 * (1 - Math.cos(a)) / 2;
+        if (ft >= 1 && t.state === "wreck") t.upside = true;
+        if (ft >= 1) t.flip = null;
+      } else if (t.upside) {
+        roll = Math.PI;
+        hop += 1.45;
+      }
+      this.e.set(wreck ? 0.12 : 0, t.angle + (t.pop != null ? 0.5 * Math.min(1, (now - t.pop) / 0.7) : 0), roll, "YXZ");
       this.q.setFromEuler(this.e);
       this.m.compose(this.v.set(t.x, (t.y || 0) + hop, t.z), this.q, this.s.set(1, t.burned ? 0.9 : 1, 1));
       this.carMesh.setMatrixAt(n, this.m);
@@ -456,7 +472,8 @@ export class CityLifeRenderer {
         // Sparks off the crash, more the harder it was.
         this.burst(e.x, e.z, Math.min(10, 2 + Math.round((e.strength || 0) / 3)), 0xffc23a, 5, 4);
       }
-      if (kick && e.byPlayer && e.strength > 5)
+      if (kick && e.kick) kick(e.kick);
+      else if (kick && e.byPlayer && e.strength > 5)
         kick(Math.min(0.3, e.strength / 50));
     }
   }

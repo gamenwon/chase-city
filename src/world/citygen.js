@@ -36,6 +36,8 @@ import { sitePlan } from "../preview/locations/sites.js";
 import { assignBrands } from "./brands.js";
 import { dinerPlan } from "../preview/locations/diner.js";
 import { bigsitePlan } from "../preview/locations/bigsite.js";
+import { yardPlan } from "../preview/locations/yard.js";
+import { funparkPlan } from "../preview/locations/funpark.js";
 
 export const CITY_HALF = 108; // city edge (|x|, |z|)
 export const RING = 90; // ring road centre line
@@ -582,6 +584,14 @@ export function buildCity(seed) {
     b.type = "bigsite";
     specials.push(b);
   }
+  // Casual pass: a container logistics yard (a long block if there is one)
+  // and a small amusement park in every city.
+  for (const kind of ["containers", "funpark"]) {
+    const b = (kind === "containers" && spreadPick((x) => fits(x) && Math.max(x.w, x.d) >= 24)) || spreadPick((x) => fits(x));
+    if (!b) return { failed: `no block for the ${kind}` };
+    b.type = kind;
+    specials.push(b);
+  }
   const parks = [], trees = [];
   for (let k = 0; k < 2; k++) {
     const b = spreadPick((x) => fits(x, 20.5, 40));
@@ -599,6 +609,13 @@ export function buildCity(seed) {
       cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
       const plan = bigsitePlan(b, R);
       mounds.push(...plan.mounds);
+      specialFeatures.push(plan.feature);
+      continue;
+    }
+    if (b.type === "containers" || b.type === "funpark") {
+      counts[b.type] = (counts[b.type] || 0) + 1;
+      cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
+      const plan = b.type === "containers" ? yardPlan(b, R) : funparkPlan(b, R);
       specialFeatures.push(plan.feature);
       continue;
     }
@@ -1136,6 +1153,8 @@ export function validateCity(L) {
     for (const k of ["gas", "court", "park", "gasDepot"]) if (!L.locations?.[k]) problems.push(`missing ${k}`);
     if (!L.features.some((f) => f.kind === "diner")) problems.push("missing restaurant plaza");
     if (!L.features.some((f) => f.kind === "bigsite") || !L.mounds?.length) problems.push("missing construction site");
+    if (!L.features.some((f) => f.kind === "containers" && f.containers.length >= 4)) problems.push("missing container yard");
+    if (!L.features.some((f) => f.kind === "funpark")) problems.push("missing amusement park");
     const kinds = new Set((L.yards || []).map((y) => y.kind));
     for (const k of ["parking", "carwash", "construction", "market", "cafe", "depot", "plaza", "corner"]) if (!kinds.has(k)) problems.push(`missing yard ${k}`);
     const content = L.streetProps.length + [...L.features, ...L.yards].reduce((a, f) => a + f.items.length + f.flyers.length + (f.vehicles?.length || 0), 0);

@@ -164,7 +164,7 @@ export function breakPillar(sim, pillar) {
   pillar.health = 0;
   pillar.brokeAt = sim.elapsed;
   sim.stats.pillarsBroken = (sim.stats.pillarsBroken || 0) + 1;
-  sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: pillar.x, z: pillar.z, strength: 14, byPlayer: true });
+  sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: pillar.x, z: pillar.z, strength: 14, byPlayer: true, kick: 0.45, sound: "rumble" });
   const op = sim.overpasses[pillar.op];
   collapseSpan(sim, op, pillarSpan(op, pillar), pillar);
   sim.refreshNavigation();
@@ -269,7 +269,10 @@ function landSpan(sim, op, g) {
   for (const s of [g.s0 + 1.2, g.s1 - 1.2])
     for (const side of [-1, 1]) {
       const q = spanPoint(op, s), lat = side * (op.W / 2 - 0.4);
-      op.debris.push({ x: q.x - q.uz * lat, z: q.z + q.ux * lat, w: 1.4, d: 1.4, kind: "rubble", solid: true, gap: g.id });
+      const x = q.x - q.uz * lat, z = q.z + q.ux * lat;
+      // Never dropped on top of a car (it would be left inside it).
+      const onCar = [sim.player, ...sim.police.filter((c) => c.state === "active")].some((c) => !(c.level) && Math.abs(c.x - x) < 0.7 + 1.6 && Math.abs(c.z - z) < 0.7 + 1.6);
+      op.debris.push({ x, z, w: 1.4, d: 1.4, kind: "rubble", solid: !onCar, gap: g.id });
     }
   sim.refreshNavigation();
 }

@@ -383,6 +383,8 @@ export function blastCity(sim, city, x, z, R, s) {
       t.timer = 2.5;
     }
     damageTraffic(sim, city, t, 22 * k * s, false);
+    // A strong blast close by throws the car over (casual pass).
+    if (k * Math.sqrt(s) > 0.55 && !t.flip && !t.upside) t.flip = { at: sim.elapsed, h: 1 + k * 2.2, side: dx * Math.cos(t.angle) - dz * Math.sin(t.angle) > 0 ? -1 : 1 };
     if (t.state === "wreck") wrecked.push(t);
   }
   return wrecked;
@@ -1034,6 +1036,7 @@ function syncParked(sim, city) {
         spot.car.health = 0;
         spot.car.fireSince = -60; // (back in view: long burning)
         if (spot.burned) Object.assign(spot.car, { burned: true, exploded: true, burnedAt: -60 });
+        if (spot.upside) spot.car.upside = true;
       }
       city.traffic.push(spot.car);
       active++;
@@ -1048,6 +1051,7 @@ function syncParked(sim, city) {
     t.spot.angle = t.angle;
     t.spot.wrecked = t.state === "wreck";
     t.spot.burned = !!t.burned;
+    t.spot.upside = !!(t.upside || t.flip);
     t.spot.car = null;
     return false;
   });
@@ -1264,6 +1268,8 @@ function blowCar(sim, city, t) {
   t.vx += (rnd(sim) - 0.5) * 3;
   t.vz += (rnd(sim) - 0.5) * 3;
   t.pop = sim.elapsed;
+  // Its own blast throws it over (lands on its roof) one time in two.
+  if (rnd(sim) < 0.5 && !t.upside) t.flip = { at: sim.elapsed, h: 1.6, side: rnd(sim) < 0.5 ? 1 : -1 };
 }
 
 // Something else hit a civilian car (a falling sculpture, debris).
@@ -1342,6 +1348,7 @@ function updateTraffic(sim, city, dt) {
         color: t.color,
         wrecked: true,
         burned: !!t.burned,
+        upside: !!(t.upside || t.flip),
         car: null,
       });
     return false;

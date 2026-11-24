@@ -30,7 +30,7 @@ import * as THREE from "three";
 import { B, G, cyl, pieceGeometry, bakedMaterial, coloredGeometry } from "./parts.js";
 import { BRANDS, BRAND_KEYS, SMALL_SIGNS, ADS } from "../../world/brands.js";
 import { SCULPTURES } from "./sculptures.js";
-import { damageCar } from "../../game/city.js";
+import { Tumblers } from "./tumble.js";
 
 const BASE = 0.4;
 const ATLAS = 1024;
@@ -217,6 +217,7 @@ export class AdSystem {
     this.signs = []; // { b, face?, kind, range, glow, neon, state }
     this.boards = []; // digital screens
     this.sculptures = [];
+    this.tumblers = new Tumblers(runtime, storefronts);
     this.buildings = new Map(); // building -> { signs: [], tube, sculpture, boards }
     const faceOf = new Map();
     for (const f of storefronts.faces) {
@@ -339,7 +340,12 @@ export class AdSystem {
         scene.add(mesh);
         const home = new THREE.Vector3(b.x, top + 1.42 + def.mount, b.z);
         const q0 = new THREE.Quaternion().setFromAxisAngle(UP, main.ry);
-        const sc = { b, kind: b.sculpture, def, mesh, mat, home, q0, face: main, rec };
+        const sc = { b, kind: b.sculpture, def, mesh, mat, home, q0, face: main, rec, state: "mounted" };
+        // A donut that stops rolling topples flat.
+        if (def.wheel) sc.onRest = (pc) => {
+          pc.q.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+          pc.pos.y = 0.05 + 0.6 * 1.65;
+        };
         this.sculptures.push(sc);
         rec.sculpture = sc;
       }
@@ -433,12 +439,14 @@ export class AdSystem {
       this.tubeMesh.geometry.attributes.color.needsUpdate = true;
       this.tubeDead = new Set();
     }
+    if (!this.tumblers.pieces.length) for (const sc of this.sculptures) this.tumblers.add(sc);
+    this.tumblers.reset();
     for (const sc of this.sculptures) {
-      Object.assign(sc, { state: "mounted", hitAt: {}, lastBonk: -9, glowUntil: Infinity });
-      sc.pos = sc.home.clone();
-      sc.vel = new THREE.Vector3();
-      sc.q = sc.q0.clone();
-      sc.w = new THREE.Vector3();
+      Object.assign(sc, { state: "mounted", glowUntil: Infinity });
+      sc.pos.copy(sc.home);
+      sc.vel.set(0, 0, 0);
+      sc.q.copy(sc.q0);
+      sc.w.set(0, 0, 0);
       sc.mesh.position.copy(sc.pos);
       sc.mesh.quaternion.copy(sc.q);
     }
@@ -571,168 +579,20 @@ export class AdSystem {
   // ------------------------------------------------------ sculptures --
   detach(sim, sc, nx, nz, power) {
     if (sc.state !== "mounted") return;
-    sc.state = "fall";
     sc.glowUntil = (sim?.elapsed ?? 0) + 2.4;
     this.stats.detached++;
     const side = Math.random() - 0.5;
-    sc.vel.set(nx * (3 + power * 0.18) - nz * side * 2, 3.2 + power * 0.08, nz * (3 + power * 0.18) + nx * side * 2);
-    sc.w.set(Math.random() - 0.5, (Math.random() - 0.5) * 0.6, Math.random() - 0.5).normalize().multiplyScalar(2 + Math.random() * 2.5);
-    if (sc.def.wheel) sc.w.set(-nz, 0, nx).multiplyScalar(-3);
+    this.tumblers.launch(sc, nx * (3 + power * 0.18) - nz * side * 2, 3.2 + power * 0.08, nz * (3 + power * 0.18) + nx * side * 2, 3.2);
     this.burst(sc.pos.x, sc.pos.y - sc.def.r, sc.pos.z, 12, [0xffe14a, 0xffffff], 5, 14, 0.6);
     if (sim) sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: sc.pos.x, z: sc.pos.z, strength: 12, sound: "metal" });
   }
   step(sim, dt) {
     this.sim = sim;
-    const now = sim.elapsed;
-    const cars = [sim.player, ...sim.police.filter((c) => c.state === "active")];
-    for (const sc of this.sculptures) {
-      if (sc.state === "mounted") continue;
-      const def = sc.def, p = sc.pos, v = sc.vel;
-      if (sc.state === "rest") {
-        // Never in the way: a car that touches it shoves it on.
-        for (const car of cars) {
-          if ((car.level || 0) !== 0) continue;
-          const dx = p.x - car.x, dz = p.z - car.z, d = Math.hypot(dx, dz);
-          const sp = Math.hypot(car.vx || 0, car.vz || 0);
-          if (d < def.r + 1.3 && sp > 2) {
-            sc.state = "fall";
-            v.set((car.vx || 0) * 0.9 + (dx / (d || 1)) * 2, 2.5, (car.vz || 0) * 0.9 + (dz / (d || 1)) * 2);
-            sim.city?.events.push({ id: ++sim.city.eventId, type: "prop", action: "break", x: p.x, z: p.z, strength: 9, sound: "bonk" });
-          }
-        }
-        continue;
-      }
-      // Flying / rolling / sliding.
-      if (sc.state === "fall") v.y -= 18 * dt;
-      p.addScaledVector(v, dt);
-      const floor = 0.05 + def.lift;
-      if (sc.state === "fall" && p.y <= floor) {
-        p.y = floor;
-        const hit = -v.y;
-        if (now - sc.lastBonk > 0.25) {
-          sc.lastBonk = now;
-          this.stats.sculptureHits++;
-          sim.city?.events.push({ id: ++sim.city.eventId, type: "sculpture", action: "land", x: p.x, z: p.z, strength: Math.min(15, 6 + hit), sound: "bonk" });
-          this.runtime?.fx.push({ kind: "dust", x: p.x, z: p.z, born: now, size: 0.6 + Math.min(0.6, hit / 20) });
-          if (hit > 6) sim.cameraKick = Math.max(sim.cameraKick || 0, Math.min(0.3, hit / 40));
-          // Landing on a car: it is crushed (and may catch fire).
-          this.hitCars(sim, sc, cars, Math.max(hit, v.length()), true);
-        }
-        if (hit > 3.5) {
-          v.y = hit * 0.32;
-          v.x *= 0.75;
-          v.z *= 0.75;
-          sc.w.multiplyScalar(0.6);
-        } else {
-          v.y = 0;
-          sc.state = def.rolls ? "roll" : "slide";
-          if (def.rolls) {
-            v.x *= 1.15;
-            v.z *= 1.15;
-          }
-        }
-      }
-      const hs = Math.hypot(v.x, v.z);
-      if (sc.state === "roll" || sc.state === "slide") {
-        const f = Math.exp(-dt * (sc.state === "roll" ? 0.3 : 2.4));
-        v.x *= f;
-        v.z *= f;
-        p.y = floor;
-      }
-      // Orientation: tumbling in the air; rolling about the axis across
-      // its motion on the ground (the donut upright, like a wheel).
-      if (sc.state === "fall") {
-        this.q2.setFromAxisAngle(this.v.copy(sc.w).normalize(), sc.w.length() * dt);
-        sc.q.premultiply(this.q2);
-      } else if (sc.state === "roll" && hs > 0.05) {
-        const axis = this.v.set(v.z / hs, 0, -v.x / hs);
-        if (def.wheel) {
-          // Upright: its hole faces sideways to the motion.
-          const yaw = Math.atan2(v.x, v.z) + Math.PI / 2;
-          sc.roll = (sc.roll || 0) + (hs / def.r) * dt;
-          this.q.setFromAxisAngle(UP, yaw);
-          this.q2.setFromAxisAngle(this.s.set(0, 0, 1), -sc.roll);
-          sc.q.copy(this.q).multiply(this.q2);
-        } else {
-          this.q2.setFromAxisAngle(axis, (hs / Math.max(0.6, def.lift)) * dt);
-          sc.q.premultiply(this.q2);
-        }
-      }
-      // Moving through the city: off building walls, into cars, props,
-      // shop windows.
-      if (hs > 0.8) {
-        for (const box of sim.nearSolids(p.x, p.z, def.r + 1)) {
-          if (box.kind === "pillar" || box.w > 60) continue;
-          const px = box.w / 2 + def.r * 0.8 - Math.abs(p.x - box.x), pz = box.d / 2 + def.r * 0.8 - Math.abs(p.z - box.z);
-          if (px <= 0 || pz <= 0) continue;
-          if (px < pz) {
-            p.x += Math.sign(p.x - box.x || 1) * px;
-            v.x = -v.x * 0.4;
-          } else {
-            p.z += Math.sign(p.z - box.z || 1) * pz;
-            v.z = -v.z * 0.4;
-          }
-          if (box.kind === "pillar") this.runtime?.fx.push({ kind: "dust", x: p.x, z: p.z, born: now, size: 0.4 });
-        }
-        this.hitCars(sim, sc, cars, hs, false);
-        const fake = { x: p.x, z: p.z, vx: v.x, vz: v.z, speed: hs };
-        this.runtime?.touchItems?.(fake, def.r, hs);
-        this.runtime?.flyers?.touch(sim, fake, def.r, hs);
-        if (hs > 6) this.storefronts.touch(sim, fake, def.r);
-      }
-      if (sc.state !== "fall" && hs < 0.3) {
-        sc.state = "rest";
-        v.set(0, 0, 0);
-        if (def.wheel) {
-          // A donut topples flat when it stops.
-          this.q.setFromAxisAngle(this.s.set(1, 0, 0), Math.PI / 2);
-          sc.q.copy(this.q);
-          p.y = 0.05 + 0.6;
-        }
-      }
-      // Off the map edge: stop.
-      if (Math.max(Math.abs(p.x), Math.abs(p.z)) > 112) {
-        v.set(0, 0, 0);
-        sc.state = "rest";
-      }
-    }
+    this.tumblers.step(sim, dt);
+    this.stats.sculptureHits = this.tumblers.stats.hits + this.tumblers.stats.landed;
     // Fireworks: rockets and their ground hits (secondary blasts).
     this.stepShows(sim, dt);
   }
-  hitCars(sim, sc, cars, speed, landing) {
-    const p = sc.pos, def = sc.def, now = sim.elapsed;
-    const all = [...cars];
-    for (const t of sim.city?.traffic || []) all.push(t);
-    if (sim.target?.state === "fleeing") all.push(sim.target);
-    for (const car of all) {
-      if ((car.level || 0) !== 0) continue;
-      const dx = car.x - p.x, dz = car.z - p.z, d = Math.hypot(dx, dz);
-      if (d > def.r + 1.1) continue;
-      if (now - (sc.hitAt[car.id ?? "p"] ?? -9) < 0.6) continue;
-      sc.hitAt[car.id ?? "p"] = now;
-      const k = Math.min(1.6, speed / 10) * def.mass * (landing ? 1.4 : 1);
-      const ux = dx / (d || 1), uz = dz / (d || 1);
-      if (car === sim.player) {
-        sim.damage?.(Math.min(16, 6 * k));
-        car.vx += ux * 4 * k;
-        car.vz += uz * 4 * k;
-      } else if (car.role != null || sim.police.includes(car)) {
-        car.health -= 38 * k;
-        car.vx += ux * 6 * k;
-        car.vz += uz * 6 * k;
-        if (car.health <= 0) car.lastDamageCause = "sculpture";
-      } else if (sim.city?.traffic.includes(car)) {
-        damageCar(sim, car, 14 * k);
-        car.vx = (car.vx || 0) + ux * 5 * k;
-        car.vz = (car.vz || 0) + uz * 5 * k;
-      } else if (car === sim.target) car.health = Math.max(1, car.health - 25 * k);
-      this.stats.sculptureHits++;
-      sc.vel.x *= 0.6;
-      sc.vel.z *= 0.6;
-      sim.city?.events.push({ id: ++sim.city.eventId, type: "sculpture", action: "hit", x: car.x, z: car.z, strength: Math.min(15, 6 + speed), sound: "bonk" });
-    }
-  }
-
   // ------------------------------------------------------- fireworks --
   fireworks(sim, f, speed) {
     if (!sim || this.shows.some((s) => s.b === f.b)) return;
