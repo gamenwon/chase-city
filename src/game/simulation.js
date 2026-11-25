@@ -18,6 +18,8 @@ import { updateTarget, resolveTargetContact } from "./target.js";
 import { updateJump } from "./jumps.js";
 import { updateBlasts } from "./blast.js";
 import { updateHelicopter } from "./helicopter.js";
+import { CHAOS, chaosDestroyed, chaosFleet, chaosNextPoliceKind } from "./chaos.js";
+import { makeHeavyPolice } from "./police.js";
 import { resetCoins, updateCoins, awardCoins } from "./coins.js";
 import { resetRepairs, updateRepairs } from "./repairs.js";
 import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
@@ -64,7 +66,12 @@ export class Simulation {
     this.cityGenerator = options.cityGenerator || null;
     this.fixedSeed = Number.isFinite(options.seed) ? options.seed : null;
     // Destruction for the result screen, counted as city events happen.
-    this.onCityEvent = (e) => recordCityEvent(this.tally, e);
+    this.onCityEvent = (e) => {
+      const added = recordCityEvent(this.tally, e);
+      // CITY CHAOS: what the player knocked down counts for the combo.
+      if (added && this.chaos) chaosDestroyed(this, e.type === "traffic" ? "traffic" : "prop", `tally:${e.type}:${e.targetId}`, e.x ?? this.player.x, e.z ?? this.player.z, 0, true);
+      return added;
+    };
     this.reset();
   }
   refreshNavigation() {
@@ -122,6 +129,8 @@ export class Simulation {
     this.pin = createPin();
     this.pickups = [];
     this.target = null; // TARGET HUNT: the fleeing car (target.js)
+    this.chaos = null; // CITY CHAOS state (chaos.js), set by its setup
+    this.chaosMode = !!missionRules.chaos;
     this.blastQueue = []; // chain links waiting to go off (blast.js)
     this.cameraRig.reset();
     this.cameraRig.update(this.layout.start || { x: 0, z: 8, angle: 0 }, 0);
@@ -214,7 +223,7 @@ export class Simulation {
     };
 
     this.police = this.policeEnabled
-      ? Array.from({ length: CONFIG.policeCount }, (_, i) => makePolice(i))
+      ? Array.from({ length: this.chaosMode ? CHAOS.startPolice : CONFIG.policeCount }, (_, i) => makePolice(i))
       : [];
     if (this.layout.start) this.placeStartPolice();
     this.mission.definition.setup?.(this);
@@ -479,6 +488,8 @@ export class Simulation {
     const c = car;
     const depth = c.blastDepth || 0;
     this.stats.explosions++;
+    // (CITY CHAOS: a car the player rammed or crushed is the player's.)
+    if (this.chaos) chaosDestroyed(this, "police", `police:${c.id}:${c.generation ?? 0}`, c.x, c.z, depth, ["rammed", "crushed"].includes(c.lastDamageCause));
     awardCoins(this, `police:${c.id}:${c.generation ?? 0}`, "police", c.x, c.z, depth);
     if (c.lastDamageCause === "blast") this.stats.chainExplosions++;
     const crashSpeed = Math.hypot(c.vx, c.vz);
@@ -825,14 +836,16 @@ export class Simulation {
         // Vehicle collection: who gives way depends on the player car's
         // weight (vehicles.js). A car holding a roadblock is braced across
         // the road: only the heaviest cars shove it at all, a little.
-        const car = this.vehicle.stats, mass = car.mass || 1;
+        // (Heavy police: the weight that counts is the player's against
+        // the police car's.)
+        const car = this.vehicle.stats, cm = c.mass || 1, mass = (car.mass || 1) / cm;
         const braced = c.blockState === "hold";
         const closing = Math.max(0, (p.vx - c.vx) * nx + (p.vz - c.vz) * nz);
         // Monster truck: up and over a (not braced) police car, crushing it.
         // (Only driving into it at speed; never a car forming a cordon, so
         // a monster truck can still be boxed in and arrested.)
         const ownHit = Math.max(0, p.vx * nx + p.vz * nz);
-        if (car.climbs && !braced && c.mode !== "contain" && ownHit > 12 && closing > 6 && !(c.climbedAt > this.elapsed - 1)) {
+        if (car.climbs && !braced && c.mode !== "contain" && c.heavy !== "armored" && ownHit > 12 && closing > 6 && !(c.climbedAt > this.elapsed - 1)) {
           c.climbedAt = this.elapsed;
           c.health = 0;
           c.lastDamageCause = "crushed";
@@ -860,7 +873,7 @@ export class Simulation {
         }
         if (share) {
           // (The classic car: exactly the old 0.1.)
-          const k = Math.max(0.05, 0.1 + (share - 0.2) * 0.6) * Math.sqrt(car.impact || 1);
+          const k = (Math.max(0.05, 0.1 + (share - 0.2) * 0.6) * Math.sqrt(car.impact || 1)) / cm;
           c.vx += nx * closing * k;
           c.vz += nz * closing * k;
         }
@@ -868,7 +881,7 @@ export class Simulation {
         // (Only the player's own hit, not a police car ramming it.)
         if (ownHit > 8 && closing > 8 && (car.impact || 1) > 1 && c.mode !== "contain" && this.elapsed - (c.playerHitAt ?? -9) > 0.4) {
           c.playerHitAt = this.elapsed;
-          c.health -= (Math.min(closing, ownHit) - 8) * 2.6 * Math.max(0, (car.impact || 1) - 1);
+          c.health -= ((Math.min(closing, ownHit) - 8) * 2.6 * Math.max(0, (car.impact || 1) - 1)) / cm;
           if (c.health <= 0) c.lastDamageCause = "rammed";
         }
         // Only a real hit hurts: a car pressed nose-first against a parked
@@ -879,7 +892,14 @@ export class Simulation {
             this.recordImpact(p, closing, "player-police");
             this.hitCooldown = 0.8;
           }
-          hurtPolice(this, closing, Math.max(0, p.vx * nx + p.vz * nz), `police:${c.id}`);
+          hurtPolice(this, closing, Math.max(0, p.vx * nx + p.vz * nz), `police:${c.id}`, Math.min(1.6, Math.sqrt(cm)));
+          // A heavy police car driving into the player shoves it.
+          const push = -((c.vx || 0) * nx + (c.vz || 0) * nz);
+          if (cm > 1 && push > 2) {
+            const k = Math.min(0.6, 0.35 * (cm - 1)) / Math.max(0.8, car.mass || 1);
+            p.vx -= nx * push * k;
+            p.vz -= nz * push * k;
+          }
         }
         p.speed = Math.max(0, p.speed - closing * 0.25 * (1 - (car.retain ?? 0)));
       }
@@ -922,6 +942,7 @@ export class Simulation {
   }
   update(dt, input = {}) {
     this.syncHealth();
+    this.lastDt = dt;
     if (!this.started || this.result || dt <= 0) return;
     dt = Math.min(dt, 0.05);
     this.elapsed += dt;
@@ -963,10 +984,10 @@ export class Simulation {
       (p.netSpeed - (p.fleeSpeed ?? CONFIG.playerSpeed)) *
         (1 - Math.exp(-dt / 1.2));
     this.cameraRig.update(p, dt);
-    const desiredFleet = Math.min(
-      CONFIG.maxPolice,
-      4 + Math.floor((this.elapsed + 1e-7) / 10),
-    );
+    // (CITY CHAOS: the fleet follows the wanted level.)
+    const desiredFleet = this.chaos
+      ? Math.min(CONFIG.maxPolice, chaosFleet(this))
+      : Math.min(CONFIG.maxPolice, 4 + Math.floor((this.elapsed + 1e-7) / 10));
     while (
       this.reinforcementsEnabled &&
       this.policeEnabled &&
@@ -988,6 +1009,9 @@ export class Simulation {
       }
       const c = Object.assign(makePolice(id), spawn);
       c.spawnedAt = this.elapsed;
+      // CITY CHAOS wanted 4-5: heavy police SUVs and an armored truck.
+      const heavy = this.chaos && chaosNextPoliceKind(this);
+      if (heavy) makeHeavyPolice(c, heavy);
       this.spawnEvents.push({
         time: this.elapsed,
         kind: "reinforcement",
@@ -1002,7 +1026,8 @@ export class Simulation {
       previous.set(c, { x: c.x, z: c.z });
     }
     if (this.policeEnabled) {
-      updateRoadblock(this, dt);
+      // (CITY CHAOS: roadblocks only from wanted level 3.)
+      if (!this.chaos || this.chaos.level >= CHAOS.roadblockFrom || this.roadblock) updateRoadblock(this, dt);
       updateCordon(this, dt);
     }
     p.cordonActive = !!this.cordon;
@@ -1030,6 +1055,9 @@ export class Simulation {
             makePolice(c.id, c.generation + 1),
             spawn,
           );
+          // (CITY CHAOS: the replacement may be a heavy unit.)
+          const heavy = this.chaos && chaosNextPoliceKind(this);
+          if (heavy) makeHeavyPolice(this.police[i], heavy);
           this.police[i].spawnedAt = this.elapsed;
           this.spawnEvents.push({
             time: this.elapsed,
@@ -1084,6 +1112,7 @@ export class Simulation {
         const spawn = hidden && this.navigation.spawn(p, this.police, c.id, c.generation + 1, this.cameraRig.camera);
         if (spawn) {
           this.police[i] = Object.assign(makePolice(c.id, c.generation + 1), spawn);
+          if (c.heavy) makeHeavyPolice(this.police[i], c.heavy);
           this.police[i].spawnedAt = this.elapsed;
           this.stats.policeRecalls = (this.stats.policeRecalls || 0) + 1;
           this.spawnEvents.push({ time: this.elapsed, kind: "recall", ...spawn });

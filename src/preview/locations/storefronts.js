@@ -30,6 +30,7 @@ const TYPES = ["plain", "plain", "goods", "goods", "electric", "diner", "plain",
 // buildings are not rebuilt) and are drawn instanced: three draw calls in
 // all, however many shops are broken.
 import * as THREE from "three";
+import { chaosDestroyed } from "../../game/chaos.js";
 import { K } from "../../render/kit.js";
 import { C, B, G, pieceGeometry, bakedMaterial } from "./parts.js";
 import { BRANDS } from "../../world/brands.js";
@@ -255,6 +256,8 @@ export class Storefronts {
   breakFace(sim, f, speed) {
     if (f.broken || this.front.count >= CAP) return;
     f.broken = true;
+    // (CITY CHAOS: a shop front counts for the combo.)
+    if (sim?.chaos) chaosDestroyed(sim, "shop", `shop:${f.b.x},${f.b.z},${f.ry}`, f.b.x, f.b.z, 0);
     this.stats.broken++;
     this.place(this.front, f);
     this.place(this.patch, f, f.wall);

@@ -18,6 +18,7 @@ import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
 import { RepairRenderer } from "./repairs.js";
+import { ChaosRenderer } from "./chaos.js";
 import { TOON_MODELS } from "./toon-vehicles.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
@@ -127,6 +128,7 @@ export class CityRenderer {
     this.heli = new HelicopterRenderer(this.scene);
     this.coins = new CoinRenderer(this.scene);
     this.repairs = new RepairRenderer(this.scene);
+    this.chaos = new ChaosRenderer(this.scene);
     this.overpass.setLayout(layout);
     // V2.1 destructible low-rise buildings (wall cells).
     this.cells = new BuildingCellsRenderer(this.scene);
@@ -354,6 +356,7 @@ export class CityRenderer {
     this.cameraRig.resize(w, h);
   }
   render(sim, dt, running = sim.started && !sim.result) {
+    this.lastSimChaos = !!sim.chaos;
     const p = sim.player;
     // The chosen car's model (vehicle collection; the classic car otherwise).
     if (this.playerModelId !== (sim.vehicleId || "starter")) this.setPlayerModel(sim.vehicleId || "starter");
@@ -428,6 +431,7 @@ export class CityRenderer {
     this.player.updateMatrixWorld(true);
     this.roadEvents.update(sim, this.camera);
     this.pickups.update(sim, this.camera);
+    this.chaos.update(sim, this.camera);
     this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
     this.water.update(sim.city, sim.elapsed, this.camera);
     this.overpass.update(sim, dt);
@@ -491,7 +495,12 @@ export class CityRenderer {
   }
   // V2.0: the on-screen arrow (escape gate, or the mission's next item).
   get guidanceView() {
+    // (CITY CHAOS: screen-edge markers instead, see chaosMarks.)
+    if (this.lastSimChaos) return null;
     return this.roadEvents.view || this.pickups.view || this.targetView.view;
+  }
+  get chaosMarks() {
+    return this.chaos.marks;
   }
   setPip(enabled) {
     this.pipEnabled = enabled;
@@ -597,6 +606,7 @@ export class CityRenderer {
     this.officers.reset();
     this.cityLife.reset();
     this.pickups.reset();
+    this.chaos.reset();
     this.targetView.reset();
     this.water.reset();
     this.cameraRig.reset();

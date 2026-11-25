@@ -30,7 +30,8 @@ test("every mission carries its own goal, limit, conditions, reward and map", ()
     assert.ok(m.timeLimit === null || m.timeLimit > 0);
     assert.ok(["short", "challenge"].includes(m.durationClass));
     assert.equal(m.reward.type, "credits");
-    assert.ok(m.reward.amount > 0);
+    // (CITY CHAOS pays by score and coins, not a fixed reward.)
+    assert.ok(m.reward.amount > 0 || m.type === "chaos");
     assert.ok(m.failOn.length > 0 && m.failOn.includes("destroyed"));
     assert.equal(typeof m.update, "function");
     assert.equal(typeof m.hud, "function");

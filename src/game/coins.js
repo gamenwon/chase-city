@@ -20,6 +20,7 @@
 // solid. A collected coin does not come back in the same run.
 import { groundHeight, updateJump, JUMP } from "./jumps.js";
 import { overpassHeight } from "../world/citygen.js";
+import { chaosDestroyed } from "./chaos.js";
 
 export const COINS = Object.freeze({
   radius: 2.6, // forgiving pickup distance (m)
@@ -183,6 +184,9 @@ export function resetCoins(sim) {
 // Destruction reward: once per key (object), chain links and the per-run
 // total capped.
 export function awardCoins(sim, key, kind, x, z, chainDepth = 0) {
+  // (CITY CHAOS: every reward-worthy destruction feeds the combo and the
+  // wanted level; it checks who caused it and counts each object once.)
+  if (sim.chaos) chaosDestroyed(sim, kind, key, x, z, chainDepth);
   if (!sim.coinKeys || sim.coinKeys.has(key) || sim.result) return 0;
   sim.coinKeys.add(key);
   const R = COINS.reward;

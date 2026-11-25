@@ -397,6 +397,7 @@ function frame(ms) {
     frame.taken = taken;
   } else frame.taken = 0;
   ui.update(sim, renderer?.guidanceView);
+  ui.chaosHud(sim, renderer?.chaosMarks);
   if (state === "running" || state === "ready") renderer?.locations?.render(state === "running" ? dt : 0, sim);
   renderer?.render(
     sim,

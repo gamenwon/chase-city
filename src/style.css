@@ -1151,3 +1151,75 @@ body.busted #arrest-countdown {
 .stats .hp[data-state="crit"] strong { color: #ff6b6b; animation: hp-pulse 1.2s ease-in-out infinite; }
 @keyframes hp-pulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .stats .hp[data-state="crit"] strong { animation: none; } }
+
+/* CITY CHAOS HUD (interface.js chaosHud). */
+#chaos-carry {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: #ffb347;
+  color: #2a1700;
+  font: 800 11px "Barlow Condensed", sans-serif;
+  letter-spacing: 1px;
+}
+#chaos-carry[hidden] { display: none; }
+#heat b.up { animation: chaos-star 0.5s ease-out 3; }
+@keyframes chaos-star { 50% { transform: scale(1.25); color: #fff; } }
+#chaos-pop {
+  position: fixed;
+  left: 36px;
+  top: 104px;
+  z-index: 2;
+  pointer-events: none;
+  font: 900 italic 26px "Barlow Condensed", Impact, sans-serif;
+  letter-spacing: 1px;
+  color: #ffd84a;
+  text-shadow: 0 2px 0 #7a3a00, 0 0 14px #0009;
+  white-space: nowrap;
+  animation: chaos-pop 0.35s ease-out;
+}
+#chaos-pop[hidden] { display: none; }
+#chaos-pop.big { color: #ff6b3a; font-size: 32px; }
+#chaos-pop.target { color: #ff4b5c; }
+#chaos-pop.delivery, #chaos-pop.parcel { color: #7cc4ff; text-shadow: 0 2px 0 #0b3a66, 0 0 14px #0009; }
+#chaos-pop.wanted { color: #fff; }
+@keyframes chaos-pop { from { transform: scale(1.4); opacity: 0.3; } }
+#chaos-pop { transform-origin: left center; }
+#chaos-marks { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+#chaos-marks[hidden] { display: none; }
+.cmark {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  background: #0b1f26cc;
+  border: 2px solid var(--c);
+  display: grid;
+  place-items: center;
+}
+.cmark[hidden] { display: none; }
+.cmark i {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 13px solid var(--c);
+  margin-top: -6px;
+}
+.cmark b {
+  position: absolute;
+  top: 100%;
+  margin-top: 1px;
+  font: 700 9px monospace;
+  color: var(--c);
+  text-shadow: 0 1px 3px #000;
+}
+@media (max-width: 700px) {
+  #chaos-pop { left: 14px; top: 168px; font-size: 22px; }
+  #chaos-pop.big { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #chaos-pop, #heat b.up { animation: none; }
+}

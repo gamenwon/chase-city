@@ -117,8 +117,11 @@ function lanePoint(a, b, along) {
 
 // Where to place the target at the start: a road segment 40-60 m from the
 // player, preferably ahead of him, clear of solids; it starts driving away.
-export function createTarget(sim) {
+// (CITY CHAOS: a replacement target spawns further out, off screen:
+// opts { min, max, hidden(point) }.)
+export function createTarget(sim, opts = {}) {
   useNet(sim);
+  const dMin = opts.min ?? 45, dMax = opts.max ?? 62;
   const p = sim.player,
     f = fwd(p.angle);
   const segs = [];
@@ -127,7 +130,7 @@ export function createTarget(sim) {
       for (const nb of neighboursOf(NET ? NET.nodes.get(id) : { x, z })) {
         const mid = { x: (x + nb.x) / 2, z: (z + nb.z) / 2 };
         const d = Math.hypot(mid.x - p.x, mid.z - p.z);
-        if (d < 45 || d > 62) continue;
+        if (d < dMin || d > dMax) continue;
         const ahead = ((mid.x - p.x) * f.x + (mid.z - p.z) * f.z) / d;
         // Leaving away from the player (it has a head start).
         const away = Math.hypot(nb.x - p.x, nb.z - p.z) > Math.hypot(x - p.x, z - p.z);
@@ -136,9 +139,10 @@ export function createTarget(sim) {
       }
   segs.sort((a, b) => b.score - a.score);
   let pick = segs[0];
+  if (!pick) return null;
   for (const s of segs) {
     const pos = lanePoint(s.from, s.to, segLength(s.from, s.to) / 2);
-    if (sim.navigation.allowed(pos) && !sim.nearSolids(pos.x, pos.z, 2).length) {
+    if (sim.navigation.allowed(pos) && !sim.nearSolids(pos.x, pos.z, 2).length && (!opts.hidden || opts.hidden(pos))) {
       pick = s;
       break;
     }
@@ -343,7 +347,8 @@ export function resolveTargetContact(sim) {
   t.lastHitAt = sim.elapsed;
   // Proportional to impact severity: a rear-end bump ~5-12, a hard ram
   // 20-30, a T-bone at full speed up to 34.
-  const damage = clamp((closing - 2) * 3.2, 2, 34);
+  // (A car with more impact power takes it down in fewer hits.)
+  const damage = clamp((closing - 2) * 3.2, 2, 34) * Math.sqrt(sim.vehicle?.stats.impact || 1);
   t.health = Math.max(0, t.health - damage);
   t.hits++;
   t.damageTaken += damage;

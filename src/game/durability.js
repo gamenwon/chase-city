@@ -91,11 +91,12 @@ export function hurtImpact(sim, kind, speed, key) {
 }
 // A police car contact: the player's own head-on ram at speed is heavy
 // (5-8); being rammed hurts less than ramming.
-export function hurtPolice(sim, closing, ownHit, key) {
+export function hurtPolice(sim, closing, ownHit, key, scale = 1) {
   if (closing < DAMAGE.min.police) return 0;
+  // (scale: a heavy police car hits harder, CITY CHAOS.)
   let base = ownHit >= 20 ? 5 + Math.min(3, (ownHit - 20) / 5) : DAMAGE.base.police(closing);
   if (ownHit < closing * 0.5) base *= DAMAGE.received;
-  return hurt(sim, "police", base, key);
+  return hurt(sim, "police", base * scale, key);
 }
 export function heal(sim, share) {
   const before = sim.hp;

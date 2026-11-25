@@ -67,7 +67,8 @@ export function updateHelicopter(sim, dt) {
     if (sim.heli) sim.heli.leaving = true;
   }
   if (!sim.heli) {
-    if (!sim.policeEnabled || sim.heliEnabled === false || sim.result || sim.elapsed < HELI.spawnAfter || !sim.police.some((c) => c.state === "active")) {
+    // (CITY CHAOS: called in at wanted level 4, chaos.js.)
+    if (!sim.policeEnabled || sim.heliEnabled === false || sim.result || (sim.chaos ? sim.chaos.level < sim.chaos.heliFrom : sim.elapsed < HELI.spawnAfter) || !sim.police.some((c) => c.state === "active")) {
       p.heliTracked = false;
       return;
     }

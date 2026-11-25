@@ -6,7 +6,7 @@
 // hidden). Without it the default order below is used.
 import { MISSIONS } from "./missions.js";
 
-export const DEFAULT_MISSION_ORDER = Object.freeze(["survival60", "parcels", "targetHunt"]);
+export const DEFAULT_MISSION_ORDER = Object.freeze(["cityChaos", "survival60", "parcels", "targetHunt"]);
 
 export function missionOrder(config = globalThis.CHASE_CITY_CONFIG) {
   const wanted = Array.isArray(config?.missionOrder)

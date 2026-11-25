@@ -158,6 +158,88 @@ export class Interface {
       this.hitTimer = setTimeout(() => box.classList.remove("hit"), 160);
     }
   }
+  // CITY CHAOS HUD: wanted stars (1-5), parcels carried, a short
+  // combo / callout line under the top bar, and the screen-edge markers.
+  // Built once; hidden outside CITY CHAOS.
+  chaosHud(sim, marks = []) {
+    const c = sim.chaos;
+    document.body.classList.toggle("chaos", !!c);
+    if (!this.chaosEls) {
+      const carry = document.createElement("span");
+      carry.id = "chaos-carry";
+      document.getElementById("mission-hud").append(carry);
+      const pop = document.createElement("div");
+      pop.id = "chaos-pop";
+      pop.setAttribute("aria-live", "polite");
+      const box = document.createElement("div");
+      box.id = "chaos-marks";
+      box.setAttribute("aria-hidden", "true");
+      const chips = Array.from({ length: 4 }, () => {
+        const m = document.createElement("div");
+        m.className = "cmark";
+        m.innerHTML = "<i></i><b></b>";
+        box.append(m);
+        return m;
+      });
+      document.body.append(pop, box);
+      this.chaosEls = { carry, pop, box, chips, stars: document.querySelector("#heat b"), popKey: "" };
+    }
+    const E = this.chaosEls;
+    if (!c) {
+      E.carry.hidden = true;
+      E.pop.hidden = true;
+      E.box.hidden = true;
+      if (E.starsSet) {
+        E.stars.textContent = "★ ★ ★";
+        E.starsSet = false;
+      }
+      return;
+    }
+    const stars = "★".repeat(c.level) + "☆".repeat(5 - c.level);
+    if (E.stars.textContent !== stars) E.stars.textContent = stars;
+    E.starsSet = true;
+    E.stars.classList.toggle("up", sim.elapsed - c.levelUpAt < 1.5);
+    E.carry.hidden = c.carried <= 0;
+    const carryText = `택배 ${c.carried}`;
+    if (E.carry.textContent !== carryText) E.carry.textContent = carryText;
+    // One line at a time: the running combo, else the latest callout.
+    const now = sim.elapsed, k = c.combo;
+    let text = "", kind = "";
+    if (k.count >= 2 && now <= k.until) {
+      text = `${k.label} ×${k.count}`;
+      kind = k.count >= 10 ? "big" : "combo";
+    } else {
+      const f = c.feed[c.feed.length - 1];
+      if (f && now - f.time < 1.8) (text = f.text), (kind = f.kind);
+    }
+    E.pop.hidden = !text || !!sim.result;
+    if (text && E.popKey !== text) {
+      E.popKey = text;
+      E.pop.textContent = text;
+      E.pop.className = kind;
+      E.pop.style.animation = "none";
+      void E.pop.offsetWidth;
+      E.pop.style.animation = "";
+    }
+    E.box.hidden = !!sim.result;
+    // (Markers that would overlap are stacked apart.)
+    const W = innerWidth, H = innerHeight, placed = [];
+    E.chips.forEach((m, i) => {
+      const q = marks[i];
+      m.hidden = !q;
+      if (!q) return;
+      let x = Math.min(0.95, Math.max(0.05, q.sx)) * W, y = Math.min(0.9, Math.max(0.26, q.sy)) * H;
+      for (let n = 0; n < 4 && placed.some((o) => Math.hypot(o.x - x, o.y - y) < 46); n++) y += y > H * 0.6 ? -48 : 48;
+      placed.push({ x, y });
+      m.style.left = `${x.toFixed(0)}px`;
+      m.style.top = `${y.toFixed(0)}px`;
+      m.style.setProperty("--c", q.color);
+      m.dataset.kind = q.kind;
+      m.firstChild.style.transform = `rotate(${q.angle.toFixed(0)}deg)`;
+      const label = `${q.distance}m`;
+      if (m.lastChild.textContent !== label) m.lastChild.textContent = label;
+    });
+  }
   setWallet(amount) {
     this.elements["wallet-credits"].textContent =
       Math.round(amount).toLocaleString("ko-KR");
@@ -167,7 +249,7 @@ export class Interface {
     const def = sim.mission.definition,
       map = MAPS[def.mapId];
     this.elements["mission-number"].textContent =
-      `MISSION / ${String(number).padStart(2, "0")}`;
+      def.type === "chaos" ? "CITY CHAOS" : `MISSION / ${String(number).padStart(2, "0")}`;
     this.elements["time-label"].textContent =
       def.type === "chase" ? "도주 시간" : "주행 시간";
     document.body.classList.toggle("no-police", !sim.policeEnabled);

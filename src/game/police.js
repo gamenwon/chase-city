@@ -1,4 +1,16 @@
 import { CONFIG, clamp, angleDelta } from "./config.js";
+// CITY CHAOS heavy police (wanted 4-5): a heavy SUV and an armored truck.
+// Heavier (they shove a heavy player car), sturdier, a little slower; never
+// indestructible. mass is relative to an ordinary police car (1).
+export const HEAVY_POLICE = Object.freeze({
+  suv: { mass: 1.9, health: 170, topSpeed: 25.5, cruise: 21.5 },
+  armored: { mass: 2.8, health: 280, topSpeed: 23, cruise: 20 },
+});
+export function makeHeavyPolice(c, kind) {
+  const h = HEAVY_POLICE[kind];
+  if (!h) return c;
+  return Object.assign(c, { heavy: kind, mass: h.mass, health: h.health, maxHealth: h.health, topSpeed: h.topSpeed, speed: h.cruise, effectiveSpeed: h.cruise });
+}
 export function makePolice(i, generation = 0) {
   let x = (i % 2 ? 1 : -1) * 3,
     z = 30 + i * 9;
@@ -355,7 +367,7 @@ export function steerPolice(
       c.effectiveSpeed,
       CONFIG.flankSprintSpeed + difficulty,
     );
-  let speed = c.effectiveSpeed * corner;
+  let speed = Math.min(c.effectiveSpeed, c.topSpeed ?? Infinity) * corner;
   if (surrounding) {
     speed = Math.min(speed, Math.max(0, d - 0.12) * 2.2, 6);
     c.boostTimer = 0;
@@ -558,7 +570,7 @@ export function steerBlocker(c, index, player, dt, navigation, fleet = []) {
     c.blockState === "recover"
       ? 5
       : Math.sqrt(2 * CONFIG.blockDecel * Math.max(0, d - 0.3));
-  let limit = Math.min(CONFIG.frontSprintSpeed * corner, cap);
+  let limit = Math.min(Math.min(CONFIG.frontSprintSpeed, c.topSpeed ?? Infinity) * corner, cap);
   // Close to the player, come in slowly; never shove another police car.
   const toPlayer = Math.hypot(player.x - c.x, player.z - c.z);
   // Coming in toward the player: slow down near it. Driving past it (to get

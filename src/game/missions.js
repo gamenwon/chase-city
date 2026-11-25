@@ -22,10 +22,37 @@
 // Order on the select screen is not here: see catalog.js.
 import { crossedExit } from "./escape.js";
 import { createTarget, TARGET } from "./target.js";
+import { createChaos, updateChaos } from "./chaos.js";
 
 const SURVIVAL_SECONDS = 60;
 
 export const MISSIONS = Object.freeze({
+  // CITY CHAOS (chaos.js): every activity at once in one city, no clock,
+  // until BUSTED or WRECKED. Score, not a single goal.
+  cityChaos: Object.freeze({
+    id: "cityChaos",
+    type: "chaos",
+    title: "CITY CHAOS",
+    objective: "경찰을 따돌리며 타깃 차량 추격, 코인·택배 수집, 배송, 도시 파괴를 자유롭게! 체포되거나 차가 부서질 때까지 최고 점수에 도전하세요.",
+    mapId: "downtown",
+    durationClass: "challenge",
+    timeLimit: null,
+    target: 0,
+    reward: Object.freeze({ type: "credits", amount: 0 }),
+    rules: Object.freeze({ police: true, chaos: true }),
+    failOn: Object.freeze(["arrested", "destroyed"]),
+    continueOn: Object.freeze(["arrested", "destroyed"]),
+    progressLabel: "점수",
+    unit: "",
+    progress: (sim) => sim.chaos?.score || 0,
+    setup(sim) {
+      createChaos(sim);
+    },
+    update(sim) {
+      updateChaos(sim, sim.lastDt || 1 / 60);
+    },
+    hud: (sim) => `SCORE ${(sim.chaos?.score || 0).toLocaleString("en-US")}`,
+  }),
   // The V1.x police chase, unchanged, as one mission among others.
   survival60: Object.freeze({
     id: "survival60",

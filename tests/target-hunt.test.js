@@ -17,8 +17,8 @@ const hunt = (seed = 1) => {
   return s;
 };
 
-test("TARGET HUNT is listed after the existing missions, no police, no clock", () => {
-  assert.deepEqual(missionOrder(), ["survival60", "parcels", "targetHunt"]);
+test("TARGET HUNT is listed after the existing missions (CITY CHAOS first), no police, no clock", () => {
+  assert.deepEqual(missionOrder(), ["cityChaos", "survival60", "parcels", "targetHunt"]);
   const def = MISSIONS.targetHunt;
   assert.equal(def.rules.police, false);
   assert.equal(def.timeLimit, null);
