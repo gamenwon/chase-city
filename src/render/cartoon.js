@@ -568,7 +568,8 @@ export function taxi() {
   // textures): T A X I as small dark bars.
   for (const f of [-1, 1]) {
     const z = zc + f * 0.16;
-    const bar = (x, y, w, h) => box(g, w, h, 0.02, 0x1f1e24, x, top + 0.2 + y, z);
+    // (Mirrored on the front face so it reads left to right from both ends.)
+    const bar = (x, y, w, h) => box(g, w, h, 0.02, 0x1f1e24, x * f, top + 0.2 + y, z);
     bar(-0.33, 0.14, 0.16, 0.04); bar(-0.33, 0, 0.05, 0.16);
     bar(-0.12, 0, 0.04, 0.17); bar(-0.04, 0, 0.04, 0.17); bar(-0.08, 0.14, 0.12, 0.04); bar(-0.08, 0.07, 0.12, 0.03);
     bar(0.1, 0, 0.04, 0.17); bar(0.18, 0, 0.04, 0.17); bar(0.14, 0.07, 0.06, 0.04);
