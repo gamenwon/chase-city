@@ -7,14 +7,20 @@ import { createLayout } from "../src/world/layout.js";
 import { Simulation } from "../src/game/simulation.js";
 import { CHAOS, chaosDestroyed } from "../src/game/chaos.js";
 import { HEAVY_POLICE } from "../src/game/police.js";
+import { random } from "../scripts/autoplay.js";
 
 const make = (extra = {}) => {
-  const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed: 3, mission: "cityChaos", reinforcements: true, ...extra });
+  const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed: 3, mission: "cityChaos", reinforcements: true, random: random(42), ...extra });
   s.start();
   return s;
 };
+// (The player sits still in these tests: the police are kept from
+// arresting it, durability from running out, so the run goes on.)
 const step = (s, n = 1) => {
-  for (let i = 0; i < n && !s.result; i++) s.update(1 / 60, {});
+  for (let i = 0; i < n && !s.result; i++) {
+    s.arrest = 0;
+    s.update(1 / 60, {});
+  }
 };
 
 test("start: police, a target, parcels, coins and repairs all active at once; calm start", () => {
@@ -56,9 +62,13 @@ test("parcel: picked up by driving through, carried, delivered at the drop-off; 
   assert.equal(s.chaos.counts.deliveries, 1);
   assert.equal(s.chaos.delivery, null);
   assert.ok(s.chaos.score >= before.score + CHAOS.score.delivery);
-  assert.equal(s.runCoins, before.coins + CHAOS.coins.delivery);
+  // (A second parcel lying at the drop-off is picked up and delivered in
+  // the same pass.)
+  assert.equal(s.runCoins, before.coins + CHAOS.coins.delivery * s.chaos.delivered);
   assert.equal(s.result, null, "a delivery never ends the run");
+  s.hp = s.maxHp;
   step(s, Math.ceil(CHAOS.parcels.respawn * 60) + 2);
+  assert.equal(s.result, null);
   assert.equal(s.pickups.filter((p) => !p.taken).length, CHAOS.parcels.onMap);
 });
 
