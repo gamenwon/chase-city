@@ -1219,7 +1219,7 @@ body.busted #arrest-countdown {
   text-shadow: 0 1px 3px #000;
 }
 @media (max-width: 700px) {
-  #chaos-pop { left: 14px; top: 168px; font-size: 22px; }
+  #chaos-pop { left: 14px; top: 212px; font-size: 22px; }
   #chaos-pop.big { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) {
