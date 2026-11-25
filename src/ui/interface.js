@@ -288,7 +288,7 @@ export class Interface {
     document.querySelector("#mission-goal").textContent = mission.objective;
     document.querySelector("#mission-limit").textContent = limitText(mission);
     document.querySelector("#mission-reward").textContent =
-      `${mission.reward.amount} 코인`;
+      mission.type === "chaos" ? "점수 · 코인(수집·파괴·타깃·배송)" : `${mission.reward.amount} 코인`;
     if (vehicle)
       document.querySelector("#mission-vehicle").textContent = vehicle.name;
   }
@@ -297,7 +297,7 @@ export class Interface {
   showVehiclePicker(list, current, onPick) {
     const box = document.querySelector("#vehicle-picker"), grid = document.querySelector("#vehicle-grid");
     if (!box || !grid) return;
-    const labels = [["speed", "속도"], ["accel", "가속"], ["handling", "조향"], ["mass", "중량"], ["destroy", "파괴"]];
+    const labels = [["speed", "속도"], ["accel", "가속"], ["handling", "조향"], ["mass", "중량"], ["destroy", "파괴"], ["durability", "내구"]];
     grid.innerHTML = "";
     for (const v of list) {
       const b = document.createElement("button");
@@ -308,7 +308,9 @@ export class Interface {
       const bars = labels
         .map(([k, n]) => `<span class="vp-row"><small>${n}</small><i>${"<b></b>".repeat(v.ratings[k])}${"<u></u>".repeat(5 - v.ratings[k])}</i></span>`)
         .join("");
-      b.innerHTML = `<strong>${v.name}</strong>${bars}`;
+      // The car's picture (pre-rendered from its real model,
+      // scripts/thumbs.cjs), name, what it is good at, its ratings.
+      b.innerHTML = `<img src="${import.meta.env.BASE_URL}vehicles/${v.id}.webp" alt="" width="240" height="150" loading="lazy" decoding="async"><strong>${v.name}</strong><em>${v.role || ""}</em>${bars}`;
       b.addEventListener("click", () => onPick(v.id));
       grid.appendChild(b);
     }

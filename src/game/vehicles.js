@@ -185,3 +185,16 @@ export function vehicleRatings(vehicle) {
   const r = vehicle.ratings || { speed: 3, accel: 3, steer: 3, mass: 2, destroy: 2 };
   return { speed: r.speed, accel: r.accel, handling: r.steer, mass: r.mass, destroy: r.destroy, durability: r.durability ?? 2 };
 }
+
+// One-line specialization for the vehicle select cards.
+export const VEHICLE_ROLES = Object.freeze({
+  starter: "균형형 · 기본 차량",
+  mini: "조향·가속 특화 · 좁은 길",
+  super: "최고 속도 · 추격과 탈출",
+  muscle: "속도와 파괴력의 균형",
+  suv: "경찰차 밀어내기 · 안정성",
+  icecream: "넓은 코인 흡수 · 멜로디",
+  monster: "차량 타고 넘기 · 뒤집기",
+  dozer: "시설 파괴 최강 · 가장 느림",
+  armored: "최고 내구 · 충돌에도 속도 유지",
+});

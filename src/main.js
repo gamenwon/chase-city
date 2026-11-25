@@ -4,7 +4,7 @@ const audio = new SoundSystem();
 import { Simulation } from "./game/simulation.js";
 import { getMission } from "./game/missions.js";
 import { missionOrder, nextMission } from "./game/catalog.js";
-import { getVehicle, VEHICLES, COLLECTION, vehicleRatings } from "./game/vehicles.js";
+import { getVehicle, VEHICLES, COLLECTION, vehicleRatings, VEHICLE_ROLES } from "./game/vehicles.js";
 import { Progress } from "./game/progress.js";
 import { getMap, mapLayout } from "./world/maps.js";
 import { generateCity } from "./world/citygen.js";
@@ -153,7 +153,7 @@ ui.start.addEventListener("click", () => {
 document.querySelector("#result-vehicle")?.addEventListener("click", () => document.querySelector("#pick-vehicle")?.click());
 document.querySelector("#pick-vehicle")?.addEventListener("click", () => {
   if (state !== "ready" && state !== "over") return; // (not from a paused run)
-  const list = ["starter", ...COLLECTION].map((id) => ({ id, name: VEHICLES[id].name, ratings: vehicleRatings(VEHICLES[id]) }));
+  const list = ["starter", ...COLLECTION].map((id) => ({ id, name: VEHICLES[id].name, role: VEHICLE_ROLES[id], ratings: vehicleRatings(VEHICLES[id]) }));
   ui.showVehiclePicker(list, progress.selectedVehicle, (id) => {
     if (state !== "ready" && state !== "over") return;
     progress.selectVehicle(id);

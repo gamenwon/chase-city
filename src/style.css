@@ -1132,6 +1132,8 @@ body.busted #arrest-countdown {
 }
 .vp-card.current { border-color: #ffcf19; box-shadow: inset 0 0 0 1px #ffcf19; }
 .vp-card strong { display: block; font-size: 12px; margin-bottom: 4px; }
+.vp-card img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; margin: -2px 0 2px; }
+.vp-card em { display: block; font-style: normal; font-size: 9.5px; color: #ffcf19; margin: -2px 0 5px; line-height: 1.25; min-height: 2.5em; }
 .vp-row { display: flex; align-items: center; gap: 4px; font-size: 9px; color: #b9cfca; }
 .vp-row small { width: 22px; flex: none; }
 .vp-row i { display: inline-flex; gap: 2px; }
@@ -1252,4 +1254,17 @@ body.busted #arrest-countdown {
 @media (min-width: 701px) {
   .overlay.chaos-res .cr-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .overlay.chaos-res .cr-grid div { padding: 4px 6px; }
+}
+.vp-card { position: relative; }
+.vp-card.current { background: #22505b; box-shadow: inset 0 0 0 2px #ffcf19, 0 0 0 1px #ffcf19; }
+.vp-card.current::after {
+  content: "선택됨";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: #ffcf19;
+  color: #102a32;
+  font: 800 9px sans-serif;
 }
