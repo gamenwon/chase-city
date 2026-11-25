@@ -149,6 +149,8 @@ ui.start.addEventListener("click", () => {
 // Developer vehicle selection: any car of the collection (or the classic
 // car), only between runs (never while one is being played); the mission
 // restarts with it.
+// (Also from the CITY CHAOS result screen.)
+document.querySelector("#result-vehicle")?.addEventListener("click", () => document.querySelector("#pick-vehicle")?.click());
 document.querySelector("#pick-vehicle")?.addEventListener("click", () => {
   if (state !== "ready" && state !== "over") return; // (not from a paused run)
   const list = ["starter", ...COLLECTION].map((id) => ({ id, name: VEHICLES[id].name, ratings: vehicleRatings(VEHICLES[id]) }));
@@ -241,6 +243,7 @@ document.querySelector("#ad-double").addEventListener("click", async () => {
 function resultInfo() {
   return {
     earned: result.earned,
+    previousBest: result.previousBest,
     hasNext: !!nextMission(sim.missionId, order),
   };
 }
@@ -268,8 +271,15 @@ function finishRun() {
     time: sim.elapsed,
     repeat: recordedRun === runKey(),
   });
+  // CITY CHAOS: the personal best score (once per run).
+  let previousBest = 0;
+  if (sim.chaos) {
+    const record = progress.missionRecord(sim.missionId);
+    previousBest = record?.bestScore || 0;
+    if (recordedRun !== runKey()) progress.recordScore(sim.missionId, sim.chaos.score, { time: Math.round(sim.elapsed), wanted: sim.chaos.maxLevel, vehicle: sim.vehicleId });
+  }
   recordedRun = runKey();
-  result = { base, earned, doubled: false };
+  result = { base, earned, doubled: false, previousBest };
   ui.setWallet(progress.credits);
   ui.gameover(sim, resultInfo());
   refreshAds();

@@ -105,6 +105,15 @@ export class Progress {
     this.save();
     return r;
   }
+  // CITY CHAOS personal best (score, and the run it came from). Returns
+  // the previous best (0 if none).
+  recordScore(missionId, score, extra = {}) {
+    const r = (this.data.missions[missionId] ||= { plays: 0, clears: 0, bestTime: null });
+    const previous = r.bestScore || 0;
+    if (score > previous) Object.assign(r, { bestScore: score, best: { ...extra, score } });
+    this.save();
+    return previous;
+  }
   missionRecord(missionId) {
     return this.data.missions[missionId] || null;
   }

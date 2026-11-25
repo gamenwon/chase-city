@@ -630,6 +630,25 @@ export class SoundSystem {
         this.voice("tone", 0.5, f.kind === "pick" ? 1760 : 1568, 0.055);
         if (f.kind !== "pick") this.voice("tone", 0.5, 2093, 0.11);
       }
+      // CITY CHAOS cues: a combo tick (higher with the count), target
+      // down, a delivery, the wanted level going up. Rapid ones merge.
+      const cc = sim.chaos;
+      if (cc) {
+        const st = (this.chaosSeen ||= { run: -1 });
+        if (st.run !== sim.runNumber) Object.assign(st, { run: sim.runNumber, combo: 0, targets: 0, deliveries: 0, level: 1 });
+        const t = this.context.currentTime;
+        if (cc.combo.count >= 2 && cc.combo.count !== st.combo && t - (st.comboAt ?? -1) > 0.09) {
+          st.comboAt = t;
+          this.voice("tone", 0.32, 660 * Math.pow(2, Math.min(12, cc.combo.count - 2) / 12), 0);
+        }
+        st.combo = cc.combo.count;
+        if (cc.counts.targets > st.targets) [784, 988, 1175, 1568].forEach((hz, i) => this.voice("tone", 0.55, hz, i * 0.08));
+        st.targets = cc.counts.targets;
+        if (cc.counts.deliveries > st.deliveries) [880, 1319, 1760].forEach((hz, i) => this.voice("tone", 0.5, hz, i * 0.09));
+        st.deliveries = cc.counts.deliveries;
+        if (cc.level > st.level) [523, 392, 523, 392].forEach((hz, i) => this.voice("tone", 0.35, hz, i * 0.14));
+        st.level = cc.level;
+      }
       // Repair toolbox: a rising three-note "fixed" arpeggio.
       this.repairSeen ||= new WeakSet();
       for (const f of sim.repairFx || []) {

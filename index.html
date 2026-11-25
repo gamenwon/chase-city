@@ -104,6 +104,20 @@
             <dd id="result-earned">0</dd>
           </div>
         </dl>
+        <div id="chaos-result" hidden>
+          <div class="cr-score"><small>TOTAL SCORE</small><strong id="cr-score">0</strong><em id="cr-best" hidden>NEW BEST!</em><span id="cr-prev"></span></div>
+          <dl class="cr-grid">
+            <div><dt>생존 시간</dt><dd id="cr-time">00:00</dd></div>
+            <div><dt>최고 수배</dt><dd id="cr-wanted">★</dd></div>
+            <div><dt>최고 콤보</dt><dd id="cr-combo">0</dd></div>
+            <div><dt>경찰차 파괴</dt><dd id="cr-police">0</dd></div>
+            <div><dt>일반 차량 파괴</dt><dd id="cr-civilian">0</dd></div>
+            <div><dt>시설 파괴</dt><dd id="cr-facilities">0</dd></div>
+            <div><dt>타깃 처치</dt><dd id="cr-targets">0</dd></div>
+            <div><dt>택배 수거 · 배송</dt><dd id="cr-parcels">0</dd></div>
+            <div><dt>획득 코인</dt><dd id="cr-coins">0</dd></div>
+          </dl>
+        </div>
         <div id="ad-actions" hidden>
           <button id="ad-continue" class="ad" hidden>
             광고 보고 이어하기 <small>1회</small>
@@ -116,6 +130,7 @@
         <button id="start" class="primary">START →</button>
         <div class="secondary-actions">
           <button id="next-mission" class="secondary" hidden>다음 미션 →</button>
+          <button id="result-vehicle" class="secondary" hidden>차량 선택</button>
           <button id="open-select" class="secondary">미션 선택</button>
         </div>
         <div class="instructions">

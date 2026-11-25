@@ -51,6 +51,8 @@ export class Interface {
         "open-select",
         "mission-select",
         "mission-list",
+        "chaos-result",
+        "result-vehicle",
       ].map((id) => [id, document.getElementById(id)]),
     );
     try {
@@ -258,6 +260,7 @@ export class Interface {
   }
   show(eyebrow, title, message, button) {
     this.overlay.hidden = false;
+    this.overlay.classList.remove("chaos-res");
     document.body.classList.remove("playing");
     this.elements.eyebrow.textContent = eyebrow;
     this.elements.title.textContent = title;
@@ -267,6 +270,8 @@ export class Interface {
     this.elements["ad-actions"].hidden = true;
     this.elements["next-mission"].hidden = true;
     this.elements["open-select"].hidden = true;
+    this.elements["chaos-result"].hidden = true;
+    this.elements["result-vehicle"].hidden = true;
     this.start.textContent = button;
     this.start.focus({ preventScroll: true });
   }
@@ -330,6 +335,7 @@ export class Interface {
   // where each ad state is "hidden", "disabled" or "ready".
   gameover(sim, info = {}) {
     const def = sim.mission.definition;
+    if (def.type === "chaos") return this.chaosResult(sim, info);
     if (def.type === "chase") {
       this.best = Math.max(this.best, Math.floor(sim.elapsed));
       try {
@@ -365,7 +371,37 @@ export class Interface {
     }
     this.showResultDetails(sim, info);
   }
+  // CITY CHAOS result: BUSTED / WRECKED, the score (and personal best),
+  // what the run did. RETRY, vehicle select, mission select.
+  chaosResult(sim, info = {}) {
+    const c = sim.chaos, e = this.elements;
+    const busted = sim.result === "arrested";
+    const why = busted
+      ? sim.pin?.trapped ? "경찰차에 막혀 빠져나오지 못했습니다." : "포위에서 빠져나오지 못했습니다."
+      : "차량 내구도가 모두 소진됐습니다.";
+    this.show(busted ? "BUSTED!" : "WRECKED!", busted ? "체포됨" : "차량 파괴", why, "RETRY →");
+    e["chaos-result"].hidden = false;
+    this.overlay.classList.add("chaos-res");
+    const set = (id, v) => (document.getElementById(id).textContent = v);
+    set("cr-score", c.score.toLocaleString("en-US"));
+    const best = info.previousBest ?? 0;
+    document.getElementById("cr-best").hidden = !(c.score > best);
+    set("cr-prev", best > 0 ? `최고 기록 ${Math.max(best, c.score).toLocaleString("en-US")}` : "첫 기록");
+    set("cr-time", formatTime(sim.elapsed));
+    set("cr-wanted", "★".repeat(c.maxLevel));
+    set("cr-combo", c.combo.best >= 2 ? `×${c.combo.best}` : "-");
+    set("cr-police", c.counts.police);
+    set("cr-civilian", c.counts.civilian);
+    set("cr-facilities", c.counts.facilities);
+    set("cr-targets", c.counts.targets);
+    set("cr-parcels", `${c.counts.parcels} · ${c.delivered || 0}`);
+    set("cr-coins", `+${(info.earned ?? sim.runCoins).toLocaleString("ko-KR")}`);
+    e["open-select"].hidden = false;
+    e["result-vehicle"].hidden = false;
+    this.setAds(info.ads || {});
+  }
   showResultDetails(sim, info = {}) {
+    if (sim.mission.definition.type === "chaos") return this.chaosResult(sim, info);
     const e = this.elements;
     e["result-details"].hidden = false;
     e["result-time"].textContent = formatTime(sim.elapsed);
