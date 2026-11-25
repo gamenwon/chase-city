@@ -1268,3 +1268,4 @@ body.busted #arrest-countdown {
   color: #102a32;
   font: 800 9px sans-serif;
 }
+#mission-hud #chaos-carry { color: #2a1700; font: 800 13px "Noto Sans KR", sans-serif; letter-spacing: 0; justify-self: start; width: auto; margin: 6px 0 0; padding: 2px 9px; }
