@@ -1269,3 +1269,20 @@ body.busted #arrest-countdown {
   font: 800 9px sans-serif;
 }
 #mission-hud #chaos-carry { color: #2a1700; font: 800 13px "Noto Sans KR", sans-serif; letter-spacing: 0; justify-self: start; width: auto; margin: 6px 0 0; padding: 2px 9px; }
+
+/* Pause popup: leave for the mission select, with a confirmation. */
+#exit-confirm {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: #0b2a32;
+  border: 1px solid #ffcf19;
+  border-radius: 4px;
+}
+#exit-confirm[hidden] { display: none; }
+#exit-confirm strong { display: block; font: 800 18px "Barlow Condensed", sans-serif; color: #ffcf19; }
+#exit-confirm p { margin: 6px 0 12px; font-size: 13px; line-height: 1.5; }
+#exit-confirm small { color: #9fbeb9; }
+.exit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.exit-actions button { min-height: 44px; }
+.overlay.confirming #start,
+.overlay.confirming .secondary-actions { display: none; }

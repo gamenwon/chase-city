@@ -272,6 +272,8 @@ export class Interface {
     this.elements["open-select"].hidden = true;
     this.elements["chaos-result"].hidden = true;
     this.elements["result-vehicle"].hidden = true;
+    document.getElementById("pause-exit").hidden = true;
+    this.confirmExit(false);
     this.start.textContent = button;
     this.start.focus({ preventScroll: true });
   }
@@ -332,6 +334,16 @@ export class Interface {
       "준비되면 다시 도시로 돌아가세요.",
       "계속 달리기 →",
     );
+    // Leave the run for the mission select (after a confirmation).
+    document.getElementById("pause-exit").hidden = false;
+  }
+  // The "Return to Mission Select?" confirmation over the pause popup.
+  confirmExit(open) {
+    const box = document.getElementById("exit-confirm");
+    if (!box) return;
+    box.hidden = !open;
+    this.overlay.classList.toggle("confirming", open);
+    if (open) document.getElementById("exit-cancel").focus({ preventScroll: true });
   }
   // Result screen. `info`: { earned, hasNext, ads: { continue, double } }
   // where each ad state is "hidden", "disabled" or "ready".

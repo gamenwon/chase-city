@@ -176,6 +176,25 @@ document.querySelector("#pick-vehicle")?.addEventListener("click", () => {
     chooseMission(missionId);
   });
 });
+// Pause popup: MISSION SELECT ends the run (after a confirmation) and goes
+// to the mission list. CANCEL goes back to the pause popup (still paused).
+document.querySelector("#pause-exit").addEventListener("click", () => {
+  if (state === "paused") ui.confirmExit(true);
+});
+document.querySelector("#exit-cancel").addEventListener("click", () => {
+  ui.confirmExit(false);
+  ui.start.focus({ preventScroll: true });
+});
+document.querySelector("#exit-ok").addEventListener("click", () => {
+  if (state !== "paused") return;
+  ui.confirmExit(false);
+  // The same clean switch as choosing a mission: coins picked up so far are
+  // paid once, the simulation, AI, timers and gameplay audio stop and the
+  // city is rebuilt for the briefing; no run is recorded.
+  audio.setRunning(false);
+  chooseMission(sim.missionId);
+  document.querySelector("#open-select").click();
+});
 document.querySelector("#next-mission").addEventListener("click", () => {
   const next = nextMission(sim.missionId, order);
   if (next) chooseMission(next);

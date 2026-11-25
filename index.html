@@ -132,6 +132,15 @@
           <button id="next-mission" class="secondary" hidden>다음 미션 →</button>
           <button id="result-vehicle" class="secondary" hidden>차량 선택</button>
           <button id="open-select" class="secondary">미션 선택</button>
+          <button id="pause-exit" class="secondary" hidden>MISSION SELECT</button>
+        </div>
+        <div id="exit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title" hidden>
+          <strong id="exit-title">Return to Mission Select?</strong>
+          <p>Your current game will end.<br /><small>진행 중인 게임이 종료됩니다. 모은 코인은 저장됩니다.</small></p>
+          <div class="exit-actions">
+            <button id="exit-cancel" class="secondary">CANCEL</button>
+            <button id="exit-ok" class="primary">CONFIRM</button>
+          </div>
         </div>
         <div class="instructions">
           <span><kbd>←</kbd><kbd>→</kbd> 조향</span

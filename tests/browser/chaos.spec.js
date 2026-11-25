@@ -84,3 +84,35 @@ test("other missions stay as they were (no CITY CHAOS HUD or systems)", async ({
     await page.keyboard.press("p");
   }
 });
+
+test("pause popup: MISSION SELECT asks first, CANCEL stays paused, CONFIRM ends the run and opens the mission list", async ({ page }) => {
+  await open(page);
+  for (const id of ["cityChaos", "parcels"]) {
+    await page.evaluate((id) => window.__CHASE__.chooseMission(id), id);
+    await page.locator("#start").click();
+    await page.waitForTimeout(800);
+    await page.evaluate(() => (window.__CHASE__.sim.runCoins += 5));
+    await page.keyboard.press("p");
+    await expect(page.locator("#pause-exit")).toBeVisible();
+    await expect(page.locator("#start")).toBeVisible(); // resume kept
+    await page.locator("#pause-exit").click();
+    await expect(page.locator("#exit-confirm")).toBeVisible();
+    await expect(page.locator("#exit-title")).toHaveText("Return to Mission Select?");
+    await page.locator("#exit-cancel").click();
+    await expect(page.locator("#exit-confirm")).toBeHidden();
+    expect(await page.evaluate(() => window.__CHASE__.state)).toBe("paused");
+    const wallet = await page.evaluate(() => window.__CHASE__.progress.credits);
+    const t = await page.evaluate(() => window.__CHASE__.sim.elapsed);
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.__CHASE__.sim.elapsed)).toBe(t); // still paused
+    await page.locator("#pause-exit").click();
+    await page.locator("#exit-ok").click();
+    await expect(page.locator("#mission-select")).toBeVisible();
+    const r = await page.evaluate(() => ({ state: window.__CHASE__.state, started: window.__CHASE__.sim.started, elapsed: window.__CHASE__.sim.elapsed, credits: window.__CHASE__.progress.credits }));
+    expect(r.state).toBe("ready");
+    expect(r.started).toBe(false);
+    expect(r.elapsed).toBe(0);
+    expect(r.credits).toBeGreaterThanOrEqual(wallet + 5); // coins kept, once
+    await page.locator("#close-select").click();
+  }
+});
