@@ -6,7 +6,7 @@ test("V1.7 native chase: natural crashes and offscreen road reinforcements", asy
   test.setTimeout(600000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.evaluate(async () => {
     const { stageDriver } = await import("/scripts/pursuit.js");
     const { random } = await import("/scripts/autoplay.js");

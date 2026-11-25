@@ -8,7 +8,7 @@ test("real camera tracks routed pursuit, eight-car fleet and bounded rear effect
   await page.route("https://fonts.googleapis.com/**", (r) =>
     r.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   const metrics = await page.evaluate(async () => {
     const { sim: s, renderer: r } = window.__CHASE__;
@@ -77,7 +77,7 @@ test("real camera tracks routed pursuit, eight-car fleet and bounded rear effect
 test("player wall sliding costs zero health and remains controllable on keyboard/touch", async ({
   page,
 }, info) => {
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   const result = await page.evaluate(() => {
     const { sim: s } = window.__CHASE__;

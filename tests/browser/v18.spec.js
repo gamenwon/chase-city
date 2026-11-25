@@ -9,7 +9,7 @@ test("V1.8 native chase: side/front pressure, staged multi-explosions, persisten
   test.setTimeout(900000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.evaluate(async () => {
     const { stageDriver } = await import("/scripts/pursuit.js");
     const { random } = await import("/scripts/autoplay.js");

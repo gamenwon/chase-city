@@ -84,7 +84,7 @@ test("V1.8 bonnet-view PIP: device default, toggles, HUD-safe layout, real drawi
   test.setTimeout(600000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   const mobile = info.project.name.includes("iphone");
   const toggle = page.locator("#pip-toggle");
   // Desktop starts with the PIP on, phones and touch screens with it off.

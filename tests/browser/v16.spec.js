@@ -29,7 +29,7 @@ test("normal START, native frames and legal steering: AI cordon progresses from 
   await page.route("https://fonts.googleapis.com/**", (r) =>
     r.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   const initial = await page.evaluate(async () => {
     const { normalCordonControls, cordonSample } =
       await import("/scripts/reproduce-v16.js");
@@ -172,7 +172,7 @@ test("permanent collision wreck/fire at 30 and 60 seconds, offscreen return, gro
   await page.route("https://fonts.googleapis.com/**", (r) =>
     r.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   await page.locator("#pause").click();
   await page.evaluate(async () => {

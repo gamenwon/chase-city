@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("two-second road-control warning, actual barrier meshes and escape-clear navigation", async ({
   page,
 }) => {
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   await page.evaluate(() => {
     const s = window.__CHASE__.sim;
@@ -64,7 +64,7 @@ test("green outside gate, direction/distance UI, post-60 chase and final ESCAPED
   await page.route("https://fonts.googleapis.com/**", (r) =>
     r.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   await page.evaluate(() => {
     const s = window.__CHASE__.sim;

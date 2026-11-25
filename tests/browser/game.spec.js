@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 const open = async (page) => {
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await expect(page.locator("#start")).toHaveText("START →");
 };
 const launch = async (page) => {

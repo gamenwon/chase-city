@@ -26,17 +26,17 @@ export const CHAOS = Object.freeze({
   startPolice: 2,
   heat: {
     perSecond: 1, // survival
-    police: 8, // a police car the player took out
-    civilian: 3, // a civilian car wrecked / blown up
-    major: 12, // gas station, depot tank, bridge span, landmark...
+    police: 5, // a police car the player took out
+    civilian: 2, // a civilian car wrecked / blown up
+    major: 10, // gas station, depot tank, bridge span, landmark...
     shop: 2, // a shop front
-    prop: 0.3, // a sign, a lamp, a bin
+    prop: 0.2, // a sign, a lamp, a bin
     target: 10,
     chainLink: 3, // each further link of a chain reaction
   },
-  // Heat needed for wanted level 1..5 (survival alone: 2 at 50 s, 3 at
-  // 2:10, 4 at 3:50, 5 at 5:50; destruction gets there sooner).
-  levels: [0, 50, 130, 230, 350],
+  // Heat needed for wanted level 1..5 (survival alone: 2 at 1:00, 3 at
+  // 2:30, 4 at 4:20, 5 at 6:20; a steady rampage gets to 4 in 2-3 min).
+  levels: [0, 60, 150, 260, 380],
   // Police cars wanted on the road per level, and how many of them heavy.
   fleet: [2, 4, 5, 6, 7],
   heavySuv: [0, 0, 0, 1, 2],
@@ -166,9 +166,9 @@ export function chaosDestroyed(sim, kind, key, x, z, chainDepth = 0, byPlayer = 
   else if (kind === "prop") c.counts.props++;
   else c.counts.facilities++;
   // Wanted heat.
-  const H = CHAOS.heat;
-  c.heat += kind === "police" ? H.police : kind === "civilian" || kind === "traffic" ? H.civilian : MAJOR.has(kind) ? H.major : kind === "shop" ? H.shop : H.prop;
-  if (chainDepth > 0) c.heat += H.chainLink;
+  const H = CHAOS.heat, pace = sim.chaosPace || 1;
+  c.heat += pace * (kind === "police" ? H.police : kind === "civilian" || kind === "traffic" ? H.civilian : MAJOR.has(kind) ? H.major : kind === "shop" ? H.shop : H.prop);
+  if (chainDepth > 0) c.heat += H.chainLink * pace;
   // Combo.
   const now = sim.elapsed, k = c.combo;
   if (now <= k.until) k.count++;
@@ -223,7 +223,7 @@ export function updateChaos(sim, dt) {
   if (!c || sim.result) return;
   const p = sim.player, now = sim.elapsed;
   // Survival: heat and a trickle of score.
-  c.heat += CHAOS.heat.perSecond * dt;
+  c.heat += CHAOS.heat.perSecond * dt * (sim.chaosPace || 1);
   const whole = Math.floor(now);
   if (whole > c.survivalScored) {
     addScore(c, CHAOS.score.survivalPerSecond * (whole - c.survivalScored));

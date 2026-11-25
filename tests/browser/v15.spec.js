@@ -5,7 +5,7 @@ test("real cordon produces BUSTED, releases no explosions, stops sound and resta
   test.setTimeout(180000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   const before = await page.evaluate(async () => {
     const { makePolice } = await import("/src/game/police.js");
@@ -90,7 +90,7 @@ test("yellow full roadblock and persistent burned body/fire/smoke/debris render 
   await page.route("https://fonts.googleapis.com/**", (r) =>
     r.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   await page.locator("#pause").click();
   const measured = await page.evaluate(async () => {

@@ -93,7 +93,7 @@ const SCENARIOS = {
 
 async function play(page, name) {
   const scenario = SCENARIOS[name];
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.evaluate(async (scenario) => {
     const { makePolice } = await import("/src/game/police.js");
     const { sim: s, input, renderer: r } = window.__CHASE__;

@@ -23,9 +23,22 @@ const profile = mobile ? "mobile" : "desktop";
 const progress = new Progress();
 const ads = installAdBridge(window);
 const order = missionOrder();
-const firstMission = order.includes(progress.data.lastMission)
-  ? progress.data.lastMission
-  : order[0];
+// Company evaluation preset (?eval): CITY CHAOS on a fixed city (seed 3
+// unless ?seed is given), ?tod=day|night allowed, and a faster wanted
+// level so heavy police and the helicopter show up in a short demo. The
+// normal game keeps its random cities.
+const params = new URLSearchParams(location.search);
+const evalMode = params.has("eval");
+// (?mission=<id>: the first mission when none was played yet, e.g. for
+// tests and links; the last one played still comes back after a reload.)
+const missionParam = params.get("mission");
+const firstMission = evalMode
+  ? "cityChaos"
+  : order.includes(progress.data.lastMission)
+    ? progress.data.lastMission
+    : missionParam && order.includes(missionParam)
+      ? missionParam
+      : order[0];
 // Every map built so far is downtown; a mission on another map would need
 // its own renderer (see world/maps.js).
 const startMap = getMap(getMission(firstMission).mapId);
@@ -36,10 +49,11 @@ const ui = new Interface(),
     mission: firstMission,
     vehicle: progress.selectedVehicle,
     // Development only: ?tod=day or ?tod=night fixes the time of day.
-    timeOfDay: import.meta.env.DEV ? new URLSearchParams(location.search).get("tod") : null,
+    timeOfDay: import.meta.env.DEV || evalMode ? params.get("tod") : null,
     // V2.1: a new generated city every run; ?seed=N replays one city.
     cityGenerator: generateCity,
-    seed: seedParam(),
+    seed: seedParam() ?? (evalMode ? 3 : undefined),
+    chaosPace: evalMode ? 2 : 1,
   });
 function seedParam() {
   const v = new URLSearchParams(location.search).get("seed");

@@ -10,7 +10,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 const OUT = "test-results/pin";
 
 async function stage(page, name) {
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.waitForFunction(() => window.__CHASE__);
   await page.locator("#start").click();
   await expect(page.locator("#overlay")).toBeHidden();

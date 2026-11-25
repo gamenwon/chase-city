@@ -65,6 +65,8 @@ export class Simulation {
     // same one again with a fixed seed (?seed=..., for replaying a map).
     this.cityGenerator = options.cityGenerator || null;
     this.fixedSeed = Number.isFinite(options.seed) ? options.seed : null;
+    // CITY CHAOS wanted-level pace (2 in the evaluation preset).
+    this.chaosPace = options.chaosPace || 1;
     // Destruction for the result screen, counted as city events happen.
     this.onCityEvent = (e) => {
       const added = recordCityEvent(this.tally, e);

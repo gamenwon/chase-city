@@ -10,7 +10,7 @@ const OUT = process.env.FIX_OUT || "test-results/v19-city";
 test.use({ video: "on" });
 
 async function play(page, name, seconds) {
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.evaluate(
     async ({ name }) => {
       const city = await import("/src/game/city.js");
@@ -344,7 +344,7 @@ test("performance: frame time with the city on, governor log", async ({
   page,
 }, info) => {
   test.setTimeout(300000);
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.locator("#start").click();
   const result = await page.evaluate(async () => {
     const { sim: s, input, perf } = window.__CHASE__;

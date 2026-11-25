@@ -3,7 +3,7 @@ const open = async (page) => {
   await page.route("https://fonts.googleapis.com/**", (r) =>
     r.fulfill({ status: 200, contentType: "text/css", body: "" }),
   );
-  await page.goto("/?debug");
+  await page.goto("/?debug&mission=survival60");
   await page.waitForFunction(() => !!window.__CHASE__);
 };
 test("rendered pixels reveal the whole car through complete building geometry and restore", async ({

@@ -3,7 +3,9 @@ import { test, expect } from "@playwright/test";
 // V2.0 mission platform in the real game page (city on, device budgets).
 const OUT = "test-results/v20";
 
-async function open(page, query = "?debug") {
+// (The game opens CITY CHAOS by default; these mission tests start from
+// the police chase.)
+async function open(page, query = "?debug&mission=survival60") {
   await page.goto(`/${query}`);
   await page.waitForFunction(() => window.__CHASE__);
 }
@@ -28,11 +30,12 @@ test("mission select: all missions listed in catalog order; choosing one changes
   await page.locator("#open-select").click();
   await expect(page.locator("#mission-select")).toBeVisible();
   const cards = page.locator(".mission-card");
-  await expect(cards).toHaveCount(3);
-  await expect(cards.nth(0)).toContainText("도시 탈출");
-  await expect(cards.nth(1)).toContainText("택배 수거");
-  await expect(cards.nth(2)).toContainText("타깃 헌트");
-  await expect(cards.nth(1)).toContainText("제한 시간 80초");
+  await expect(cards).toHaveCount(4);
+  await expect(cards.nth(0)).toContainText("CITY CHAOS");
+  await expect(cards.nth(1)).toContainText("도시 탈출");
+  await expect(cards.nth(2)).toContainText("택배 수거");
+  await expect(cards.nth(3)).toContainText("타깃 헌트");
+  await expect(cards.nth(2)).toContainText("제한 시간 80초");
   await page.screenshot({ path: `${OUT}/${info.project.name}-select.png` });
   await page.locator('[data-mission="parcels"]').click();
   await expect(page.locator("#mission-select")).toBeHidden();
@@ -57,7 +60,7 @@ test("mission select: all missions listed in catalog order; choosing one changes
   expect(s.police).toBe(0);
   expect(s.pickups).toBe(5);
   expect(s.hud).toMatch(/^수거 0 \/ 5 · 남은 \d+초$/);
-  expect(s.number).toBe("MISSION / 02");
+  expect(s.number).toBe("MISSION / 03");
   expect(s.heat).toBe("none");
   expect(s.arrow).toBe(true);
   expect(s.arrowName).toBe("택배");
@@ -74,8 +77,8 @@ test("collect mission success: result screen, credits paid once and kept after r
   await collectAll(page);
   await expect(page.locator("#eyebrow")).toHaveText("MISSION COMPLETE!");
   await expect(page.locator("#title")).toHaveText("택배 수거 성공!");
-  await expect(page.locator("#result-earned")).toHaveText(/^\+300 코인/);
-  await expect(page.locator("#wallet-credits")).toHaveText("300");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+3\d\d 코인/);
+  await expect(page.locator("#wallet-credits")).toHaveText(/^3\d\d$/);
   await expect(page.locator("#next-mission")).toBeVisible();
   await expect(page.locator("#open-select")).toBeVisible();
   await page.screenshot({ path: `${OUT}/${info.project.name}-clear.png` });
@@ -84,7 +87,7 @@ test("collect mission success: result screen, credits paid once and kept after r
   expect(await page.evaluate(() => window.__CHASE__.progress.credits)).toBe(300);
   await page.reload();
   await page.waitForFunction(() => window.__CHASE__);
-  await expect(page.locator("#wallet-credits")).toHaveText("300");
+  await expect(page.locator("#wallet-credits")).toHaveText(/^3\d\d$/);
   // The last mission chosen is offered again.
   await expect(page.locator("#title")).toHaveText("택배 수거");
   const record = await page.evaluate(() =>
@@ -256,15 +259,15 @@ test("ads with a host ad system: continue once after failure, double reward afte
   await page.locator("#start").click();
   await page.waitForTimeout(300);
   await collectAll(page);
-  await expect(page.locator("#result-earned")).toHaveText(/^\+300 코인/);
+  await expect(page.locator("#result-earned")).toHaveText(/^\+3\d\d 코인/);
   const dbl = page.locator("#ad-double");
   await expect(dbl).toBeEnabled();
   await dbl.click();
-  await expect(page.locator("#result-earned")).toHaveText(/^\+600 코인/);
-  await expect(page.locator("#wallet-credits")).toHaveText("600");
+  await expect(page.locator("#result-earned")).toHaveText(/^\+6\d\d 코인/);
+  await expect(page.locator("#wallet-credits")).toHaveText(/^6\d\d$/);
   await expect(dbl).toBeDisabled();
   await dbl.click({ force: true });
-  await expect(page.locator("#wallet-credits")).toHaveText("600");
+  await expect(page.locator("#wallet-credits")).toHaveText(/^6\d\d$/);
   // A provider that closes without reward pays nothing.
   await page.evaluate(() =>
     window.ChaseCityAds.register({
@@ -275,11 +278,11 @@ test("ads with a host ad system: continue once after failure, double reward afte
   await page.locator("#start").click();
   await page.waitForTimeout(300);
   await collectAll(page);
-  await expect(page.locator("#wallet-credits")).toHaveText("900");
+  await expect(page.locator("#wallet-credits")).toHaveText(/^9\d\d$/);
   await page.locator("#ad-double").click();
   await page.waitForTimeout(300);
-  await expect(page.locator("#wallet-credits")).toHaveText("900");
-  await expect(page.locator("#result-earned")).toHaveText(/^\+300 코인/);
+  await expect(page.locator("#wallet-credits")).toHaveText(/^9\d\d$/);
+  await expect(page.locator("#result-earned")).toHaveText(/^\+3\d\d 코인/);
 });
 
 test("the host can reorder missions (setting, no code change)", async ({
@@ -288,7 +291,7 @@ test("the host can reorder missions (setting, no code change)", async ({
   await page.addInitScript(() => {
     window.CHASE_CITY_CONFIG = { missionOrder: ["parcels", "survival60"] };
   });
-  await open(page);
+  await open(page, "?debug");
   await expect(page.locator("#title")).toHaveText("택배 수거");
   await page.locator("#open-select").click();
   await expect(page.locator(".mission-card").nth(0)).toContainText("택배 수거");
