@@ -26,6 +26,7 @@ function build(name) {
     holder.remove(h.group);
     return h.group;
   }
+  if (name.startsWith("civ:")) return CARTOON.civilian(name.slice(4));
   if (name.startsWith("old:")) {
     const id = name.slice(4);
     return (TOON_MODELS[id] || playerCar)();

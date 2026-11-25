@@ -155,6 +155,15 @@ export function badge(size = 0.5) {
   t.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
 }
+// Bake a model, keeping textured decals (and blinking lenses) as their own
+// meshes: the colour bake would drop their textures.
+export function bake(g, keep = []) {
+  const decals = [];
+  g.traverse((o) => {
+    if (o.isMesh && o.material?.map) decals.push(o);
+  });
+  bakeVehicle(g, [...keep, ...decals]);
+}
 export function sideDecal(g, mesh, x, y, z) {
   for (const s of [-1, 1]) {
     const m = s < 0 ? mesh : mesh.clone();
@@ -300,7 +309,7 @@ export function coupe() {
     v3(-1.05, o.belt + 0.46, zb - 0.28), v3(1.05, o.belt + 0.46, zb - 0.28), v3(1.05, o.belt + 0.52, zb + 0.08), v3(-1.05, o.belt + 0.52, zb + 0.08)], PINK);
   const num = decal("01", "#ffffff", "#e0367a", 0.4, 0.3);
   sideDecal(g, num, o.W / 2 + 0.03, o.belt + 0.25, cb - 0.3);
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
 // Supercar: yellow with black accents, a very short angular wedge nose,
@@ -327,7 +336,7 @@ export function supercar() {
     v3(-1.15, o.belt + 0.6, zb - 0.36), v3(1.15, o.belt + 0.6, zb - 0.36), v3(1.15, o.belt + 0.7, zb + 0.12), v3(-1.15, o.belt + 0.7, zb + 0.12)], BLK);
   for (const sx of [-1, 1]) box(g, 0.06, 0.3, 0.56, BLK, sx * 1.15, o.belt + 0.46, zb - 0.15);
   void faces, inside;
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
 
@@ -353,7 +362,7 @@ export function policeCar() {
   roofText.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
   roofText.position.set(0, s.top + 0.112, cb - 0.55);
   g.add(roofText);
-  bakeVehicle(g, [lens.red, lens.blue]);
+  bake(g, [lens.red, lens.blue]);
   const out = scaled(g);
   out.userData.red = lens.red;
   out.userData.blue = lens.blue;
@@ -387,7 +396,7 @@ export function policeArmored() {
   box(g, 0.9, 0.16, 0.7, 0x1d1c22, 0, s.top + 0.1, cb - 0.6);
   const lens = lightBar(g, s.top + 0.1, cf + s.o.lean + 0.25, 1.7);
   void zb;
-  bakeVehicle(g, [lens.red, lens.blue]);
+  bake(g, [lens.red, lens.blue]);
   const out = scaled(g);
   out.userData.red = lens.red;
   out.userData.blue = lens.blue;
@@ -459,7 +468,7 @@ export function miniCar() {
   }
   // Checker decal on the sides.
   for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2 === 0) box(g, 0.02, 0.1, 0.1, 0xffffff, sx * (o.W / 2 + 0.01), o.clear + 0.3 + j * 0.1, cb - 0.55 + i * 0.1);
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
 // Monster truck: purple body high on huge treaded tyres with yellow coil
@@ -498,12 +507,12 @@ export function monsterTruck() {
     m.rotation.x = Math.PI / 2;
   }
   void zb;
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
 // Armored truck (player): gray armour, van-tall windshield over a very
 // short nose, riveted angular plates, a heavy bumper, roof lamps; no
-// police markings (a gold shield emblem instead).
+// police markings (a yellow hazard band instead).
 export function armoredTruck() {
   const GY = 0x8f969f, PL = 0x7c838d, D = 0x2b2a30;
   const s = shell({ body: GY, cabin: GY, roof: PL, W: 2.14, L: 3.35, clear: 0.42, belt: 1.32, hood: 0.36, tail: 0.04, cabH: 1.66, lean: 0.34, backLean: 0.02, taper: 0.88, noseDrop: 0.06, r: 0.5, wheelW: 0.48, rim: 0x55535c });
@@ -519,10 +528,8 @@ export function armoredTruck() {
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 5; i++) box(g, 0.05, 0.05, 0.05, 0xb8bec6, sx * (o.W / 2 + 0.02), o.clear + 0.68, zf + 0.35 + i * 0.6);
     box(g, 0.05, 0.5, o.L - 0.5, PL, sx * (o.W / 2 + 0.02), o.clear + 0.1, 0.1);
-    const em = badge(0.5);
-    em.material = em.material.clone();
-    em.material.color.setHex(0xdddddd);
-    sideDecal(g, em, o.W / 2 + 0.05, o.clear + 0.66, cb - 0.6);
+    // A yellow hazard band (no police markings on the player's truck).
+    for (let i = 0; i < 6; i++) box(g, 0.03, 0.14, 0.18, i % 2 ? D : 0xf5c01a, sx * (o.W / 2 + 0.04), o.belt - 0.3, cb - 1.2 + i * 0.18);
   }
   // Roof: hatch and four lamps.
   box(g, 0.8, 0.14, 0.7, D, 0, top + 0.1, cb - 0.6);
@@ -531,7 +538,7 @@ export function armoredTruck() {
     const m = add(g, ni(new THREE.CylinderGeometry(0.13, 0.13, 0.12, 10)), 0xffe58a, x, top + 0.3, cf + o.lean + 0.14, LAMP);
     m.rotation.x = Math.PI / 2;
   }
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
 
@@ -620,7 +627,7 @@ export const PLAYER_MODELS = Object.freeze({ starter: coupe, super: supercar, mi
 // Civilian types as single bakeable groups for previews.
 export function civilian(type) {
   const g = TRAFFIC_TYPES[type]();
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
 
@@ -646,6 +653,6 @@ export function targetCar() {
   for (const z of [zc - 0.35, zc + 0.35]) box(g, o.W * 0.8, 0.06, 0.08, BLK, 0, top + 0.16, z);
   box(g, 0.55, 0.3, 0.5, 0x3a6b3a, -0.25, top + 0.2, zc);
   box(g, 0.4, 0.24, 0.42, 0x6b4a2a, 0.3, top + 0.2, zc - 0.05);
-  bakeVehicle(g);
+  bake(g);
   return scaled(g);
 }
