@@ -7,7 +7,7 @@ import { inspectEnclosure } from "./arrest.js";
 import { addWreck, updateWrecks } from "./wrecks.js";
 import { spawnView, inspectSpawn } from "./spawning.js";
 import { chooseExit, constrainToWorld } from "./escape.js";
-import { updateBarricades } from "./barricades.js";
+import { updateBarricades, MINI_GAP } from "./barricades.js";
 import { gapFillers } from "../world/layout.js";
 import { clearSegment } from "./navigation.js";
 import { createMission, updateMission, getMission } from "./missions.js";
@@ -381,10 +381,12 @@ export class Simulation {
   // (only the carriageway part stops it), the monster truck goes over it
   // (a hop). Police and traffic are always stopped.
   passesBarricade(body, b, act = true) {
+    // (MINI_GAP: how much of the carriageway next to the kerb is open to
+    // the mini, render/road-events.js draws cones there.)
     if (b.kind !== "barricade" || body !== this.player) return false;
     const s = this.vehicle?.stats || {};
     if (s.climbs) {
-      if (act && !body.falling && (body.level || 0) === 0 && Math.hypot(body.vx, body.vz) > 6) {
+      if (act && !body.falling && (body.level || 0) === 0 && Math.hypot(body.vx, body.vz) > 1.5) {
         Object.assign(body, { falling: true, vy: 5.2, y: Math.max(body.y || 0, 0.05) });
         this.stats.barricadeVaults = (this.stats.barricadeVaults || 0) + 1;
         this.city?.events.push({ id: ++this.city.eventId, type: "jump", action: "takeoff", x: body.x, z: body.z, strength: 10, sound: "whoosh" });
@@ -393,7 +395,8 @@ export class Simulation {
     }
     if (s.slipsBarricade && b.road && b.roadHalf != null) {
       const lat = b.vertical ? body.x - b.road.x : body.z - b.road.z;
-      if (Math.abs(lat) > b.roadHalf + 0.15) {
+      // (Open over the pavement and the outer lane: easy to aim for.)
+      if (Math.abs(lat) > b.roadHalf - MINI_GAP) {
         if (!act) return true;
         if (!body.slipAt || this.elapsed - body.slipAt > 2) this.stats.barricadeSlips = (this.stats.barricadeSlips || 0) + 1;
         body.slipAt = this.elapsed;
@@ -873,7 +876,9 @@ export class Simulation {
         // (Only driving into it at speed; never a car forming a cordon, so
         // a monster truck can still be boxed in and arrested.)
         const ownHit = Math.max(0, p.vx * nx + p.vz * nz);
-        if (car.climbs && !braced && c.mode !== "contain" && c.heavy !== "armored" && ownHit > 12 && closing > 6 && !(c.climbedAt > this.elapsed - 1)) {
+        // (A roadblock car parked across the road is climbed at almost any
+        // speed: the monster truck goes over roadblocks.)
+        if (car.climbs && c.mode !== "contain" && c.heavy !== "armored" && (braced ? ownHit > 3 : ownHit > 12 && closing > 6) && !(c.climbedAt > this.elapsed - 1)) {
           c.climbedAt = this.elapsed;
           c.health = 0;
           c.lastDamageCause = "crushed";
@@ -943,7 +948,7 @@ export class Simulation {
     for (let pass = 0; pass < 2; pass++) {
       let moved = false;
       for (const c of this.police) {
-        if (c.state !== "active" || c.blockState !== "hold") continue;
+        if (c.state !== "active" || c.blockState !== "hold" || c.health <= 0) continue;
         const contact = policeContact(p, c);
         if (!contact) continue;
         p.x -= contact.x * (contact.depth + 0.001);
@@ -959,7 +964,7 @@ export class Simulation {
       this.police.some(
         (c) =>
           c.state === "active" &&
-          c.blockState === "hold" &&
+          c.blockState === "hold" && c.health > 0 &&
           policeContact(p, c)?.depth > 0.05,
       )
     ) {

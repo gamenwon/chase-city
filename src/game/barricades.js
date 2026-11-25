@@ -1,5 +1,7 @@
 import { RoadNavigation, distance, clearSegment } from "./navigation.js";
 export const BARRICADE_TIMES = Object.freeze([10, 20, 30, 40, 50]);
+// The outer lane next to each kerb (m) is open to the mini (cones).
+export const MINI_GAP = 2.2;
 export function overlap(a, b, margin = 0) {
   return (
     Math.abs(a.x - b.x) < (a.w + b.w) / 2 + margin &&

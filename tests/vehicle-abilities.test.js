@@ -41,50 +41,56 @@ function barricadeRun(vehicle, lat) {
   return { through: p.z < z0 - 1, moved: start - p.z, vaults: s.stats.barricadeVaults || 0, slips: s.stats.barricadeSlips || 0 };
 }
 
-test("mini: slips past a barricade over the pavement, never through the carriageway part", () => {
-  assert.equal(barricadeRun("mini", 5.6).through, true);
-  assert.ok(barricadeRun("mini", 5.6).slips >= 1);
+test("mini: slips past a barricade over the pavement or the outer lane (easy to aim for), never through the middle", () => {
+  for (const lat of [5.6, 3.0, -2.6]) {
+    const r = barricadeRun("mini", lat);
+    assert.equal(r.through, true, `lat ${lat}`);
+    assert.ok(r.slips >= 1);
+  }
   assert.equal(barricadeRun("mini", 0).through, false);
-  // Other cars are stopped on the pavement too.
+  // Other cars are stopped everywhere along it.
   assert.equal(barricadeRun("starter", 5.6).through, false);
-  assert.equal(barricadeRun("armored", 5.6).through, false);
+  assert.equal(barricadeRun("armored", 3.0).through, false);
 });
 
-test("monster truck: goes over a barricade (a hop), anywhere across it", () => {
-  for (const lat of [0, 5.6]) {
+test("monster truck: goes over a barricade (a hop) anywhere across it, even slowly", () => {
+  for (const lat of [0, 3, 5.6]) {
     const r = barricadeRun("monster", lat);
     assert.equal(r.through, true, `lat ${lat}`);
     assert.ok(r.vaults >= 1);
   }
 });
 
-test("monster truck leaps off the elevated road over the parapet and lands in the street; other cars are kept on the deck", () => {
+test("monster truck: climbs over a police car parked across the road (roadblock); other cars are stopped by it", () => {
   const run = (vehicle) => {
     const s = make(vehicle);
-    const op = s.overpasses[0];
-    assert.ok(op, "a city with an elevated road");
-    const sMid = op.L / 2;
-    const path = op.pts ? null : null;
-    void path;
-    const x = op.a.x + op.u.x * sMid, z = op.a.z + op.u.z * sMid;
-    const nx = -op.u.z, nz = op.u.x;
     const p = s.player;
-    Object.assign(p, { x, z, level: 1, op: op.id, y: overpassHeight(op, sMid), vx: nx * 9 + op.u.x * 12, vz: nz * 9 + op.u.z * 12, speed: 15, angle: Math.atan2(-(nx * 9 + op.u.x * 12), -(nz * 9 + op.u.z * 12)) });
-    s.previousPlayer = { x, z };
-    let left = false;
-    for (let i = 0; i < 150 && !s.result; i++) {
-      s.arrest = 0;
-      s.update(1 / 60, { right: true });
-      if ((p.level || 0) === 0) left = true;
-    }
-    return { left, leaps: s.stats.deckLeaps || 0, y: p.y || 0, level: p.level || 0 };
+    const c = { ...s.police[0] };
+    s.police = [Object.assign(c, { state: "active", health: 100, x: p.x, z: p.z - 2.4, vx: 0, vz: 0, angle: Math.PI / 2, blockState: "hold", mode: "block" })];
+    Object.assign(p, { vx: 0, vz: -8, speed: 8, angle: 0 });
+    s.resolvePlayerPolice();
+    return { crushed: c.health <= 0, hop: !!p.air };
   };
   const m = run("monster");
-  assert.ok(m.leaps >= 1 && m.left, JSON.stringify(m));
-  assert.equal(m.level, 0);
-  assert.ok(m.y < 0.05, "it reached the street");
-  const c = run("starter");
-  assert.equal(c.leaps, 0);
+  assert.ok(m.crushed && m.hop, JSON.stringify(m));
+  assert.equal(run("starter").crushed, false);
+});
+
+test("the elevated road keeps every car on the deck (no jumping off)", () => {
+  const s = make("monster");
+  const op = s.overpasses[0];
+  const sMid = op.L / 2;
+  const x = op.a.x + op.u.x * sMid, z = op.a.z + op.u.z * sMid;
+  const nx = -op.u.z, nz = op.u.x;
+  const p = s.player;
+  Object.assign(p, { x, z, level: 1, op: op.id, y: overpassHeight(op, sMid), vx: nx * 9 + op.u.x * 12, vz: nz * 9 + op.u.z * 12, speed: 15, angle: Math.atan2(-(nx * 9 + op.u.x * 12), -(nz * 9 + op.u.z * 12)) });
+  s.previousPlayer = { x, z };
+  for (let i = 0; i < 30 && !s.result; i++) {
+    s.arrest = 0;
+    s.update(1 / 60, { right: true });
+  }
+  assert.equal(p.level, 1);
+  assert.equal(s.stats.deckLeaps || 0, 0);
 });
 
 test("sand dunes: every city has a dune block; a fast car takes off over a crest and flies a while", () => {

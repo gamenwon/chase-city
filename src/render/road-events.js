@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { MINI_GAP } from "../game/barricades.js";
 export class RoadEventsRenderer {
   constructor(scene) {
     this.scene = scene;
@@ -110,11 +111,12 @@ export class RoadEventsRenderer {
       const road = b.road || b;
       group.position.set(b.vertical ? road.x : b.x, 0, b.vertical ? b.z : road.z);
       group.rotation.y = b.vertical ? 0 : Math.PI / 2;
-      group.scale.x = b.roadHalf ? Math.min(1.3, (b.roadHalf * 2) / 11.2) : 1;
+      // (The outer lanes are left to cones: the mini's way past.)
+      group.scale.x = b.roadHalf ? Math.max(0.3, ((b.roadHalf - MINI_GAP) * 2) / 11.2) : 1;
       if (!b.roadHalf) continue;
       const span = (b.vertical ? b.w : b.d) / 2, c0 = b.vertical ? b.x : b.z, r0 = b.vertical ? road.x : road.z;
       for (const side of [-1, 1])
-        for (let o = b.roadHalf + 0.7; o < 30; o += 1.15) {
+        for (let o = b.roadHalf - MINI_GAP + 0.6; o < 30; o += 1.3) {
           const at = r0 + side * o;
           if (Math.abs(at - c0) > span - 0.2) break;
           const cone = (this.cones[nc++] ||= this.cone());

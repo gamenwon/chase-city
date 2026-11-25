@@ -114,21 +114,6 @@ export function constrainLevels(sim, body, radius) {
         // The parapet: back inside, the speed into it taken away.
         const loc = local(op, body.x, body.z);
         const nx = -(loc.uz ?? op.u.z), nz = loc.ux ?? op.u.x;
-        // Monster truck: over the parapet at speed, it leaps off the deck
-        // and drops to the street below (anywhere along the deck).
-        const out = (body.vx * nx + body.vz * nz) * Math.sign(lat);
-        if (body === sim.player && sim.vehicle?.stats.climbs && out > 3.5 && !body.falling) {
-          body.level = 0;
-          body.op = null;
-          body.falling = true;
-          body.vy = 3.2;
-          body.leapt = true;
-          body.x += nx * Math.sign(lat) * 1.2;
-          body.z += nz * Math.sign(lat) * 1.2;
-          sim.stats.deckLeaps = (sim.stats.deckLeaps || 0) + 1;
-          sim.city?.events.push({ id: ++sim.city.eventId, type: "jump", action: "takeoff", x: body.x, z: body.z, strength: 12, sound: "whoosh" });
-          return false;
-        }
         const back = Math.abs(lat) - lim;
         const sg = Math.sign(lat);
         body.x -= nx * sg * back;
