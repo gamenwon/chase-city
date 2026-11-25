@@ -36,6 +36,7 @@ import { sitePlan } from "../preview/locations/sites.js";
 import { assignBrands } from "./brands.js";
 import { dinerPlan } from "../preview/locations/diner.js";
 import { bigsitePlan } from "../preview/locations/bigsite.js";
+import { dunesPlan } from "../preview/locations/dunes.js";
 import { yardPlan } from "../preview/locations/yard.js";
 import { funparkPlan } from "../preview/locations/funpark.js";
 
@@ -592,6 +593,15 @@ export function buildCity(seed) {
     b.type = kind;
     specials.push(b);
   }
+  // Sand dunes: a block of ridges to jump (a long block if one is free;
+  // left out if no block is left).
+  {
+    const b = spreadPick((x) => fits(x) && Math.max(x.w, x.d) >= 24) || spreadPick((x) => fits(x));
+    if (b) {
+      b.type = "dunes";
+      specials.push(b);
+    }
+  }
   const parks = [], trees = [];
   for (let k = 0; k < 2; k++) {
     const b = spreadPick((x) => fits(x, 20.5, 40));
@@ -608,6 +618,14 @@ export function buildCity(seed) {
       counts.bigsite = (counts.bigsite || 0) + 1;
       cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
       const plan = bigsitePlan(b, R);
+      mounds.push(...plan.mounds);
+      specialFeatures.push(plan.feature);
+      continue;
+    }
+    if (b.type === "dunes") {
+      counts.dunes = (counts.dunes || 0) + 1;
+      cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
+      const plan = dunesPlan(b, R);
       mounds.push(...plan.mounds);
       specialFeatures.push(plan.feature);
       continue;

@@ -28,6 +28,7 @@ export function planBarricade(player, navigation, solids, active, fleet, id) {
       horizontal = Math.abs(b.x - a.x) / L > 0.97;
       across = e.width + 0.2;
     }
+    const roadHalf = (across - 0.2) / 2;
     // Generated city: the barricade reaches across everything drivable
     // there (pavements, open frontage) up to the buildings either side,
     // so it cannot be driven round over the pavement.
@@ -57,6 +58,9 @@ export function planBarricade(player, navigation, solids, active, fleet, id) {
       kind: "barricade",
       vertical,
       road: { x: node.x, z: node.z },
+      // Half width of the carriageway: beyond it the barricade only spans
+      // the pavement (cones; a small car can slip through there).
+      roadHalf,
       forward: { x: fx, z: fz },
     };
     if (

@@ -122,7 +122,9 @@ export const VEHICLES = Object.freeze({
   mini: build("mini", "미니카", "민첩한 조향, 빠른 가속. 가볍고 좁은 길에 강하지만 부딪히면 잘 밀린다.", { speed: 3, accel: 4, steer: 5, mass: 1, destroy: 1 , durability: 2}, {
     maxHp: 100,
     resist: { civilian: 1.2 },
-    stats: { radius: 1.0, grip: 13, roll: 0.03, engine: { pitch: 1.45, gain: 0.8 } },
+    // (Smaller than the rest, and narrow enough to slip past a barricade
+    // over the pavement: slipsBarricade.)
+    stats: { radius: 0.86, slipsBarricade: true, grip: 13, roll: 0.03, engine: { pitch: 1.45, gain: 0.8 } },
   }),
   super: build("super", "슈퍼카", "최고 속도와 가속. 추격과 탈출에 강하고, 큰 충돌에서는 속도를 많이 잃는다.", { speed: 5, accel: 5, steer: 4, mass: 1, destroy: 2 , durability: 2}, {
     maxHp: 100,
@@ -147,6 +149,7 @@ export const VEHICLES = Object.freeze({
   monster: build("monster", "몬스터 트럭", "압도적인 차량 파괴. 작은 차를 타고 넘어 짓누르고 뒤집는다. 회전 반경이 크다.", { speed: 3, accel: 3, steer: 2, mass: 5, destroy: 5 , durability: 4}, {
     maxHp: 170,
     resist: { civilian: 0.4, police: 0.8 },
+    // (climbs: over small cars, barricades, and off the elevated road.)
     stats: { climbs: true, impact: 3.2, env: 2.2, grip: 8, propRetain: 0.75, roll: 0.07, bounce: 0.12, turnRate: 1.3, engine: { pitch: 0.6, gain: 1.4 } },
   }),
   dozer: build("dozer", "불도저", "시설물 파괴 특화. 가장 느리지만 무엇이든 밀어내고 부순다.", { speed: 2, accel: 2, steer: 2, mass: 5, destroy: 5 , durability: 5}, {

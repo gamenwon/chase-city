@@ -86,14 +86,43 @@ export class RoadEventsRenderer {
     }
     return group;
   }
+  // Traffic cones over the pavement parts of a barricade (beyond the
+  // carriageway): the gap a small car can slip through.
+  cone() {
+    const g = new THREE.Group();
+    this.box(g, 0, 0.03, 0, 0.5, 0.06, 0.5, 0x23373e);
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.62, 8), new THREE.MeshStandardMaterial({ color: 0xff6a1a, roughness: 0.6 }));
+    c.position.y = 0.37;
+    g.add(c);
+    this.box(g, 0, 0.42, 0, 0.3, 0.08, 0.3, 0xf4f4f0);
+    g.scale.setScalar(1.6); // (readable from the chase camera)
+    this.scene.add(g);
+    return g;
+  }
   update(sim, camera) {
     this.barriers.forEach((group) => (group.visible = false));
+    this.cones ||= [];
+    let nc = 0;
     for (const b of sim.barricades) {
       const group = this.barriers[b.id - 1];
       group.visible = true;
-      group.position.set(b.x, 0, b.z);
+      // The heavy barrier across the carriageway only.
+      const road = b.road || b;
+      group.position.set(b.vertical ? road.x : b.x, 0, b.vertical ? b.z : road.z);
       group.rotation.y = b.vertical ? 0 : Math.PI / 2;
+      group.scale.x = b.roadHalf ? Math.min(1.3, (b.roadHalf * 2) / 11.2) : 1;
+      if (!b.roadHalf) continue;
+      const span = (b.vertical ? b.w : b.d) / 2, c0 = b.vertical ? b.x : b.z, r0 = b.vertical ? road.x : road.z;
+      for (const side of [-1, 1])
+        for (let o = b.roadHalf + 0.7; o < 30; o += 1.15) {
+          const at = r0 + side * o;
+          if (Math.abs(at - c0) > span - 0.2) break;
+          const cone = (this.cones[nc++] ||= this.cone());
+          cone.visible = true;
+          cone.position.set(b.vertical ? at : b.x, 0, b.vertical ? b.z : at);
+        }
     }
+    for (let i = nc; i < this.cones.length; i++) this.cones[i].visible = false;
     const open = sim.escape.phase !== "locked";
     this.gate.visible = open;
     if (open) {
@@ -125,5 +154,6 @@ export class RoadEventsRenderer {
     this.gate.visible = false;
     this.view = null;
     this.barriers.forEach((group) => (group.visible = false));
+    for (const c of this.cones || []) c.visible = false;
   }
 }

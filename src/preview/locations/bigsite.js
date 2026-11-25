@@ -79,7 +79,7 @@ export function bigsitePlan(b, R) {
 }
 
 // Earth ramp mesh (the same height field as jumps.js).
-function moundMesh(m, color) {
+export function moundMesh(m, color) {
   const g = new THREE.BufferGeometry();
   const as = [-m.len, 0, m.len], bs = [-(m.w + JUMP.side), -m.w, m.w, m.w + JUMP.side];
   const h = (a, b) => m.h * (1 - Math.abs(a) / m.len) * (Math.abs(b) <= m.w ? 1 : 1 - (Math.abs(b) - m.w) / JUMP.side);

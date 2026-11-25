@@ -20,6 +20,7 @@ import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
 import { dinerDecor } from "./diner.js";
 import { bigsiteDecor } from "./bigsite.js";
+import { dunesDecor } from "./dunes.js";
 import { yardDecor } from "./yard.js";
 import { funparkDecor } from "./funpark.js";
 import { BigProps } from "./bigprops.js";
@@ -115,6 +116,7 @@ export class LocationsRuntime {
       for (const it of f.items) if (it.kind === "statue") P.plinth(G(decor, it.x, it.y, it.z, it.ry));
       if (f.kind === "diner") dinerDecor(decor, f);
       if (f.kind === "bigsite") bigsiteDecor(decor, f);
+      if (f.kind === "dunes") dunesDecor(decor, f);
       if (f.kind === "containers") yardDecor(decor, f);
       if (f.kind === "funpark") funparkDecor(decor, f);
       if (decor.children.length) scene.add(bake(decor));

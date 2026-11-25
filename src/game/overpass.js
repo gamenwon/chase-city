@@ -114,6 +114,21 @@ export function constrainLevels(sim, body, radius) {
         // The parapet: back inside, the speed into it taken away.
         const loc = local(op, body.x, body.z);
         const nx = -(loc.uz ?? op.u.z), nz = loc.ux ?? op.u.x;
+        // Monster truck: over the parapet at speed, it leaps off the deck
+        // and drops to the street below (anywhere along the deck).
+        const out = (body.vx * nx + body.vz * nz) * Math.sign(lat);
+        if (body === sim.player && sim.vehicle?.stats.climbs && out > 3.5 && !body.falling) {
+          body.level = 0;
+          body.op = null;
+          body.falling = true;
+          body.vy = 3.2;
+          body.leapt = true;
+          body.x += nx * Math.sign(lat) * 1.2;
+          body.z += nz * Math.sign(lat) * 1.2;
+          sim.stats.deckLeaps = (sim.stats.deckLeaps || 0) + 1;
+          sim.city?.events.push({ id: ++sim.city.eventId, type: "jump", action: "takeoff", x: body.x, z: body.z, strength: 12, sound: "whoosh" });
+          return false;
+        }
         const back = Math.abs(lat) - lim;
         const sg = Math.sign(lat);
         body.x -= nx * sg * back;
@@ -218,11 +233,23 @@ export function updateOverpasses(sim, dt) {
         g.state = "down";
         landSpan(sim, op, g);
       }
+  updateFalling(sim, dt);
+}
+// Bodies dropping (off a broken or jumped-off deck, over a barricade):
+// gravity until they reach the street.
+export function updateFalling(sim, dt) {
   for (const b of [sim.player, ...sim.police, ...(sim.city?.traffic || []), ...(sim.target ? [sim.target] : [])]) {
     if (!b.falling) continue;
     b.vy = (b.vy || 0) - 18 * dt;
     b.y = Math.max(0, (b.y || 0) + b.vy * dt);
     if (b.y <= 0) {
+      // A leap off the deck lands hard (a thud, dust, a little damage).
+      if (b === sim.player && b.leapt) {
+        hurt(sim, "fall", 3, "leap");
+        sim.city?.events.push({ id: ++sim.city.eventId, type: "jump", action: "land", x: b.x, z: b.z, strength: 14, sound: "thud" });
+        sim.cameraKick = Math.max(sim.cameraKick || 0, 0.3);
+        b.leapt = false;
+      }
       b.falling = false;
       b.y = 0;
       b.vy = 0;

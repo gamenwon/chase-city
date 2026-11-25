@@ -55,7 +55,8 @@ test("airborne coins sit on the real jump arc: a car jumping the ramp at speed c
   const s = make(3);
   s.police = [];
   const m = s.layout.mounds.find((q) => q.main), p = s.player;
-  const arc = s.coins.filter((c) => c.kind === "ramp" && c.y > 2);
+  // (The coins over this ramp's arc; dune crests have their own.)
+  const arc = s.coins.filter((c) => c.kind === "ramp" && c.y > 2 && Math.abs(-(c.x - m.x) * m.uz + (c.z - m.z) * m.ux) < 2 && Math.abs((c.x - m.x) * m.ux + (c.z - m.z) * m.uz) < 30);
   assert.ok(arc.length >= 3, `${arc.length} airborne coins`);
   Object.assign(p, { x: m.x - m.ux * (m.len + 5), z: m.z - m.uz * (m.len + 5), angle: Math.atan2(-m.ux, -m.uz), vx: m.ux * 22, vz: m.uz * 22, speed: 22 });
   s.previousPlayer = { x: p.x, z: p.z };

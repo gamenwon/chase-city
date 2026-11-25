@@ -22,7 +22,7 @@ import { CHAOS, chaosDestroyed, chaosFleet, chaosNextPoliceKind } from "./chaos.
 import { makeHeavyPolice } from "./police.js";
 import { resetCoins, updateCoins, awardCoins } from "./coins.js";
 import { resetRepairs, updateRepairs } from "./repairs.js";
-import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, sameLevel } from "./overpass.js";
+import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, updateFalling, sameLevel } from "./overpass.js";
 import { createBuildingCells, cellSolids, hitWall } from "./buildings.js";
 import { updateRoadblock } from "./roadblock.js";
 import { updateCordon, cordonSealed } from "./cordon.js";
@@ -357,7 +357,8 @@ export class Simulation {
     for (let pass = 0; pass < 8; pass++) {
       let contact = false;
       for (const b of near)
-        if (resolveBuilding(body, b, radius)) {
+        if (this.passesBarricade(body, b)) continue;
+        else if (resolveBuilding(body, b, radius)) {
           if (b.kind === "wreck" && body === this.player) (this.pushedWrecks ||= new Set()).add(b);
           contact = true;
           body.lastObstacleKind = b.kind || "wall";
@@ -366,7 +367,7 @@ export class Simulation {
         }
       if (!contact) break;
     }
-    if (near.some((b) => resolveBuilding({ ...body }, b, radius - 1e-6))) {
+    if (near.some((b) => !this.passesBarricade(body, b, false) && resolveBuilding({ ...body }, b, radius - 1e-6))) {
       body.x = fallback.x;
       body.z = fallback.z;
       hit = true;
@@ -375,6 +376,31 @@ export class Simulation {
       z = body.z;
     constrainToWorld(body, this.escape, fallback);
     return hit || x !== body.x || z !== body.z;
+  }
+  // Vehicle collection: the mini slips past a barricade over the pavement
+  // (only the carriageway part stops it), the monster truck goes over it
+  // (a hop). Police and traffic are always stopped.
+  passesBarricade(body, b, act = true) {
+    if (b.kind !== "barricade" || body !== this.player) return false;
+    const s = this.vehicle?.stats || {};
+    if (s.climbs) {
+      if (act && !body.falling && (body.level || 0) === 0 && Math.hypot(body.vx, body.vz) > 6) {
+        Object.assign(body, { falling: true, vy: 5.2, y: Math.max(body.y || 0, 0.05) });
+        this.stats.barricadeVaults = (this.stats.barricadeVaults || 0) + 1;
+        this.city?.events.push({ id: ++this.city.eventId, type: "jump", action: "takeoff", x: body.x, z: body.z, strength: 10, sound: "whoosh" });
+      }
+      return true;
+    }
+    if (s.slipsBarricade && b.road && b.roadHalf != null) {
+      const lat = b.vertical ? body.x - b.road.x : body.z - b.road.z;
+      if (Math.abs(lat) > b.roadHalf + 0.15) {
+        if (!act) return true;
+        if (!body.slipAt || this.elapsed - body.slipAt > 2) this.stats.barricadeSlips = (this.stats.barricadeSlips || 0) + 1;
+        body.slipAt = this.elapsed;
+        return true;
+      }
+    }
+    return false;
   }
   move(body, dt, radius = CONFIG.radius) {
     const v0 = { x: body.vx, z: body.vz };
@@ -1197,6 +1223,7 @@ export class Simulation {
     // Explosions damage, shove and set off what is around them (blast.js).
     updateBlasts(this);
     if (this.overpasses.length) updateOverpasses(this, dt);
+    else updateFalling(this, dt);
     // Police helicopter (pursuit missions): spawns, follows, tracks.
     updateHelicopter(this, dt);
     // Coins and repair toolboxes the player drives through.
