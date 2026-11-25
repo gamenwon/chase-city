@@ -290,7 +290,7 @@ export class Interface {
     document.querySelector("#mission-goal").textContent = mission.objective;
     document.querySelector("#mission-limit").textContent = limitText(mission);
     document.querySelector("#mission-reward").textContent =
-      mission.type === "chaos" ? "점수 · 코인(수집·파괴·타깃·배송)" : `${mission.reward.amount} 코인`;
+      mission.type === "chaos" ? "점수 · 코인(수집·파괴·타깃)" : `${mission.reward.amount} 코인`;
     if (vehicle)
       document.querySelector("#mission-vehicle").textContent = vehicle.name;
   }

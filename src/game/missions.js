@@ -33,7 +33,7 @@ export const MISSIONS = Object.freeze({
     id: "cityChaos",
     type: "chaos",
     title: "CITY CHAOS",
-    objective: "경찰을 따돌리며 타깃 차량 추격, 코인·택배 수집, 배송, 도시 파괴를 자유롭게! 체포되거나 차가 부서질 때까지 최고 점수에 도전하세요.",
+    objective: "경찰을 따돌리며 타깃 차량 추격, 코인 수집, 도시 파괴를 자유롭게! 체포되거나 차가 부서질 때까지 최고 점수에 도전하세요.",
     mapId: "downtown",
     durationClass: "challenge",
     timeLimit: null,
