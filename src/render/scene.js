@@ -14,6 +14,7 @@ import { CityLifeRenderer } from "./city.js";
 import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
+import { MaterialPass } from "./pbr.js";
 import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
@@ -71,11 +72,15 @@ export class CityRenderer {
     this.sun = sun;
     this.materials = new Map();
     this.buildings = [];
+    // Material test pass (pbr.js): off unless asked for (?gfx=pbr, or G).
+    this.gfx = new MaterialPass(this.renderer, this.scene, theme);
     if (layout.procedural) {
       // V2.1 generated city (world.js).
       this.world = new GeneratedWorld(this.scene, layout, theme);
       this.buildings = this.world.entries;
+      this.patchWorld();
     } else this.buildGridWorld(layout, theme);
+    if (options.gfx) this.setGfx(true);
     this.layout = layout;
     // V1.9: street trees, lamps, signs and bins are interactive city props
     // (src/game/city.js), drawn by CityLifeRenderer.
@@ -257,11 +262,23 @@ export class CityRenderer {
     this.world?.dispose();
     this.world = new GeneratedWorld(this.scene, layout, this.theme);
     this.buildings = this.world.entries;
+    this.patchWorld();
     this.occlusion = new BuildingOcclusion(this.buildings);
     this.night.setLayout(layout);
     this.overpass.setLayout(layout);
     this.cells.setLayout(layout);
     this.layout = layout;
+  }
+  // Material test pass: ground and building materials get the switchable
+  // surface shader; the player's car its material version.
+  patchWorld() {
+    this.gfx.patch(this.world?.material);
+    this.gfx.patch(this.world?.buildingMaterial);
+  }
+  setGfx(on) {
+    this.gfx.set(on);
+    this.gfx.setNight(this.tod === "night");
+    this.playerModelId = null; // rebuilt with (or without) materials
   }
   // Vehicle collection: swap the player's car model (TOON_MODELS id, or
   // the classic car).
@@ -271,7 +288,7 @@ export class CityRenderer {
     if (this.playerModelId === id) return;
     this.playerModelId = id;
     const old = this.player;
-    this.player = make();
+    this.player = (this.gfx.on && this.gfx.vehicle(id)) || make();
     if (old) {
       this.player.position.copy(old.position);
       this.player.rotation.copy(old.rotation);
@@ -453,6 +470,7 @@ export class CityRenderer {
     // Police helicopter (after the camera has moved this frame).
     this.heli.setSun(this.sun?.position);
     this.heli.update(sim, this.camera, this.tod === "night", dt);
+    this.gfx.update(sim);
     this.coins.update(sim, dt, this.tod === "night");
     this.repairs.update(sim, dt);
     this.cells.update(sim, dt);
@@ -586,6 +604,7 @@ export class CityRenderer {
   // and the cheap night lights (night.js). Switched only between runs.
   applyTimeOfDay(tod) {
     this.tod = tod;
+    this.gfx?.setNight(tod === "night");
     const night = tod === "night", d = this.dayLook;
     const sky = night ? new THREE.Color(NIGHT.sky) : d.sky;
     this.renderer.setClearColor(sky);

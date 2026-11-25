@@ -96,6 +96,10 @@ try {
   renderer = new CityRenderer(document.querySelector("#game"), sim.layout, {
     mobile,
     theme: startMap.theme,
+    // Material test pass (render/pbr.js): ?gfx=pbr starts with it on; the
+    // G key switches it at any time (before/after in the same frame).
+    // (Evaluation test build: on by default, ?gfx=off starts without.)
+    gfx: params.get("gfx") !== "off",
   });
   sim.cameraRig = renderer.cameraRig;
   // The facility locations and their destruction (render/scene.js).
@@ -352,7 +356,21 @@ setPip(readPipChoice());
 pipToggle.addEventListener("click", () => setPip(!renderer?.pipEnabled, true));
 window.addEventListener("keydown", (e) => {
   if (e.code === "KeyV" && !e.repeat) setPip(!renderer?.pipEnabled, true);
+  if (e.code === "KeyG" && !e.repeat && renderer) toggleGfx();
 });
+// Material test pass switch (HUD button and G): before/after in place.
+const gfxButton = document.querySelector("#gfx-toggle");
+function showGfx() {
+  if (!gfxButton || !renderer) return;
+  gfxButton.textContent = renderer.gfx.on ? "재질 ON" : "재질 OFF";
+  gfxButton.setAttribute("aria-pressed", String(renderer.gfx.on));
+}
+function toggleGfx() {
+  renderer.setGfx(!renderer.gfx.on);
+  showGfx();
+}
+gfxButton?.addEventListener("click", () => renderer && toggleGfx());
+showGfx();
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && state === "running") pause();
 });

@@ -1286,3 +1286,23 @@ body.busted #arrest-countdown {
 .exit-actions button { min-height: 44px; }
 .overlay.confirming #start,
 .overlay.confirming .secondary-actions { display: none; }
+
+/* Material test pass switch (evaluation build). */
+.stats #gfx-toggle {
+  width: auto;
+  min-width: 46px;
+  font-size: 10px;
+  padding: 0 6px;
+}
+.stats #gfx-toggle[aria-pressed="true"] {
+  background: #4cd964;
+  border-color: #4cd964;
+  color: #102a32;
+}
+@media (max-width: 700px) {
+  .stats #gfx-toggle {
+    min-width: 38px;
+    font-size: 9px;
+    padding: 0 4px;
+  }
+}

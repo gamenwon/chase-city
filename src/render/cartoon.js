@@ -157,7 +157,19 @@ export function badge(size = 0.5) {
 }
 // Bake a model, keeping textured decals (and blinking lenses) as their own
 // meshes: the colour bake would drop their textures.
+// (Material test pass, render/pbr.js: buildRaw(make) builds a model
+// without baking, so its parts can get their own surface materials.)
+let RAW = false;
+export function buildRaw(make) {
+  RAW = true;
+  try {
+    return make();
+  } finally {
+    RAW = false;
+  }
+}
 export function bake(g, keep = []) {
+  if (RAW) return;
   const decals = [];
   g.traverse((o) => {
     if (o.isMesh && o.material?.map) decals.push(o);
