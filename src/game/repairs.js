@@ -21,6 +21,7 @@ export function placeRepairs(sim) {
     Math.max(Math.abs(x), Math.abs(z)) < 100 &&
     !sim.staticSolids.some((q) => Math.abs(q.x - x) < q.w / 2 + 1.5 && Math.abs(q.z - z) < q.d / 2 + 1.5) &&
     (!sim.navigation?.allowed || sim.navigation.allowed({ x, z })) &&
+    !(sim.layout.start && Math.hypot(sim.layout.start.x - x, sim.layout.start.z - z) < 25) &&
     !(sim.coins || []).some((c) => Math.hypot(c.x - x, c.z - z) < 6);
   for (let tries = 0; out.length < REPAIRS.count && tries < 400 && roads.length; tries++) {
     const e = roads[Math.floor(R() * roads.length)];

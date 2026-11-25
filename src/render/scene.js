@@ -19,7 +19,7 @@ import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
 import { RepairRenderer } from "./repairs.js";
 import { ChaosRenderer } from "./chaos.js";
-import { TOON_MODELS } from "./toon-vehicles.js";
+import { TOON_MODELS, policeSuv, policeArmored } from "./toon-vehicles.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
 import { jumpPitch } from "../game/jumps.js";
@@ -384,6 +384,19 @@ export class CityRenderer {
     for (let i = sim.police.length; i < this.police.length; i++)
       this.police[i].visible = false;
     sim.police.forEach((c, i) => {
+      // CITY CHAOS heavy units: this slot shows the matching model (built
+      // once per slot and kind, then swapped).
+      const kind = c.heavy || "patrol";
+      if ((this.police[i].userData.kind || "patrol") !== kind) {
+        const slot = (this.policeVariants ||= [])[i] ||= { patrol: this.police[i] };
+        this.police[i].visible = false;
+        if (!slot[kind]) {
+          slot[kind] = kind === "suv" ? policeSuv() : policeArmored();
+          slot[kind].userData.kind = kind;
+          this.scene.add(slot[kind]);
+        }
+        this.police[i] = slot[kind];
+      }
       const mesh = this.police[i];
       mesh.visible = c.state === "active" || c.wreckAge < CONFIG.wreckSeconds;
       // A wreck launches, flips onto its roof and lands in the exact pose the

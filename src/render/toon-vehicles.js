@@ -474,4 +474,113 @@ export function armoredTruck() {
   return scaled(g);
 }
 
+// ------------------------------------------------- HEAVY POLICE (CITY CHAOS)
+// Blinking light-bar lenses: separate materials (the renderer toggles
+// them), kept out of the bake like the patrol car's.
+function lightBar(g, y, z, w = 1.5) {
+  const D = 0x1d1c22;
+  B(g, w, 0.1, 0.4, D, 0, y, z);
+  const red = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.2, 0.36), new THREE.MeshStandardMaterial({ color: 0xff2a3c, emissive: 0xff2040, emissiveIntensity: 0.9, flatShading: true }));
+  red.position.set(-w * 0.27, y + 0.15, z);
+  const blue = new THREE.Mesh(new THREE.BoxGeometry(w * 0.42, 0.2, 0.36), new THREE.MeshStandardMaterial({ color: 0x2a6dff, emissive: 0x2a60ff, emissiveIntensity: 0.9, flatShading: true }));
+  blue.position.set(w * 0.27, y + 0.15, z);
+  g.add(red, blue);
+  B(g, 0.2, 0.16, 0.36, 0xf4f4f0, 0, y + 0.13, z);
+  return { red, blue };
+}
+function policeText(g, text, W, y, z, w = 1.3, h = 0.34) {
+  for (const s of [-1, 1]) {
+    const t = textSign(text, "#f4f4f0", "#1d1c22", w, h);
+    t.position.set(s * (W / 2 + 0.03), y, z);
+    t.rotation.y = (s * Math.PI) / 2;
+    g.add(t);
+  }
+}
+// Heavy police SUV: a tall boxy black-and-white SUV on big tyres, white
+// doors and roof, a huge black push bumper, a full-width light bar.
+export function policeSuv() {
+  const g = new THREE.Group();
+  const BK = 0x1d1c22, WH = 0xf4f4f0, W = 2.2, L = 3.45, r = 0.6, clear = 0.56;
+  const belt = clear + 0.74;
+  B(g, W, 0.74, L - 0.1, BK, 0, clear, 0);
+  for (const s of [-1, 1]) B(g, 0.06, 0.66, 1.7, WH, s * (W / 2 + 0.02), clear + 0.04, 0.1); // white doors
+  for (const z of [-1.05, 1.05]) {
+    for (const s of [-1, 1]) B(g, 0.3, 0.2, r * 2.3, BK, s * (W / 2 + 0.06), 2 * r - 0.1, z);
+    for (const s of [-1, 1]) wheel(g, s * (W / 2 - 0.08), z, r, 0.52, 0x9da1a8, true);
+  }
+  B(g, W - 0.2, 0.06, 0.95, BK, 0, belt, -1.18);
+  const roof = belt + 1.02, zf = -0.68, zr = L / 2 - 0.02;
+  slant(g, 0, { y: belt, z: zf }, { y: roof, z: zf + 0.2 }, W - 0.1, 0.08, WH);
+  pane(g, W - 0.36, roof - belt - 0.2, 0, (belt + roof) / 2, zf + 0.04, 0, -0.18);
+  B(g, W - 0.04, 0.14, zr - zf - 0.1, WH, 0, roof - 0.1, (zf + zr) / 2 + 0.06);
+  for (const s of [-1, 1]) {
+    for (const z of [zf + 0.14, 0.38, zr - 0.08]) B(g, 0.1, roof - belt, 0.14, WH, s * (W / 2 - 0.05), belt, z);
+    pane(g, 0.62, roof - belt - 0.26, s * (W / 2 - 0.03), (belt + roof) / 2, 0.0, Math.PI / 2);
+    pane(g, 0.88, roof - belt - 0.26, s * (W / 2 - 0.03), (belt + roof) / 2, 0.98, Math.PI / 2);
+    const star = cyl(g, 0.2, 0.03, 0xf5c01a, s * (W / 2 + 0.07), clear + 0.42, -0.55, "x", 5);
+    star.rotation.x = Math.PI / 2;
+  }
+  pane(g, W - 0.5, roof - belt - 0.3, 0, (belt + roof) / 2, zr + 0.02);
+  const lens = lightBar(g, roof + 0.02, -0.1, 1.7);
+  // Face: lamps, black grille, a massive push bumper.
+  for (const s of [-1, 1]) {
+    roundLamp(g, 0.17, s * 0.66, clear + 0.46, -L / 2);
+    B(g, 0.24, 0.24, 0.06, 0xd8202c, s * 0.78, clear + 0.4, L / 2 - 0.04, 0, TAIL);
+  }
+  B(g, 0.9, 0.42, 0.05, 0x2f2e35, 0, clear + 0.22, -L / 2 - 0.02);
+  B(g, W + 0.3, 0.42, 0.34, BK, 0, clear - 0.24, -L / 2 - 0.2);
+  for (const s of [-1, 1]) B(g, 0.14, 0.8, 0.14, BK, s * 0.45, clear - 0.1, -L / 2 - 0.36);
+  B(g, 1.2, 0.12, 0.14, BK, 0, clear + 0.62, -L / 2 - 0.36);
+  B(g, W + 0.1, 0.26, 0.24, BK, 0, clear - 0.12, L / 2 + 0.04);
+  bakeVehicle(g, [lens.red, lens.blue]);
+  policeText(g, "POLICE", W, clear + 0.36, 0.25);
+  const out = scaled(g);
+  out.userData.red = lens.red;
+  out.userData.blue = lens.blue;
+  return out;
+}
+// Police armored truck: short and tall, dark navy armour with white
+// POLICE panels, a reinforced ram bumper, slit windows, a light bar and a
+// roof hatch.
+export function policeArmored() {
+  const g = new THREE.Group();
+  const NV = 0x1f2a44, WH = 0xf4f4f0, D = 0x15151a, W = 2.3, L = 3.55, r = 0.58, clear = 0.46;
+  B(g, W - 0.1, 0.86, 0.85, NV, 0, clear, -1.3);
+  B(g, W, 2.15, 2.7, NV, 0, clear, 0.42);
+  for (const s of [-1, 1]) B(g, 0.05, 0.62, 2.3, WH, s * (W / 2 + 0.02), clear + 0.75, 0.45); // white band
+  for (const z of [-1.08, 1.15]) {
+    for (const s of [-1, 1]) B(g, 0.24, 0.22, r * 2.3, D, s * (W / 2 + 0.05), 2 * r - 0.1, z);
+    for (const s of [-1, 1]) wheel(g, s * (W / 2 - 0.1), z, r, 0.52, 0x55535c, true);
+  }
+  const top = clear + 2.15;
+  B(g, W - 0.2, 0.92, 0.1, D, 0, clear + 1.0, -0.92);
+  pane(g, W - 0.7, 0.42, 0, clear + 1.5, -0.98, 0, -0.04);
+  for (const s of [-1, 1]) {
+    pane(g, 0.4, 0.26, s * (W / 2 + 0.01), clear + 1.65, -0.6, Math.PI / 2);
+    for (let i = 0; i < 4; i++) for (const y of [clear + 0.3, clear + 1.95]) B(g, 0.05, 0.05, 0.05, 0x6a717b, s * (W / 2 + 0.02), y, -0.65 + i * 0.75);
+  }
+  B(g, 0.9, 0.12, 0.9, 0x2b3757, 0, top, 0.6);
+  const lens = lightBar(g, top + 0.02, -0.45, 1.8);
+  // Ram bumper: a thick wedge plate across the whole front.
+  B(g, 1.1, 0.5, 0.06, D, 0, clear + 0.2, -1.75);
+  for (const s of [-1, 1]) {
+    B(g, 0.3, 0.22, 0.06, 0xfff6d2, s * 0.8, clear + 0.4, -1.76, 0, LAMP);
+    B(g, 0.3, 0.3, 0.06, 0xd8202c, s * 0.84, clear + 0.7, L / 2 + 0.04, 0, TAIL);
+  }
+  const ram = B(g, W + 0.4, 0.55, 0.36, D, 0, clear - 0.3, -2.0);
+  void ram;
+  for (const s of [-1, 1]) B(g, 0.16, 0.7, 0.16, D, s * 0.6, clear - 0.1, -1.9);
+  B(g, W + 0.06, 0.28, 0.26, D, 0, clear - 0.12, L / 2 + 0.1);
+  bakeVehicle(g, [lens.red, lens.blue]);
+  policeText(g, "POLICE", W, clear + 1.06, 0.45, 1.6, 0.44);
+  const front = textSign("POLICE", "#f4f4f0", "#1f2a44", 1.0, 0.24);
+  front.position.set(0, clear + 1.15, -0.975);
+  front.rotation.y = Math.PI;
+  g.add(front);
+  const out = scaled(g);
+  out.userData.red = lens.red;
+  out.userData.blue = lens.blue;
+  return out;
+}
+
 export const TOON_MODELS = { mini: miniCar, super: superCar, muscle: muscleCar, suv: suvCar, icecream: iceCreamTruck, monster: monsterTruck, dozer: bulldozer, armored: armoredTruck };
