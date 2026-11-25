@@ -5,7 +5,7 @@
 // (the persistent burning wreck is drawn by WreckRenderer). Also gives the
 // on-screen arrow when the target is off screen (like the parcels).
 import * as THREE from "three";
-import { targetCar } from "./kit.js";
+import { targetCar } from "./cartoon.js";
 import { wreckPose } from "./wrecks.js";
 import { CONFIG } from "../game/config.js";
 

@@ -23,12 +23,13 @@ const step = (s, n = 1) => {
   }
 };
 
-test("start: police, a target, parcels, coins and repairs all active at once; calm start", () => {
+test("start: police, a target, coins and repairs all active at once; calm start", () => {
   const s = make();
   assert.ok(s.chaos);
   assert.equal(s.police.length, CHAOS.startPolice);
   assert.ok(s.target);
-  assert.equal(s.pickups.length, CHAOS.parcels.onMap);
+  // (Evaluation build: no parcels or drop-offs in CITY CHAOS.)
+  assert.equal(s.pickups.length, CHAOS.parcels.enabled ? CHAOS.parcels.onMap : 0);
   assert.ok(s.coins.length > 20);
   assert.ok(s.repairs.length >= 3);
   assert.equal(s.chaos.level, 1);
@@ -44,32 +45,15 @@ test("other missions do not turn CITY CHAOS on", () => {
   }
 });
 
-test("parcel: picked up by driving through, carried, delivered at the drop-off; score and coins; parcel comes back", () => {
+test("evaluation build: CITY CHAOS has no parcels or drop-offs; the parcel mission still does", () => {
   const s = make();
-  const q = s.pickups[0];
-  Object.assign(s.player, { x: q.x, z: q.z, vx: 0, vz: 0, speed: 0 });
-  s.previousPlayer = { x: q.x, z: q.z };
-  step(s);
-  assert.equal(q.taken, true);
-  assert.equal(s.chaos.carried, 1);
-  assert.ok(s.chaos.delivery, "a drop-off appears");
-  const before = { score: s.chaos.score, coins: s.runCoins };
-  const d = s.chaos.delivery;
-  Object.assign(s.player, { x: d.x, z: d.z });
-  s.previousPlayer = { x: d.x, z: d.z };
-  step(s);
+  step(s, 120);
+  assert.equal(CHAOS.parcels.enabled, false);
+  assert.equal(s.pickups.length, 0);
   assert.equal(s.chaos.carried, 0);
-  assert.equal(s.chaos.counts.deliveries, 1);
   assert.equal(s.chaos.delivery, null);
-  assert.ok(s.chaos.score >= before.score + CHAOS.score.delivery);
-  // (A second parcel lying at the drop-off is picked up and delivered in
-  // the same pass.)
-  assert.equal(s.runCoins, before.coins + CHAOS.coins.delivery * s.chaos.delivered);
-  assert.equal(s.result, null, "a delivery never ends the run");
-  s.hp = s.maxHp;
-  step(s, Math.ceil(CHAOS.parcels.respawn * 60) + 2);
-  assert.equal(s.result, null);
-  assert.equal(s.pickups.filter((p) => !p.taken).length, CHAOS.parcels.onMap);
+  const p = make({ mission: "parcels" });
+  assert.equal(p.pickups.length, 5);
 });
 
 test("target: taken down -> reward once, a new target comes in off the player's position later; the run goes on", () => {
@@ -119,12 +103,13 @@ test("wanted level: grows with heat (never instantly), fleet and heavy units fol
   step(s, 60 * 12);
   const active = s.police.filter((c) => c.state === "active");
   assert.ok(active.length > CHAOS.startPolice, `fleet ${active.length}`);
-  assert.ok(active.some((c) => c.heavy === "suv"), "a heavy SUV joins at 4");
+  assert.ok(active.some((c) => c.heavy === "armored"), "an armored truck joins at 4");
+  assert.ok(!active.some((c) => c.heavy === "suv"), "no heavy SUV in this lineup");
   assert.ok(s.heli, "helicopter at 4");
   s.chaos.heat = CHAOS.levels[4];
   step(s, 60 * 12);
   assert.equal(s.chaos.level, 5);
-  assert.ok(s.police.some((c) => c.state === "active" && c.heavy === "armored"), "armored truck at 5");
+  assert.ok(s.police.filter((c) => c.state === "active" && c.heavy === "armored").length >= 1, "armored trucks at 5");
 });
 
 test("heavy police: heavier, sturdier, slower, not indestructible; shove heavy player cars", () => {

@@ -13,6 +13,7 @@
 // colours for the lights; one mesh for the body.
 import * as THREE from "three";
 import { pieceGeometry, B, cyl } from "../preview/locations/parts.js";
+import { heliBody } from "./cartoon.js";
 
 function signTexture() {
   const c = document.createElement("canvas");
@@ -66,7 +67,9 @@ export class HelicopterRenderer {
     this.mats = [];
     const mat = (m) => (this.mats.push(m), m);
     this.bodyMat = mat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.1, flatShading: true, transparent: true }));
-    this.body = new THREE.Mesh(pieceGeometry(bodyBuild), this.bodyMat);
+    // (Cartoon redesign: angular white-and-blue body, cartoon.js; the old
+    // build stays below for reference.)
+    this.body = new THREE.Mesh(pieceGeometry(heliBody), this.bodyMat);
     this.body.castShadow = false; // its own cheap shadow disc instead
     this.group.add(this.body);
     // POLICE on both doors.
@@ -74,28 +77,28 @@ export class HelicopterRenderer {
     const signMat = mat(new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
     for (const s of [-1, 1]) {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.48), signMat);
-      p.position.set(s * 1.135, 0.8, 0.6);
+      p.position.set(s * 1.13, 0.05, 1.0);
       p.rotation.y = (s * Math.PI) / 2;
       this.group.add(p);
     }
     // POLICE on the roof too (the chase camera looks down on it).
     const roof = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.5), signMat);
     roof.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
-    roof.position.set(0, 2.31, -0.85);
+    roof.position.set(0, 1.92, 1.0);
     this.group.add(roof);
     // Light bar: red and blue (flash alternately).
     this.red = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.3), mat(new THREE.MeshBasicMaterial({ color: 0xff2a3c, transparent: true, toneMapped: false })));
     this.blue = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.3), mat(new THREE.MeshBasicMaterial({ color: 0x2a6dff, transparent: true, toneMapped: false })));
-    this.red.position.set(-0.4, 1.95, 1.9);
-    this.blue.position.set(0.4, 1.95, 1.9);
+    this.red.position.set(-0.4, 2.0, 1.95);
+    this.blue.position.set(0.4, 2.0, 1.95);
     this.group.add(this.red, this.blue);
     // Belly strobes.
     this.strobe = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.2), mat(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, toneMapped: false })));
-    this.strobe.position.set(0, -0.35, 2.4);
+    this.strobe.position.set(0, -1.0, 1.6);
     this.group.add(this.strobe);
     // Main rotor: a faint blurred disc and two long blades.
     this.rotor = new THREE.Group();
-    this.rotor.position.set(0, 3.25, 0.4);
+    this.rotor.position.set(0, 3.15, 0.4);
     const blur = new THREE.Mesh(new THREE.CircleGeometry(5.4, 28).rotateX(-Math.PI / 2), mat(new THREE.MeshBasicMaterial({ color: 0x30333a, transparent: true, opacity: 0.18, depthWrite: false })));
     this.blurMat = blur.material;
     this.blurMat.userData.base = 0.18;
@@ -109,7 +112,7 @@ export class HelicopterRenderer {
     this.group.add(this.rotor);
     // Tail rotor.
     this.tail = new THREE.Group();
-    this.tail.position.set(0.25, 1.6, 6.7);
+    this.tail.position.set(0.2, 1.75, 6.85);
     for (let i = 0; i < 2; i++) {
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.5, 0.16), bladeMat);
       b.rotation.x = (i * Math.PI) / 2;
@@ -238,3 +241,4 @@ export class HelicopterRenderer {
     }
   }
 }
+void bodyBuild;

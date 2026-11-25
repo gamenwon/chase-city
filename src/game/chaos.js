@@ -39,8 +39,10 @@ export const CHAOS = Object.freeze({
   levels: [0, 60, 150, 260, 380],
   // Police cars wanted on the road per level, and how many of them heavy.
   fleet: [2, 4, 5, 6, 7],
-  heavySuv: [0, 0, 0, 1, 2],
-  armored: [0, 0, 0, 0, 1],
+  // (Evaluation lineup: patrol cars, the armored truck and the helicopter;
+  // the heavy SUV stays available but is not sent.)
+  heavySuv: [0, 0, 0, 0, 0],
+  armored: [0, 0, 0, 1, 2],
   roadblockFrom: 3,
   helicopterFrom: 4,
   // Destruction counts for the player when the player did it (rammed,
@@ -72,7 +74,9 @@ export const CHAOS = Object.freeze({
   },
   coins: { target: 8, delivery: 3 }, // per target / per parcel delivered
   target: { respawn: 5, min: 75, max: 120 },
-  parcels: { onMap: 4, respawn: 6, radius: 4.5, minGap: 40, deliveryRadius: 7, deliveryMin: 60, deliveryMax: 130 },
+  // Parcels and drop-offs: off in the evaluation build (the parcel mission
+  // still has them); the code stays for later.
+  parcels: { enabled: false, onMap: 4, respawn: 6, radius: 4.5, minGap: 40, deliveryRadius: 7, deliveryMin: 60, deliveryMax: 130 },
 });
 
 const MAJOR = new Set(["gas", "depot", "bridge", "landmark", "wheel", "sculpture", "fireworks"]);
@@ -108,7 +112,7 @@ export function createChaos(sim) {
   };
   sim.chaos = c;
   sim.pickups = [];
-  for (let i = 0; i < CHAOS.parcels.onMap; i++) sim.pickups.push(placeParcel(sim, c));
+  if (CHAOS.parcels.enabled) for (let i = 0; i < CHAOS.parcels.onMap; i++) sim.pickups.push(placeParcel(sim, c));
   sim.target = createTarget(sim);
   if (sim.target) sim.target.serial = c.targetSerial;
   return c;

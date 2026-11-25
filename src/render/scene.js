@@ -19,7 +19,8 @@ import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
 import { RepairRenderer } from "./repairs.js";
 import { ChaosRenderer } from "./chaos.js";
-import { TOON_MODELS, policeSuv, policeArmored } from "./toon-vehicles.js";
+import { TOON_MODELS, policeSuv } from "./toon-vehicles.js";
+import { PLAYER_MODELS, policeCar as cartoonPolice, policeArmored } from "./cartoon.js";
 import { BuildingCellsRenderer } from "./cells.js";
 import { LocationsRuntime } from "../preview/locations/runtime.js";
 import { jumpPitch } from "../game/jumps.js";
@@ -265,7 +266,8 @@ export class CityRenderer {
   // Vehicle collection: swap the player's car model (TOON_MODELS id, or
   // the classic car).
   setPlayerModel(id) {
-    const make = TOON_MODELS[id] || playerCar;
+    // (Cartoon redesign lineup first; the earlier toy models stay available.)
+    const make = PLAYER_MODELS[id] || TOON_MODELS[id] || playerCar;
     if (this.playerModelId === id) return;
     this.playerModelId = id;
     const old = this.player;
@@ -344,7 +346,7 @@ export class CityRenderer {
     this.scene.add(crown);
   }
   addPoliceCar() {
-    const car = policeCar();
+    const car = cartoonPolice();
     this.scene.add(car);
     return car;
   }

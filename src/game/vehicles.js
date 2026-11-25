@@ -89,7 +89,7 @@ function build(id, name, description, r, extra = {}) {
 export const VEHICLES = Object.freeze({
   starter: Object.freeze({
     id: "starter",
-    name: "스타터 쿠페",
+    name: "쿠페",
     description: "기본 차량. 모든 미션의 기준 성능.",
     ratings: Object.freeze({ speed: 3, accel: 3, steer: 3, mass: 2, destroy: 2, durability: 2 }),
     stats: Object.freeze({
@@ -173,6 +173,9 @@ export const VEHICLES = Object.freeze({
 });
 // The collection, in lineup order.
 export const COLLECTION = ["mini", "super", "muscle", "suv", "icecream", "monster", "dozer", "armored"];
+// The selectable lineup of the evaluation build (cartoon redesign): five
+// cars. The others stay configured for later.
+export const PLAYER_LINEUP = Object.freeze(["starter", "super", "mini", "monster", "armored"]);
 
 export const DEFAULT_VEHICLE = "starter";
 

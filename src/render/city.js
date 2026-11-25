@@ -1,5 +1,16 @@
 import * as THREE from "three";
 import { civilianCarGeometry } from "./kit.js";
+import { trafficGeometry, TRAFFIC_TYPES } from "./cartoon.js";
+// Civilian traffic types (cartoon redesign) and how common each is: the
+// type of a car follows from its id (stable for the whole run).
+const TYPES = Object.keys(TRAFFIC_TYPES);
+const TYPE_SHARE = { city: 0.28, compact: 0.22, taxi: 0.16, van: 0.14, bus: 0.08, cargo: 0.12 };
+export function trafficType(id) {
+  let h = ((id * 2654435761) >>> 0) / 4294967296, acc = 0;
+  for (const t of TYPES) if ((acc += TYPE_SHARE[t]) > h) return t;
+  return "city";
+}
+void civilianCarGeometry;
 import { carStage } from "../game/city.js";
 
 // Civilian car damage drawing (casual destruction pass).
@@ -144,17 +155,14 @@ export class CityLifeRenderer {
         P * 2,
       ),
     };
-    // Civilian cars (moving, parked, wrecked) in one draw call.
-    this.carMesh = this.instanced(
-      civilianCarGeometry(),
-      new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.6,
-        flatShading: true,
-      }),
-      40,
-    );
-    this.carMesh.count = 0;
+    // Civilian cars (moving, parked, wrecked): one instanced mesh per type
+    // (city car, compact, taxi, van, bus, cargo truck), one shared material.
+    const carMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, flatShading: true });
+    this.carMeshes = Object.fromEntries(TYPES.map((t) => {
+      const m = this.instanced(trafficGeometry(t), carMat, 40);
+      m.count = 0;
+      return [t, m];
+    }));
     // Impact particles: leaves, sparks, dust, rubbish.
     this.particles = [];
     this.particleMesh = this.instanced(
@@ -335,8 +343,11 @@ export class CityLifeRenderer {
     const recolor = key !== this.carKey;
     this.carKey = key;
     const now = sim.elapsed, p = sim.player;
+    const per = Object.fromEntries(TYPES.map((k) => [k, 0]));
     for (const t of city.traffic) {
       if (n >= 40) break;
+      const type = (t.vtype ??= trafficType(t.id));
+      const mesh = this.carMeshes[type], slot = per[type]++;
       const stage = carStage(t);
       const wreck = t.state === "wreck";
       // A car that just went up hops and rolls a little.
@@ -361,12 +372,12 @@ export class CityLifeRenderer {
       this.e.set(wreck ? 0.12 : 0, t.angle + (t.pop != null ? 0.5 * Math.min(1, (now - t.pop) / 0.7) : 0), roll, "YXZ");
       this.q.setFromEuler(this.e);
       this.m.compose(this.v.set(t.x, (t.y || 0) + hop, t.z), this.q, this.s.set(1, t.burned ? 0.9 : 1, 1));
-      this.carMesh.setMatrixAt(n, this.m);
+      mesh.setMatrixAt(slot, this.m);
       if (recolor) {
-        this.color.set(CAR_COLORS[t.color]);
-        // Dented and dirty, scorched, charred.
-        this.color.multiplyScalar([1, 0.9, 0.72, 0.55, 0.32, 0.16][stage]);
-        this.carMesh.setColorAt(n, this.color);
+        // (The type carries its own paint; the instance colour only
+        // darkens it: dented and dirty, scorched, charred.)
+        this.color.setScalar([1, 0.9, 0.72, 0.55, 0.32, 0.16][stage]);
+        mesh.setColorAt(slot, this.color);
       }
       n++;
       if (!stage) continue;
@@ -420,11 +431,12 @@ export class CityLifeRenderer {
         this.coreMesh.setMatrixAt(flames++, this.m);
       }
     }
-    if (n || this.carMesh.count) {
-      this.carMesh.count = n;
-      this.carMesh.instanceMatrix.needsUpdate = true;
-      if (recolor && this.carMesh.instanceColor)
-        this.carMesh.instanceColor.needsUpdate = true;
+    for (const [type, mesh] of Object.entries(this.carMeshes)) {
+      if (!per[type] && !mesh.count) continue;
+      mesh.count = per[type];
+      mesh.visible = per[type] > 0;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (recolor && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
     if (smoke || this.smokeMesh.count) {
       this.smokeMesh.count = smoke;
@@ -511,7 +523,7 @@ export class CityLifeRenderer {
       ...this.propMeshes.flatMap((g) => g.meshes.map((m) => m.mesh)),
       this.litterMesh,
       ...Object.values(this.pedMeshes),
-      this.carMesh,
+      ...Object.values(this.carMeshes),
       this.particleMesh,
       this.smokeMesh,
       this.flameMesh,

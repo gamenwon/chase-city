@@ -4,7 +4,7 @@ const audio = new SoundSystem();
 import { Simulation } from "./game/simulation.js";
 import { getMission } from "./game/missions.js";
 import { missionOrder, nextMission } from "./game/catalog.js";
-import { getVehicle, VEHICLES, COLLECTION, vehicleRatings, VEHICLE_ROLES } from "./game/vehicles.js";
+import { getVehicle, VEHICLES, PLAYER_LINEUP, vehicleRatings, VEHICLE_ROLES } from "./game/vehicles.js";
 import { Progress } from "./game/progress.js";
 import { getMap, mapLayout } from "./world/maps.js";
 import { generateCity } from "./world/citygen.js";
@@ -21,6 +21,8 @@ const mobile =
 const profile = mobile ? "mobile" : "desktop";
 // V2.0: missions, saved credits/records, and the rewarded-ad connection.
 const progress = new Progress();
+// (A car saved from an earlier lineup falls back to the coupe.)
+if (!PLAYER_LINEUP.includes(progress.selectedVehicle)) progress.selectVehicle("starter");
 const ads = installAdBridge(window);
 const order = missionOrder();
 // Company evaluation preset (?eval): CITY CHAOS on a fixed city (seed 3
@@ -167,7 +169,7 @@ ui.start.addEventListener("click", () => {
 document.querySelector("#result-vehicle")?.addEventListener("click", () => document.querySelector("#pick-vehicle")?.click());
 document.querySelector("#pick-vehicle")?.addEventListener("click", () => {
   if (state !== "ready" && state !== "over") return; // (not from a paused run)
-  const list = ["starter", ...COLLECTION].map((id) => ({ id, name: VEHICLES[id].name, role: VEHICLE_ROLES[id], ratings: vehicleRatings(VEHICLES[id]) }));
+  const list = PLAYER_LINEUP.map((id) => ({ id, name: VEHICLES[id].name, role: VEHICLE_ROLES[id], ratings: vehicleRatings(VEHICLES[id]) }));
   ui.showVehiclePicker(list, progress.selectedVehicle, (id) => {
     if (state !== "ready" && state !== "over") return;
     progress.selectVehicle(id);

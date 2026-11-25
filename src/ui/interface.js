@@ -409,6 +409,8 @@ export class Interface {
     set("cr-facilities", c.counts.facilities);
     set("cr-targets", c.counts.targets);
     set("cr-parcels", `${c.counts.parcels} · ${c.delivered || 0}`);
+    // (No parcels in this CITY CHAOS build: the row is left out.)
+    document.getElementById("cr-parcels").parentElement.hidden = !sim.pickups.length && !c.counts.parcels;
     set("cr-coins", `+${(info.earned ?? sim.runCoins).toLocaleString("ko-KR")}`);
     e["open-select"].hidden = false;
     e["result-vehicle"].hidden = false;
