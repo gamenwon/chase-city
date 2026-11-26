@@ -8,7 +8,11 @@
 //              bond, recessed mortar): detail + normal map
 //   vehicle    the five player cars, split into paint (clear coat),
 //              metal, glass, rubber and plastic, with a shared sky
-//              reflection map and baked-in shading toward the sills
+//              reflection map and baked-in shading toward the sills;
+//              the coupe and the patrol car in the detailed build
+//              (cartoon.js buildDetailed: see-through glass over a simple
+//              interior, window frames and mouldings, bevelled edges,
+//              detailed wheels, lamps, grille and bumpers)
 //   contact    a soft dark contact shadow under the cars
 // The ground and the buildings keep their single merged meshes: a shader
 // patch on their existing materials picks the surface by vertex colour and
@@ -20,7 +24,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { asphaltTextures, pavingTextures, brickTextures } from "./textures.js";
 import { K } from "./kit.js";
-import { buildRaw, PLAYER_MODELS } from "./cartoon.js";
+import { buildRaw, buildDetailed, PLAYER_MODELS, policeCar, INTERIOR, DASH, LENS } from "./cartoon.js";
 
 export class MaterialPass {
   constructor(renderer, scene, theme) {
@@ -139,7 +143,12 @@ uniform vec3 uRoad, uWalk, uBrick;`,
   // A player car with surface materials (null if the id is unknown).
   vehicle(id) {
     const make = PLAYER_MODELS[id];
-    return make ? materialize(buildRaw(make), this.vehicleMats) : null;
+    if (!make) return null;
+    return materialize((DETAILED.has(id) ? buildDetailed : buildRaw)(make), this.vehicleMats);
+  }
+  // The patrol car, detailed (the armoured unit keeps its own model).
+  police() {
+    return materialize(buildDetailed(policeCar), this.vehicleMats);
   }
   update(sim) {
     if (this.on) this.shadows.update(sim);
@@ -168,7 +177,10 @@ function skyEnvironment() {
   scene.add(sun);
   return scene;
 }
+// Detailed builds so far (test scope: the coupe; the patrol car too).
+const DETAILED = new Set(["starter"]);
 const CLASS = new Map([
+  [INTERIOR, "interior"], [DASH, "interior"], [LENS, "lens"], [0xf2f2ee, "lens"], [0x26252b, "rubber"],
   [0x2a74c8, "glass"], [0x9fd6ff, "glass"],
   [0x1d1c21, "rubber"], [0x141317, "rubber"],
   [0x2b2a30, "plastic"], [0x1f1e24, "plastic"],
@@ -187,10 +199,26 @@ function vehicleMaterials(env) {
     // the shape reads without washing the colour out.
     paint: mk(THREE.MeshPhysicalMaterial, { roughness: 0.55, metalness: 0.0, clearcoat: 0.8, clearcoatRoughness: 0.1 }, 0.38),
     metal: mk(THREE.MeshStandardMaterial, { roughness: 0.38, metalness: 0.65 }, 0.9),
-    glass: mk(THREE.MeshPhysicalMaterial, { roughness: 0.06, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04 }, 0.6),
+    // Glass: see-through (the interior shows), but wherever it reflects
+    // something bright (sky, sun, lamps) it turns opaque with that
+    // reflection, like real glass.
+    glass: seeThrough(mk(THREE.MeshPhysicalMaterial, { roughness: 0.04, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, opacity: 0.22, depthWrite: false }, 1.0), 0.7),
+    lens: seeThrough(mk(THREE.MeshPhysicalMaterial, { roughness: 0.02, metalness: 0, transparent: true, opacity: 0.18, depthWrite: false }, 1.2), 0.6),
+    interior: mk(THREE.MeshStandardMaterial, { roughness: 0.85, metalness: 0 }, 0.15),
     rubber: mk(THREE.MeshStandardMaterial, { roughness: 0.95, metalness: 0 }, 0.15),
     plastic: mk(THREE.MeshStandardMaterial, { roughness: 0.62, metalness: 0 }, 0.4),
   };
+}
+function seeThrough(m, k) {
+  m.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <opaque_fragment>",
+      `diffuseColor.a = clamp(diffuseColor.a + max(max(outgoingLight.r, outgoingLight.g), outgoingLight.b) * ${k.toFixed(2)}, 0.0, 0.94);
+#include <opaque_fragment>`,
+    );
+  };
+  m.customProgramCacheKey = () => "seeThrough" + k;
+  return m;
 }
 // Merge an unbaked model's parts by surface class (one mesh per class,
 // per wheel too), keeping lamps (emissive) and decals as they are.
@@ -198,6 +226,9 @@ function materialize(outer, mats) {
   const inner = outer.children[0];
   inner.updateMatrixWorld(true);
   const wheels = new Set(inner.userData.wheels || []);
+  const belt = inner.userData.belt;
+  // Meshes the renderer still drives (police light bar lenses) stay apart.
+  const keep = new Set(Object.values(outer.userData).filter((v) => v?.isMesh));
   // Height range of the body in the inner model's frame (for the baked
   // occlusion): from the lowest body part up about a metre.
   let yLow = Infinity;
@@ -216,9 +247,11 @@ function materialize(outer, mats) {
     root.traverse((o) => {
       if (!o.isMesh) return;
       if (!isWheel) for (let q = o.parent; q && q !== root; q = q.parent) if (wheels.has(q)) return;
-      if (o.material.map || (o.material.emissive && o.material.emissive.getHex() !== 0)) return; // decals, lamps
+      if (o.material.map || keep.has(o)) return; // decals, blinking lenses
+      const em = o.material.emissive?.getHex() || 0;
       const hex = o.material.color.getHex();
-      const cls = CLASS.get(hex) || "paint";
+      const cls = em ? `em:${hex}:${em}:${o.material.emissiveIntensity}` : CLASS.get(hex) || "paint";
+      if (em && !mats[cls]) mats[cls] = new THREE.MeshStandardMaterial({ color: hex, emissive: em, emissiveIntensity: o.material.emissiveIntensity, flatShading: true, vertexColors: true });
       let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
       for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "normal") g.deleteAttribute(k);
       g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
@@ -229,7 +262,9 @@ function materialize(outer, mats) {
       const pos = g.attributes.position;
       for (let i = 0; i < n; i++) {
         const y = pos.getY(i);
-        const k = isWheel || cls === "glass" ? 1 : 0.6 + 0.4 * Math.min(1, Math.max(0, (y - yLow) / ySpan));
+        let k = isWheel || cls === "glass" || cls === "lens" || em ? 1 : 0.6 + 0.4 * Math.min(1, Math.max(0, (y - yLow) / ySpan));
+        // Joint shading where the cabin meets the body (detailed builds).
+        if (belt != null && cls === "paint") k *= 1 - 0.22 * Math.exp(-(((y - belt) / 0.05) ** 2));
         col.set([c.r * k, c.g * k, c.b * k], i * 3);
       }
       g.setAttribute("color", new THREE.BufferAttribute(col, 3));
@@ -239,7 +274,7 @@ function materialize(outer, mats) {
     for (const o of remove) o.parent.remove(o);
     for (const [cls, list] of by) {
       const m = new THREE.Mesh(mergeGeometries(list), mats[cls]);
-      m.castShadow = true;
+      m.castShadow = cls !== "glass" && cls !== "lens";
       m.receiveShadow = true;
       root.add(m);
     }

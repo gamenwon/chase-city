@@ -279,6 +279,13 @@ export class CityRenderer {
     this.gfx.set(on);
     this.gfx.setNight(this.tod === "night");
     this.playerModelId = null; // rebuilt with (or without) materials
+    // Police cars too: drop them all, the render loop builds new ones.
+    if (this.police) {
+      for (const m of this.police) this.scene.remove(m);
+      for (const slot of this.policeVariants || []) for (const m of Object.values(slot || {})) this.scene.remove(m);
+      this.police = [];
+      this.policeVariants = [];
+    }
   }
   // Vehicle collection: swap the player's car model (TOON_MODELS id, or
   // the classic car).
@@ -363,7 +370,7 @@ export class CityRenderer {
     this.scene.add(crown);
   }
   addPoliceCar() {
-    const car = cartoonPolice();
+    const car = (this.gfx?.on && this.gfx.police()) || cartoonPolice();
     this.scene.add(car);
     return car;
   }

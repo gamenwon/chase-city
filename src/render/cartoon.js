@@ -12,6 +12,7 @@
 // wheels kept as groups that spin). Front is -z; visual only: the game's
 // collision shapes are unchanged.
 import * as THREE from "three";
+import { ConvexGeometry } from "three/addons/geometries/ConvexGeometry.js";
 import { add, bakeVehicle, scaled, coloredGeometry, CAR_SCALE } from "./kit.js";
 
 export const GLASS = 0x2a74c8;
@@ -21,6 +22,9 @@ export const STEEL = 0x9aa0a8; // bumpers, rims
 export const LAMP = { emissive: 0xffc94a, emissiveIntensity: 1.1 };
 export const TAIL = { emissive: 0xc0101c, emissiveIntensity: 0.55 };
 const GLASS_OPTS = { roughness: 0.25 };
+// Detailed-build colours (material pass only; pbr.js maps them to their
+// surface classes): seats/dash, headliner, clear lamp lenses, rubber.
+export const INTERIOR = 0x5a4c46, DASH = 0x2e2d33, LENS = 0xe6eef2, RUBBER = 0x1d1c21, CHROME = 0xb9bdc4;
 
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 // (Body parts are merged with the angular solids: no index buffers.)
@@ -42,6 +46,10 @@ export function subQuad(q, u0, u1, v0, v1, skew = 0) {
 // loop above them (any shape: tapers, wedges, slanted fronts). Flat shaded
 // with outward faces (each triangle is checked against the centre).
 export function hexa(p, v, color, o) {
+  if (DETAIL) {
+    const b = bevelled(v);
+    if (b) return add(p, b, color, 0, 0, 0, o);
+  }
   const faces = [[0, 1, 2, 3], [4, 7, 6, 5], [0, 4, 5, 1], [1, 5, 6, 2], [2, 6, 7, 3], [3, 7, 4, 0]];
   const c = v.reduce((a, q) => a.add(q), v3(0, 0, 0)).multiplyScalar(1 / 8);
   const pos = [];
@@ -59,6 +67,32 @@ export function hexa(p, v, color, o) {
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.computeVertexNormals();
   return add(p, g, color, 0, 0, 0, o);
+}
+// Detailed build: the same 8-corner solid with its edges chamfered (each
+// corner cut back along its three edges, then the convex hull): catches a
+// thin line of light on every edge. Only for chunky solids; thin plates
+// stay sharp. (The silhouette is unchanged: a few centimetres.)
+const NB = [[1, 3, 4], [2, 0, 5], [3, 1, 6], [0, 2, 7], [5, 7, 0], [6, 4, 1], [7, 5, 2], [4, 6, 3]];
+function bevelled(v) {
+  let minLen = Infinity;
+  for (let i = 0; i < 8; i++) for (const j of NB[i]) {
+    const l = v[i].distanceTo(v[j]);
+    if (l > 1e-4) minLen = Math.min(minLen, l);
+  }
+  if (!(minLen > 0.12)) return null;
+  const b = Math.min(0.045, minLen * 0.16);
+  const pts = [];
+  for (let i = 0; i < 8; i++) for (const j of NB[i]) {
+    const d = v[j].clone().sub(v[i]), l = d.length();
+    pts.push(l > 1e-4 ? v[i].clone().addScaledVector(d, b / l) : v[i].clone());
+  }
+  try {
+    const g = ni(new ConvexGeometry(pts));
+    g.computeVertexNormals();
+    return g;
+  } catch {
+    return null;
+  }
 }
 // Axis box by centre-bottom, as a hexa (so it bakes like the rest).
 export function box(p, w, h, d, color, x = 0, y = 0, z = 0, o) {
@@ -95,6 +129,29 @@ export function wheel(p, x, z, r, w, rim = STEEL, tread = false) {
   cyl(r, w, 0x1d1c21, 0, 12);
   cyl(r * 0.6, w + 0.03, rim, s * 0.01, 8);
   cyl(r * 0.22, w + 0.07, 0x55535c, s * 0.02, 6);
+  if (DETAIL && !tread) {
+    // Tyre: a sidewall step, a fine block tread; wheel: five spokes, hub
+    // cap and nuts on a darker barrel.
+    cyl(r * 0.86, w + 0.02, 0x26252b, 0, 12);
+    for (let i = 0, n = 18; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const lug = add(g, ni(new THREE.BoxGeometry(w * 0.86, 0.03, r * 0.2)), 0x141317, 0, Math.sin(a) * (r - 0.004), Math.cos(a) * (r - 0.004));
+      lug.rotation.x = -a;
+    }
+    cyl(r * 0.62, w + 0.04, 0x55535c, s * 0.005, 10);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const sp = add(g, ni(new THREE.BoxGeometry(0.04, r * 0.5, 0.08)), rim, s * (w / 2 + 0.035), Math.sin(a) * r * 0.3, Math.cos(a) * r * 0.3);
+      sp.rotation.x = -a;
+    }
+    const ring = add(g, ni(new THREE.TorusGeometry(r * 0.56, 0.025, 4, 12)), rim, s * (w / 2 + 0.03), 0, 0);
+    ring.rotation.y = Math.PI / 2;
+    cyl(r * 0.16, w + 0.12, CHROME, s * 0.02, 8);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + 0.6;
+      cyl(0.022, w + 0.14, 0x55535c, s * 0.02, 6).position.set(s * 0.02, Math.sin(a) * r * 0.1, Math.cos(a) * r * 0.1);
+    }
+  }
   if (tread)
     for (let i = 0, n = r > 0.7 ? 16 : 10; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
@@ -107,7 +164,20 @@ export function wheel(p, x, z, r, w, rim = STEEL, tread = false) {
 // Square lamp with a chrome-free dark bezel.
 export function lamp(p, w, h, x, y, z, color = 0xffe58a, o = LAMP, face = -1) {
   box(p, w + 0.08, h + 0.08, 0.06, TRIM, x, y - 0.04, z - face * 0.005);
-  box(p, w, h, 0.08, color, x, y, z + face * 0.02, o);
+  if (!DETAIL) {
+    box(p, w, h, 0.08, color, x, y, z + face * 0.02, o);
+    return;
+  }
+  // Detailed: a chrome reflector bowl, one or two glowing projector
+  // lenses in it, a clear cover lens in front.
+  box(p, w, h, 0.07, CHROME, x, y, z + face * 0.005);
+  const n = w > 0.34 ? 2 : 1, rr = Math.min(h * 0.36, (w / n) * 0.34);
+  for (let i = 0; i < n; i++) {
+    const bx = x + (n === 2 ? (i ? 1 : -1) * w * 0.24 : 0);
+    const m = add(p, ni(new THREE.CylinderGeometry(rr, rr * 1.15, 0.06, 10)), color, bx, y + h / 2, z + face * 0.045, o);
+    m.rotation.x = Math.PI / 2;
+  }
+  box(p, w, h, 0.02, LENS, x, y, z + face * 0.075);
 }
 // A flat text decal (canvas texture), facing +x/-x/-z/+z or up.
 export function decal(text, bg, fg, w, h, { font = "Arial Black", weight = 900 } = {}) {
@@ -159,7 +229,18 @@ export function badge(size = 0.5) {
 // meshes: the colour bake would drop their textures.
 // (Material test pass, render/pbr.js: buildRaw(make) builds a model
 // without baking, so its parts can get their own surface materials.)
-let RAW = false;
+let RAW = false, DETAIL = false;
+// Detailed build (material pass): the same model with bevelled solids, a
+// hollow cabin with an interior, set-in glass, detailed wheels, lamps,
+// grille and bumpers; unbaked like buildRaw.
+export function buildDetailed(make) {
+  DETAIL = true;
+  try {
+    return buildRaw(make);
+  } finally {
+    DETAIL = false;
+  }
+}
 export function buildRaw(make) {
   RAW = true;
   try {
@@ -233,7 +314,7 @@ export function shell(opts) {
     tl: v3(-w1 / 2, top, cf + o.lean), tr: v3(w1 / 2, top, cf + o.lean), rtl: v3(-w1 / 2, top, cb - o.backLean), rtr: v3(w1 / 2, top, cb - o.backLean),
   };
   const cabColor = o.cabin ?? o.body;
-  hexa(g, [cab.bl, cab.br, cab.rbr, cab.rbl, cab.tl, cab.tr, cab.rtr, cab.rtl], cabColor);
+  if (!DETAIL) hexa(g, [cab.bl, cab.br, cab.rbr, cab.rbl, cab.tl, cab.tr, cab.rtr, cab.rtl], cabColor);
   const inside = v3(0, (belt + top) / 2, (cf + cb) / 2);
   const faces = {
     front: [cab.bl, cab.br, cab.tr, cab.tl],
@@ -249,12 +330,14 @@ export function shell(opts) {
     tq[0].clone().add(v3(-0.02, 0.1, -0.02)), tq[1].clone().add(v3(0.02, 0.1, -0.02)), tq[2].clone().add(v3(0.02, 0.1, 0.02)), tq[3].clone().add(v3(-0.02, 0.1, 0.02))], rc);
   // Glass: an oversized windshield, tall side windows split by a B pillar,
   // a rear window.
-  glass(g, subQuad(faces.front, 0.08, 0.92, 0.06, 0.93), inside);
-  glass(g, subQuad(faces.left, 0.06, 0.47, 0.1, 0.9), inside, { stripes: 1 });
-  glass(g, subQuad(faces.left, 0.55, 0.94, 0.1, 0.9), inside, { stripes: 1 });
-  glass(g, subQuad(faces.right, 0.06, 0.45, 0.1, 0.9), inside, { stripes: 1 });
-  glass(g, subQuad(faces.right, 0.53, 0.94, 0.1, 0.9), inside, { stripes: 1 });
-  glass(g, subQuad(faces.back, 0.12, 0.88, 0.2, 0.88), inside, { stripes: 0 });
+  const WIN = {
+    front: [[0.08, 0.92, 0.06, 0.93]],
+    left: [[0.06, 0.47, 0.1, 0.9], [0.55, 0.94, 0.1, 0.9]],
+    right: [[0.06, 0.45, 0.1, 0.9], [0.53, 0.94, 0.1, 0.9]],
+    back: [[0.12, 0.88, 0.2, 0.88]],
+  };
+  if (DETAIL) hollowCabin(g, faces, inside, WIN, cabColor, { cf, cb, belt, top, w0, w1, lean: o.lean });
+  else for (const [f, list] of Object.entries(WIN)) for (const [u0, u1, v0, v1] of list) glass(g, subQuad(faces[f], u0, u1, v0, v1), inside);
   // Wipers, mirrors.
   for (const u of [0.28, 0.62]) panel(g, subQuad(faces.front, u, u + 0.2, 0.06, 0.1, 0.03), 0.06, TRIM, inside);
   // Big cartoon side mirrors on short stalks.
@@ -265,7 +348,67 @@ export function shell(opts) {
   // Wheels at the corners.
   const wz = o.wheelZ ?? L / 2 - o.r - 0.05;
   for (const z of [-wz, wz]) for (const s of [-1, 1]) wheel(g, s * (W / 2 - 0.1), z, o.r, o.wheelW, o.rim, o.tread);
+  if (DETAIL) {
+    // Angular wheel-arch liners (dark recesses behind the tyres) and the
+    // belt height for the joint shading (pbr.js).
+    for (const z of [-wz, wz]) for (const sx of [-1, 1]) {
+      const x0 = sx * (W / 2 - 0.004), x1 = sx * (W / 2 + 0.012), lo = clear, hi = Math.min(belt - 0.08, o.r * 2 + 0.06);
+      const a = o.r + 0.12, c = o.r * 0.6;
+      hexa(g, [v3(x0, lo, z - a), v3(x1, lo, z - a), v3(x1, lo, z + a), v3(x0, lo, z + a), v3(x0, hi, z - c), v3(x1, hi, z - c), v3(x1, hi, z + c), v3(x0, hi, z + c)], RUBBER);
+    }
+    g.userData.belt = belt;
+  }
   return { g, o, faces, inside, cab, zf, zb, cf, cb, top, belt };
+}
+// Detailed build: the cabin as a hollow frame (pillars and rails around
+// the window openings, a roof panel), the glass set into it with rubber
+// mouldings, and a simple interior seen through the glass: dashboard,
+// steering wheel, two front seats, a rear bench, a dark headliner.
+function hollowCabin(g, faces, inside, WIN, color, c) {
+  const len = (a, b) => a.distanceTo(b);
+  for (const [f, list] of Object.entries(WIN)) {
+    const q = faces[f];
+    const W = len(q[0], q[1]), H = len(q[0], q[3]);
+    const ws = [...list].sort((a, b) => a[0] - b[0]);
+    const v0 = Math.min(...ws.map((w) => w[2])), v1 = Math.max(...ws.map((w) => w[3]));
+    // Frame strips: below and above the openings, then the posts between.
+    panel(g, subQuad(q, 0, 1, 0, v0), 0.05, color, inside);
+    panel(g, subQuad(q, 0, 1, v1, 1), 0.05, color, inside);
+    let u = 0;
+    for (const [a, b] of ws) {
+      if (a > u) panel(g, subQuad(q, u, a, v0, v1), 0.05, color, inside);
+      u = b;
+    }
+    if (u < 1) panel(g, subQuad(q, u, 1, v0, v1), 0.05, color, inside);
+    for (const [a, b, va, vb] of ws) {
+      // Glass, set back from the frame face; a rubber moulding round it.
+      panel(g, subQuad(q, a, b, va, vb), 0.022, GLASS, inside, GLASS_OPTS);
+      const du = 0.028 / W, dv = 0.028 / H;
+      for (const qq of [subQuad(q, a, b, va, va + dv), subQuad(q, a, b, vb - dv, vb), subQuad(q, a, a + du, va, vb), subQuad(q, b - du, b, va, vb)]) panel(g, qq, 0.036, RUBBER, inside);
+    }
+  }
+  panel(g, faces.top, 0.03, color, inside);
+  // Interior (local frame: front -z; driver on the left, -x).
+  const { cf, cb, belt, top, w0, w1, lean } = c;
+  const L = cb - cf;
+  box(g, w0 - 0.08, 0.04, L - 0.06, DASH, 0, belt + 0.002, (cf + cb) / 2); // floor
+  box(g, w1 - 0.1, 0.03, L - lean - 0.2, DASH, 0, top - 0.06, (cf + lean + cb) / 2 + 0.02); // headliner
+  const dz = cf + 0.12 + lean * 0.15;
+  hexa(g, [v3(-w0 / 2 + 0.06, belt, dz - 0.08), v3(w0 / 2 - 0.06, belt, dz - 0.08), v3(w0 / 2 - 0.06, belt, dz + 0.32), v3(-w0 / 2 + 0.06, belt, dz + 0.32),
+    v3(-w0 / 2 + 0.08, belt + 0.38, dz + 0.1), v3(w0 / 2 - 0.08, belt + 0.38, dz + 0.1), v3(w0 / 2 - 0.08, belt + 0.3, dz + 0.42), v3(-w0 / 2 + 0.08, belt + 0.3, dz + 0.42)], DASH);
+  const sw = add(g, ni(new THREE.TorusGeometry(0.15, 0.028, 4, 10)), 0x1f1e24, -w0 * 0.22, belt + 0.5, dz + 0.5);
+  sw.rotation.x = -0.55;
+  box(g, 0.05, 0.05, 0.22, 0x1f1e24, -w0 * 0.22, belt + 0.38, dz + 0.4);
+  const seat = (x, z, wd) => {
+    box(g, wd, 0.2, 0.46, INTERIOR, x, belt + 0.08, z);
+    hexa(g, [v3(x - wd / 2, belt + 0.26, z + 0.18), v3(x + wd / 2, belt + 0.26, z + 0.18), v3(x + wd / 2, belt + 0.26, z + 0.32), v3(x - wd / 2, belt + 0.26, z + 0.32),
+      v3(x - wd / 2 + 0.03, belt + 0.92, z + 0.3), v3(x + wd / 2 - 0.03, belt + 0.92, z + 0.3), v3(x + wd / 2 - 0.03, belt + 0.92, z + 0.42), v3(x - wd / 2 + 0.03, belt + 0.92, z + 0.42)], INTERIOR);
+  };
+  const fz = cf + L * 0.42;
+  seat(-w0 * 0.22, fz, 0.5);
+  seat(w0 * 0.22, fz, 0.5);
+  for (const x of [-w0 * 0.22, w0 * 0.22]) box(g, 0.28, 0.16, 0.1, INTERIOR, x, belt + 0.96, fz + 0.38); // headrests
+  seat(0, Math.min(cb - 0.5, fz + 0.78), w0 - 0.24);
 }
 // Common lower-body face details: grille, lamps, bumpers, taillights,
 // door seams and handles.
@@ -273,8 +416,16 @@ export function faceKit(s, { grille = 0x55535c, bumper = STEEL, lampW = 0.44, la
   const { g, o, zf, zb } = s;
   const fy = o.clear + 0.16;
   const fh = Math.max(0.3, o.belt - o.noseDrop - fy - 0.1);
-  box(g, grilleW, fh, 0.08, TRIM, 0, fy, zf + 0.02);
-  for (let i = 0; i < 4; i++) box(g, grilleW - 0.08, 0.04, 0.1, grille, 0, fy + 0.05 + (i * (fh - 0.1)) / 3, zf + 0.0);
+  if (DETAIL) {
+    // A recessed grille: dark back plate, chrome surround, deep slats.
+    box(g, grilleW, fh, 0.04, 0x141317, 0, fy, zf + 0.04);
+    for (const [w, h, x, y] of [[grilleW + 0.06, 0.04, 0, fy - 0.03], [grilleW + 0.06, 0.04, 0, fy + fh - 0.01], [0.04, fh, -grilleW / 2 - 0.01, fy], [0.04, fh, grilleW / 2 + 0.01, fy]]) box(g, w, h, 0.1, CHROME, x, y, zf + 0.0);
+    for (let i = 0; i < 4; i++) box(g, grilleW - 0.06, 0.035, 0.12, grille, 0, fy + 0.07 + (i * (fh - 0.14)) / 3, zf + 0.02);
+    box(g, 0.035, fh - 0.04, 0.11, grille, 0, fy + 0.02, zf + 0.02);
+  } else {
+    box(g, grilleW, fh, 0.08, TRIM, 0, fy, zf + 0.02);
+    for (let i = 0; i < 4; i++) box(g, grilleW - 0.08, 0.04, 0.1, grille, 0, fy + 0.05 + (i * (fh - 0.1)) / 3, zf + 0.0);
+  }
   // Where the lamps are (night.js puts its glow dots on them).
   g.userData.lamps = {
     head: [o.W / 2 - 0.3, round ? fy + 0.2 : fy + fh - lampH / 2 - 0.02, zf - 0.06],
@@ -287,9 +438,25 @@ export function faceKit(s, { grille = 0x55535c, bumper = STEEL, lampW = 0.44, la
     } else lamp(g, lampW, lampH, sx * (o.W / 2 - 0.3), fy + fh - lampH - 0.02, zf + 0.0);
     box(g, 0.14, 0.12, 0.08, 0xffa020, sx * (o.W / 2 - 0.08), fy + 0.12, zf + 0.03, { emissive: 0xff8a00, emissiveIntensity: 0.4 }); // turn signal
     box(g, 0.32, 0.24, 0.07, 0xd8202c, sx * (o.W / 2 - 0.26), o.clear + 0.36, zb - 0.02, TAIL);
+    if (DETAIL) {
+      // Tail lamp: a dark bezel, a reversing lamp segment, a clear red cover.
+      box(g, 0.38, 0.3, 0.05, TRIM, sx * (o.W / 2 - 0.26), o.clear + 0.33, zb - 0.03);
+      box(g, 0.1, 0.24, 0.075, 0xf2f2ee, sx * (o.W / 2 - 0.26) - sx * 0.11, o.clear + 0.36, zb - 0.015);
+      box(g, 0.34, 0.03, 0.08, TRIM, sx * (o.W / 2 - 0.26), o.clear + 0.47, zb - 0.01);
+    }
   }
   box(g, o.W + 0.06, bumperH, 0.18, bumper, 0, o.clear - 0.08, zf - 0.05);
   box(g, o.W + 0.04, bumperH * 0.9, 0.16, bumper, 0, o.clear - 0.08, zb + 0.04);
+  if (DETAIL) {
+    // Bumpers in layers: a black lower lip and corner blocks, plate
+    // recesses with white plates.
+    box(g, o.W - 0.1, 0.08, 0.24, RUBBER, 0, o.clear - 0.16, zf - 0.06);
+    box(g, o.W - 0.1, 0.08, 0.22, RUBBER, 0, o.clear - 0.16, zb + 0.05);
+    for (const [z, d] of [[zf - 0.15, -1], [zb + 0.13, 1]]) {
+      box(g, 0.52, 0.18, 0.03, TRIM, 0, o.clear - 0.06, z + d * 0.005);
+      box(g, 0.46, 0.13, 0.03, 0xf4f4f0, 0, o.clear - 0.035, z + d * 0.02);
+    }
+  }
   // Door seams and handles (thin dark plates on the sides).
   for (const sx of [-1, 1]) {
     const x = sx * (o.W / 2 + 0.005);
@@ -362,15 +529,24 @@ export function supercar() {
 // Standard police car: black-and-white, extremely tall cabin, short nose
 // and tail, angular grille, red/blue light bar, door badge and POLICE.
 export function policeCar() {
-  const BLK = 0x1f1e24, WHT = 0xf6f6f2;
-  const s = shell({ body: WHT, cabin: WHT, roof: WHT });
+  // Classic black-and-white: hood, trunk, nose and tail black; the doors
+  // (a white panel along each side between the axles) and the cabin and
+  // roof white.
+  const BLK = 0x19191e, WHT = 0xf6f6f2; // (BLK: black paint, not trim plastic)
+  const s = shell({ body: BLK, cabin: WHT, roof: WHT });
   faceKit(s, { bumper: 0x8c9198, grille: 0x8c9198 });
   const { g, o, cf, cb } = s;
-  // Black skirt all round, black grille surround: reads black-and-white.
-  for (const sx of [-1, 1]) box(g, 0.04, 0.22, o.L - 0.1, BLK, sx * (o.W / 2 + 0.01), o.clear, 0);
-  box(g, o.W - 0.1, 0.3, 0.04, BLK, 0, o.clear + 0.14, s.zf + 0.04);
-  sideDecal(g, badge(0.4), o.W / 2 + 0.04, o.clear + 0.4, cf + 0.36);
-  sideDecal(g, decal("POLICE", null, "#1f1e24", 0.95, 0.26), o.W / 2 + 0.04, o.clear + 0.42, cb - 0.6);
+  // The white doors fill the side between the wheel arches.
+  const wz = o.L / 2 - o.r - 0.05, dz0 = -wz + o.r + 0.06, dz1 = wz - o.r - 0.06;
+  for (const sx of [-1, 1]) {
+    const x0 = sx * (o.W / 2 - 0.004), x1 = sx * (o.W / 2 + 0.008), y0 = o.clear + 0.05, y1 = o.belt - 0.004, z0 = dz0, z1 = dz1;
+    hexa(g, [v3(x0, y0, z0), v3(x1, y0, z0), v3(x1, y0, z1), v3(x0, y0, z1), v3(x0, y1, z0), v3(x1, y1, z0), v3(x1, y1, z1), v3(x0, y1, z1)], WHT);
+    // Door seams and handles again on top of the white panel.
+    box(g, 0.02, 0.05, 0.16, BLK, sx * (o.W / 2 + 0.014), o.belt - 0.16, dz0 + 0.16);
+  }
+  // On the white doors: the star badge over POLICE.
+  sideDecal(g, decal("POLICE", null, "#1f1e24", 0.82, 0.24), o.W / 2 + 0.03, o.clear + 0.2, 0);
+  sideDecal(g, badge(0.28), o.W / 2 + 0.03, o.clear + 0.51, 0);
   // Push bar.
   for (const x of [-0.42, 0.42]) box(g, 0.08, 0.5, 0.08, TRIM, x, o.clear - 0.12, s.zf - 0.24);
   box(g, 1.0, 0.07, 0.08, TRIM, 0, o.clear + 0.26, s.zf - 0.24);

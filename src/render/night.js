@@ -96,6 +96,9 @@ export class NightLights {
     this.beams = inst(flat, additive(0xfff2c8, 0.55), 64);
     this.dots = inst(new THREE.IcosahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xfffbe8 }), 128);
     this.tails = inst(new THREE.IcosahedronGeometry(0.13, 0), new THREE.MeshBasicMaterial({ color: 0xff3a30 }), 128);
+    // Police: the light bar washes the road red / blue in turn.
+    this.copRed = inst(flat, additive(0xff2a3c, 0.75), 24);
+    this.copBlue = inst(flat, additive(0x2a6dff, 0.85), 24);
     this.scene = scene;
     this.buildWindows(layout);
     this.lampKey = "";
@@ -170,7 +173,7 @@ export class NightLights {
   }
   setOn(on) {
     this.on = on;
-    for (const m of [this.pools, this.bulbs, this.halos, this.beams, this.dots, this.tails, this.windows]) m.visible = on;
+    for (const m of [this.pools, this.bulbs, this.halos, this.beams, this.dots, this.tails, this.copRed, this.copBlue, this.windows]) m.visible = on;
   }
   // extraLamps: [{ x, z, y }] lamp heads from elsewhere (preview parks).
   update(sim, buildingEntries, camera, extraLamps = null) {
@@ -239,6 +242,19 @@ export class NightLights {
         nd++;
       }
     }
+    let nr = 0, nbl = 0;
+    sim.police.forEach((c, i) => {
+      if (c.state !== "active" || nr + nbl >= 24) return;
+      const red = Math.floor(sim.elapsed * 8 + i) % 2 === 0; // in step with scene.js's lenses
+      const side = red ? -1 : 1, rx = Math.cos(c.angle), rz = -Math.sin(c.angle);
+      this.q.setFromAxisAngle(this.v.set(0, 1, 0), c.angle);
+      this.m.compose(this.v.set(c.x + rx * side * 1.4, (c.y || 0) + 0.2, c.z + rz * side * 1.4), this.q, this.s.set(7, 1, 7.5));
+      if (red) this.copRed.setMatrixAt(nr++, this.m);
+      else this.copBlue.setMatrixAt(nbl++, this.m);
+    });
+    this.copRed.count = nr;
+    this.copBlue.count = nbl;
+    this.copRed.instanceMatrix.needsUpdate = this.copBlue.instanceMatrix.needsUpdate = true;
     this.beams.count = nb;
     this.dots.count = this.tails.count = nd;
     for (const m of [this.beams, this.dots, this.tails]) m.instanceMatrix.needsUpdate = true;
