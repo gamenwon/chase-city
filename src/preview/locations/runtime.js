@@ -22,6 +22,7 @@ import { dinerDecor } from "./diner.js";
 import { bigsiteDecor } from "./bigsite.js";
 import { hillRoadDecor } from "./dunes.js";
 import { Cranes } from "./cranes.js";
+import { BuildingCollapse } from "./collapse-buildings.js";
 import { yardDecor } from "./yard.js";
 import { funparkDecor } from "./funpark.js";
 import { BigProps } from "./bigprops.js";
@@ -186,7 +187,10 @@ export class LocationsRuntime {
       // into the road (fruit rolling away, petals fluttering, cups and
       // café chairs, market baskets and a stall front, plates and food).
       spill: (type, x, z, nx, nz, speed, f) => this.spill(type, x, z, nx, nz, speed, f),
-      broke: (f, speed) => this.ads?.shopBroken(this.sim, f, speed),
+      broke: (f, speed) => {
+        this.ads?.shopBroken(this.sim, f, speed);
+        this.buildingCollapse?.shopBroken(f.b);
+      },
       fireworks: (f, speed) => this.ads?.fireworks(this.sim, f, speed),
       // Sparks from torn wiring at the top of the window, a few seconds.
       sparks: (x, z, nx, nz) => {
@@ -210,6 +214,7 @@ export class LocationsRuntime {
     this.ads = new AdSystem(scene, layout, this.storefronts, renderer, this);
     // Container yard, amusement park, landmark statues.
     this.big = new BigProps(scene, layout, this, this.storefronts);
+    this.buildingCollapse = new BuildingCollapse(scene, layout, this);
     this.flyers = new FlyerSystem(this.batch, groups.flatMap((f) => f.flyers || []), {
       outside: (it) => {
         const sim = this.sim;
@@ -334,6 +339,7 @@ export class LocationsRuntime {
     this.collapse.reset(sim);
     this.gantries.reset(sim);
     this.cranes.reset();
+    this.buildingCollapse.reset();
     this.depot?.reset();
     const f = this.park.fountain;
     f.state = "intact";
@@ -374,6 +380,7 @@ export class LocationsRuntime {
       this.big.touch(sim, car, radius, speed * env, car === sim.player);
       this.gantries.touch(sim, car, radius);
       this.cranes.touch(sim, car, radius, env);
+      this.buildingCollapse.touch(sim, car, radius, car === sim.player ? sim.vehicle?.stats.mass || 1 : 1.2, env);
       this.depot?.touch(sim, car, radius, speed);
       this.flyers.touch(sim, hit, radius, speed * env);
       if (near(GAS, 13)) this.touchGas(sim, car, radius, speed);
@@ -753,6 +760,7 @@ export class LocationsRuntime {
     this.collapse.step(this.sim, this.time);
     this.gantries.step(this.sim, this.time);
     if (this.sim) this.cranes.step(this.sim, this.time);
+    if (this.sim) this.buildingCollapse.step(this.sim, this.time);
     if (this.depot && this.sim) this.depot.step(this.sim, this.time, dt);
     this.fxStep(now);
     this.waterStep(dt, now);
