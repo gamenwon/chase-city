@@ -31,18 +31,14 @@ export function yardPlan(b, R) {
   const f = { kind: "containers", block: { x0, x1, z0, z1, cx, cz, alongX, L, S }, items: [], flyers: [], vehicles: [], solids: [], containers: [], crane: null, landmark: null };
   const LANE_V = 3.6, LANE_U = 3.3;
   const lane = (u, v) => Math.abs(v) < LANE_V + 0.4 || Math.abs(u) < LANE_U + 0.4;
-  // The robot stands in the quarter the chase camera sees best (+x, +z).
-  const robotQ = [Math.sign(alongX ? 1 : 1), 1];
+  // (The robot mascot was removed after review: containers in every
+  // quarter now.)
   const rowV = LANE_V + CONTAINER.d / 2 + 0.35;
   const segLo = LANE_U + 0.35, segHi = L / 2 - 0.7;
   let stack = 0;
   for (const su of [-1, 1])
     for (const sv of [-1, 1]) {
       const u = su * ((segLo + segHi) / 2), v = sv * rowV;
-      if (su === robotQ[0] && sv === robotQ[1]) {
-        f.landmark = { kind: "robot", ...at(u, v + sv * 0.6), y: Y, ry: ry + (alongX ? 0 : 0) };
-        continue;
-      }
       if (segHi - segLo < CONTAINER.w + 0.2) continue;
       const n = 2 + (R() < 0.45 ? 1 : 0);
       for (let lv = 0; lv < n; lv++)
@@ -54,7 +50,6 @@ export function yardPlan(b, R) {
   if (S / 2 - row2 > CONTAINER.d / 2 + 0.5)
     for (const su of [-1, 1])
       for (const sv of [-1, 1]) {
-        if (su === robotQ[0] && sv === robotQ[1]) continue;
         if (segHi - segLo < CONTAINER.w + 0.2) continue;
         const u = su * ((segLo + segHi) / 2);
         f.containers.push({ ...at(u, sv * row2), y: Y, ry, level: 0, stack, color: COLORS[Math.floor(R() * COLORS.length)] });
@@ -82,8 +77,6 @@ export function yardPlan(b, R) {
     fly("cargo", u, v, R(), { color: COLORS[Math.floor(R() * COLORS.length)] });
   }
   for (const [u, v] of [[-(LANE_U + 1.0), -(S / 2 - 1.3)], [LANE_U + 1.0, S / 2 - 1.3]]) if (!lane(u, v)) f.items.push({ kind: "pallet", ...at(u, v), y: Y, ry: ry + R() });
-  // The robot's plinth is solid.
-  if (f.landmark) f.solids.push({ x: f.landmark.x, z: f.landmark.z, w: 2.2, d: 2.2, kind: "plinth" });
   return { feature: f };
 }
 

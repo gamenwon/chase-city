@@ -41,10 +41,7 @@ export function funparkPlan(b, R) {
   const cR = Math.max(2.4, Math.min(3.4, Math.min(L / 2 - LANE, S / 2 - LANE) / 2 - 0.3));
   f.carousel = { ...cc, R: cR };
   f.solids.push({ x: cc.x, z: cc.z, w: 0.8, d: 0.8, kind: "carouselPole" });
-  // Dinosaur in a near quarter (seen from the chase camera).
-  const dc = at(qu, qv);
-  f.landmark = { kind: "dino", ...dc, y: Y, ry: ry - Math.PI / 4 };
-  f.solids.push({ x: dc.x, z: dc.z, w: 2.0, d: 2.0, kind: "plinth" });
+  // (The dinosaur was removed after review: that quarter is open plaza.)
   // The last quarter: ticket booths, a balloon cart, food stalls, tables.
   const tq = (u, v) => at(-qu + u, qv + v);
   f.items.push({ kind: "booth", ...tq(-1.6, -1.4), y: Y, ry: ry });

@@ -95,7 +95,8 @@ test("every city has a container yard and an amusement park with four clear ways
     const yard = L.features.find((f) => f.kind === "containers"), park = L.features.find((f) => f.kind === "funpark");
     assert.ok(yard && park, `seed ${seed}`);
     assert.ok(yard.containers.length >= 4 && yard.containers.some((c) => c.level >= 1), "stacked containers");
-    assert.ok(yard.landmark?.kind === "robot" && park.landmark?.kind === "dino");
+    // (The robot and the dinosaur were removed after review.)
+    assert.ok(!yard.landmark && !park.landmark);
     assert.ok(park.wheel && park.carousel && park.balloons.length);
     for (const f of [yard, park]) {
       const b = f.block;
