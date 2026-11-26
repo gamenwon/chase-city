@@ -66,6 +66,11 @@ export class SkidMarks {
     this.c = new THREE.Color();
     this.light = new THREE.Color(0x2c2b30);
     this.dark = new THREE.Color(0x0b0b0d);
+    // Snow (weather.js): every metre driven leaves tracks, grey ruts in
+    // the white.
+    this.snow = false;
+    this.snowLight = new THREE.Color(0xb6c0ca);
+    this.snowDark = new THREE.Color(0x7d8894);
     this.reset();
   }
   // Strips drawn (all chunks).
@@ -92,7 +97,8 @@ export class SkidMarks {
     }));
   }
   update(player, running) {
-    const amount = running ? skidAmount(player) : 0;
+    let amount = running ? skidAmount(player) : 0;
+    if (this.snow && running && Math.hypot(player.vx, player.vz) > 2.5 && !player.air) amount = Math.max(amount, 0.3);
     if (amount <= 0.05) {
       // The slide ended: the next one starts a new trail.
       this.last = [null, null];
@@ -128,7 +134,7 @@ export class SkidMarks {
     this.q.setFromAxisAngle(this.up, Math.atan2(-dx, -dz));
     this.m.compose(this.v.set(from.x, ROAD_Y, from.z), this.q, this.s.set(0.32, 1, d + 0.06));
     chunk.mesh.setMatrixAt(j, this.m);
-    chunk.mesh.setColorAt(j, this.c.copy(this.light).lerp(this.dark, 0.45 + 0.55 * amount));
+    chunk.mesh.setColorAt(j, this.snow ? this.c.copy(this.snowLight).lerp(this.snowDark, amount) : this.c.copy(this.light).lerp(this.dark, 0.45 + 0.55 * amount));
     chunk.mesh.count = Math.max(chunk.mesh.count, j + 1);
     chunk.box.expandByPoint(this.v);
     chunk.dirty = true;

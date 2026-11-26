@@ -135,6 +135,14 @@
           <button id="pip-toggle" type="button" aria-label="운전자 시점 보조 화면" aria-pressed="false" aria-controls="pip">PIP</button>
           <button id="gfx-toggle" type="button" aria-label="재질 테스트 켜기/끄기" aria-pressed="true">재질 ON</button>
           <button id="fps-toggle" type="button" aria-pressed="false">FPS 표시 OFF</button>
+          <div class="wx-row" role="group" aria-label="날씨 (테스트)">
+            <span>날씨</span>
+            <button type="button" data-wx="auto" aria-pressed="true">자동</button>
+            <button type="button" data-wx="day" aria-pressed="false">낮</button>
+            <button type="button" data-wx="night" aria-pressed="false">밤</button>
+            <button type="button" data-wx="snow" aria-pressed="false">눈</button>
+            <button type="button" data-wx="rain" aria-pressed="false">비</button>
+          </div>
           <small id="fullscreen-hint" hidden></small>
         </div>
         <div id="exit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title" hidden>

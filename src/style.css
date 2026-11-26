@@ -1598,3 +1598,8 @@ body {
 /* No gaps: the canvas fills the whole screen, notch areas included. */
 html, body { width: 100%; height: 100%; background: #102a32; }
 #game { width: 100vw; height: 100vh; height: 100dvh; }
+
+/* Weather choice (settings). */
+.wx-row { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.wx-row span { font: 700 10px monospace; letter-spacing: 2px; color: #9fbeb9; margin-right: 4px; }
+.wx-row button { min-width: 44px; }

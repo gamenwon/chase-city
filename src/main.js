@@ -529,6 +529,35 @@ setFps(
     })(),
 );
 fpsButton?.addEventListener("click", () => setFps(!fpsMeter.on, true));
+// Weather (test build): auto (the run picks day or night, as before),
+// day, night, snow (day), rain (day). Remembered; ?weather=... for links.
+// Only the look changes (car handling stays as it is for now).
+const wxKey = "chase-city-weather";
+const wxModes = ["auto", "day", "night", "snow", "rain"];
+const wxStartFixed = sim.fixedTimeOfDay;
+function setWeather(mode, remember = false) {
+  if (!wxModes.includes(mode)) mode = "auto";
+  const tod = mode === "night" ? "night" : mode === "auto" ? null : "day";
+  sim.fixedTimeOfDay = tod ?? wxStartFixed;
+  if (tod) sim.timeOfDay = tod;
+  renderer?.setWeather(mode === "snow" || mode === "rain" ? mode : "clear");
+  for (const b of document.querySelectorAll("[data-wx]")) b.setAttribute("aria-pressed", String(b.dataset.wx === mode));
+  if (remember)
+    try {
+      localStorage.setItem(wxKey, mode);
+    } catch {}
+}
+for (const b of document.querySelectorAll("[data-wx]")) b.addEventListener("click", () => setWeather(b.dataset.wx, true));
+setWeather(
+  params.get("weather") ||
+    (() => {
+      try {
+        return localStorage.getItem(wxKey) || "auto";
+      } catch {
+        return "auto";
+      }
+    })(),
+);
 function meterFps(ms, dtMs) {
   if (!fpsMeter.on || !fpsBox) return;
   if (dtMs > 0 && dtMs < 1000) {

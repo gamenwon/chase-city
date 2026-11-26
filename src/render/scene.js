@@ -16,6 +16,7 @@ import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { MaterialPass } from "./pbr.js";
 import { CITY_HALF } from "../world/citygen.js";
+import { Weather } from "./weather.js";
 import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
@@ -126,6 +127,8 @@ export class CityRenderer {
       if (this.tod === "night") this.nightFlash = Math.max(this.nightFlash, Math.min(1.2, 0.35 + scale * 0.25) * Math.max(0, 1 - distance / 70));
     });
     this.trails = new VehicleTrails(this.scene);
+    // Weather (test build): clear / snow / rain over the day or night look.
+    this.weather = new Weather(this, { mobile, roadColor: theme.road });
     this.wreckRenderer = new WreckRenderer(this.scene);
     this.roadEvents = new RoadEventsRenderer(this.scene);
     this.officers = new OfficerRenderer(this.scene);
@@ -282,12 +285,20 @@ export class CityRenderer {
     this.overpass.setLayout(layout);
     this.cells.setLayout(layout);
     this.layout = layout;
+    // (A new city: its materials get the weather too.)
+    if (this.weather && this.weather.mode !== "clear") this.weather.set(this.weather.mode);
   }
   // Material test pass: ground and building materials get the switchable
   // surface shader; the player's car its material version.
   patchWorld() {
     this.gfx.patch(this.world?.material);
     this.gfx.patch(this.world?.buildingMaterial);
+  }
+  // Weather (test build): "clear", "snow" or "rain".
+  setWeather(mode) {
+    this.weather.set(mode);
+    this.trails.skids.snow = this.weather.mode === "snow";
+    this.applyTimeOfDay(this.tod);
   }
   setGfx(on) {
     this.gfx.set(on);
@@ -486,6 +497,7 @@ export class CityRenderer {
     if (sim.cameraRig !== this.cameraRig || !running)
       this.cameraRig.update(p, dt);
     this.trails.update(p, dt, running);
+    this.weather.update(sim, dt, this.cameraRig.follow);
     this.camera.updateMatrixWorld(true);
     this.player.updateMatrixWorld(true);
     this.roadEvents.update(sim, this.camera);
@@ -644,6 +656,7 @@ export class CityRenderer {
     this.renderer.toneMappingExposure = night ? NIGHT.exposure : d.exposure;
     this.nightFlash = 0;
     this.night.setOn(night);
+    this.weather?.applyLook(this);
     // Signs and textured boards glow with their own picture at night;
     // emissive parts (police light bars, lamp heads) glow harder.
     this.scene.traverse((o) => {
