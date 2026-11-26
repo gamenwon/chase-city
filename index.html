@@ -8,6 +8,11 @@
     />
     <meta name="theme-color" content="#102a32" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CHASE CITY" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icon-180.png" />
     <title>CHASE CITY V2.0</title>
   </head>
   <body>
@@ -23,18 +28,6 @@
           <div class="meter"><i id="health-bar"></i></div>
         </div>
         <div class="coins" aria-label="이번 미션 코인"><small>코인</small><strong><i class="coin-icon" aria-hidden="true"></i><span id="coins">0</span></strong></div>
-        <button
-          id="pip-toggle"
-          aria-label="운전자 시점 보조 화면"
-          aria-pressed="false"
-          aria-controls="pip"
-        >
-          PIP
-        </button>
-        <button id="gfx-toggle" aria-label="재질 테스트 켜기/끄기" aria-pressed="true">재질 ON</button>
-        <button id="mute" aria-label="효과음 음소거" aria-pressed="false">
-          소리 ON
-        </button>
         <button id="pause" aria-label="일시정지">Ⅱ</button>
       </div>
     </div>
@@ -134,7 +127,15 @@
           <button id="result-vehicle" class="secondary" hidden>차량 선택</button>
           <button id="open-select" class="secondary">미션 선택</button>
           <button id="pause-exit" class="secondary" hidden>MISSION SELECT</button>
-          <button id="fps-toggle" class="secondary dev" type="button" aria-pressed="false">FPS 표시 OFF</button>
+        </div>
+        <div id="settings" class="settings" role="group" aria-label="설정">
+          <span class="settings-title">설정</span>
+          <button id="fullscreen-toggle" type="button" aria-pressed="false">전체 화면</button>
+          <button id="mute" type="button" aria-label="효과음 음소거" aria-pressed="false">소리 ON</button>
+          <button id="pip-toggle" type="button" aria-label="운전자 시점 보조 화면" aria-pressed="false" aria-controls="pip">PIP</button>
+          <button id="gfx-toggle" type="button" aria-label="재질 테스트 켜기/끄기" aria-pressed="true">재질 ON</button>
+          <button id="fps-toggle" type="button" aria-pressed="false">FPS 표시 OFF</button>
+          <small id="fullscreen-hint" hidden></small>
         </div>
         <div id="exit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title" hidden>
           <strong id="exit-title">Return to Mission Select?</strong>

@@ -141,7 +141,86 @@ function chooseMission(id) {
   ui.hideSelect();
   briefing();
 }
+// Fullscreen (phones): the Fullscreen API where the browser has it
+// (Android Chrome / Samsung Internet / most Android WebViews that allow it,
+// iPad Safari); iPhone Safari has no fullscreen for pages, so there the
+// way is "홈 화면에 추가" (the manifest opens it without browser bars).
+// Inside another app's frame (e.g. a preview viewer) fullscreen is only
+// possible if that frame allows it. START on a phone asks for fullscreen
+// once (a tap is needed); the settings button switches it any time.
+// Turning the phone keeps the run (only the size changes).
+const fsButton = document.querySelector("#fullscreen-toggle");
+const fsHint = document.querySelector("#fullscreen-hint");
+const fsRoot = document.documentElement;
+const fsKey = "chase-city-fullscreen";
+const standalone =
+  matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || navigator.standalone === true;
+const fsSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const inFrame = (() => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function showFullscreen() {
+  if (!fsButton) return;
+  const on = standalone || isFullscreen();
+  fsButton.textContent = standalone ? "전체 화면 (앱 실행 중)" : on ? "전체 화면 ON" : "전체 화면 OFF";
+  fsButton.setAttribute("aria-pressed", String(on));
+  fsButton.disabled = standalone;
+  let hint = "";
+  if (!standalone && !fsSupported)
+    hint = /iPhone|iPod/.test(navigator.userAgent)
+      ? "iPhone 브라우저는 웹 전체 화면을 지원하지 않습니다. Safari 공유 → '홈 화면에 추가'로 실행하면 주소창 없이 플레이할 수 있습니다."
+      : inFrame
+        ? "다른 앱 화면 안에서 열려 전체 화면이 막혀 있습니다. 게임 주소를 브라우저에서 직접 열어 주세요."
+        : "이 브라우저는 전체 화면을 지원하지 않습니다.";
+  if (fsHint) {
+    fsHint.textContent = hint;
+    fsHint.hidden = !hint;
+  }
+}
+async function enterFullscreen() {
+  if (standalone || !fsSupported || isFullscreen()) return;
+  try {
+    if (fsRoot.requestFullscreen) await fsRoot.requestFullscreen({ navigationUI: "hide" });
+    else if (fsRoot.webkitRequestFullscreen) fsRoot.webkitRequestFullscreen();
+  } catch {}
+}
+function exitFullscreen() {
+  try {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    else document.webkitExitFullscreen?.();
+  } catch {}
+}
+function rememberFullscreen(on) {
+  try {
+    localStorage.setItem(fsKey, on ? "on" : "off");
+  } catch {}
+}
+fsButton?.addEventListener("click", () => {
+  if (isFullscreen()) {
+    rememberFullscreen(false);
+    exitFullscreen();
+  } else {
+    rememberFullscreen(true);
+    enterFullscreen();
+  }
+});
+for (const type of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(type, showFullscreen);
+showFullscreen();
+function fullscreenOnStart() {
+  if (!mobile) return;
+  let pref = null;
+  try {
+    pref = localStorage.getItem(fsKey);
+  } catch {}
+  if (pref !== "off") enterFullscreen();
+}
 ui.start.addEventListener("click", () => {
+  fullscreenOnStart();
   if (!renderer) return;
   document.body.classList.remove("busted");
   if (state === "over") {

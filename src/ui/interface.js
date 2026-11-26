@@ -273,6 +273,9 @@ export class Interface {
     this.elements["chaos-result"].hidden = true;
     this.elements["result-vehicle"].hidden = true;
     document.getElementById("pause-exit").hidden = true;
+    // Settings (fullscreen, sound, PIP, materials, FPS): briefing and pause.
+    const settings = document.getElementById("settings");
+    if (settings) settings.hidden = true;
     this.confirmExit(false);
     this.start.textContent = button;
     this.start.focus({ preventScroll: true });
@@ -287,6 +290,7 @@ export class Interface {
     );
     this.elements["mission-details"].hidden = false;
     this.elements["open-select"].hidden = false;
+    document.getElementById("settings").hidden = false;
     document.querySelector("#mission-goal").textContent = mission.objective;
     document.querySelector("#mission-limit").textContent = limitText(mission);
     document.querySelector("#mission-reward").textContent =
@@ -336,6 +340,7 @@ export class Interface {
     );
     // Leave the run for the mission select (after a confirmation).
     document.getElementById("pause-exit").hidden = false;
+    document.getElementById("settings").hidden = false;
   }
   // The "Return to Mission Select?" confirmation over the pause popup.
   confirmExit(open) {

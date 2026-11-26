@@ -1422,23 +1422,24 @@ body {
   /* (No room for the logo beside the stats on a narrow screen.) */
   .brand { display: none; }
   #hud { justify-content: flex-end; }
-  .stats { gap: 9px; padding: 7px 9px; }
-  .stats strong { font-size: 20px; }
-  .stats .meter { width: 46px; }
+  .stats { gap: 12px; padding: 5px 8px; align-items: center; }
+  .stats small { font-size: 7px; }
+  .stats strong { font-size: 17px; line-height: 1.25; }
+  .stats .meter { width: 40px; }
   .stats button { width: 30px; height: 30px; }
   #mission-hud,
   body.pip-on #mission-hud {
-    top: calc(max(10px, var(--sat)) + 62px);
+    top: calc(max(10px, var(--sat)) + 46px);
     left: max(10px, var(--sal));
     transform: none;
     padding: 6px 10px;
   }
-  #heat { top: calc(max(10px, var(--sat)) + 62px); right: max(10px, var(--sar)); }
+  #heat { top: calc(max(10px, var(--sat)) + 46px); right: max(10px, var(--sar)); }
   #heat b { font-size: 20px; letter-spacing: 2px; }
   #heat .meter { width: 96px; }
-  #chaos-pop { top: calc(max(10px, var(--sat)) + 150px); left: max(12px, var(--sal)); }
-  #notice:not(:empty), body.pip-on #notice:not(:empty) { top: calc(max(10px, var(--sat)) + 140px); }
-  #pip { top: calc(max(10px, var(--sat)) + 140px); right: max(10px, var(--sar)); }
+  #chaos-pop { top: calc(max(10px, var(--sat)) + 128px); left: max(12px, var(--sal)); }
+  #notice:not(:empty), body.pip-on #notice:not(:empty) { top: calc(max(10px, var(--sat)) + 122px); }
+  #pip { top: calc(max(10px, var(--sat)) + 128px); right: max(10px, var(--sar)); }
   #speed {
     left: 50%;
     right: auto;
@@ -1469,23 +1470,24 @@ body {
   #hud {
     inset: max(8px, var(--sat)) max(12px, var(--sar)) auto max(12px, var(--sal));
   }
-  .brand { font-size: 22px; }
+  .brand { font-size: 18px; }
   .brand small { display: none; }
-  .stats { gap: 12px; padding: 6px 10px; }
-  .stats small { font-size: 8px; }
-  .stats strong { font-size: 20px; line-height: 1.3; }
-  .stats .meter { width: 52px; }
-  .stats button { width: 30px; height: 30px; }
+  body.playing .brand { visibility: hidden; }
+  .stats { gap: 14px; padding: 4px 8px; align-items: center; }
+  .stats small { font-size: 7px; }
+  .stats strong { font-size: 17px; line-height: 1.2; }
+  .stats .meter { width: 44px; }
+  .stats button { width: 28px; height: 28px; }
   .stats #pip-toggle, .stats #gfx-toggle { min-width: 30px; font-size: 9px; padding: 0 4px; }
   #mission-hud,
   body.pip-on #mission-hud {
-    top: calc(max(8px, var(--sat)) + 34px);
+    top: calc(max(8px, var(--sat)) + 26px);
     left: max(12px, var(--sal));
     transform: none;
     padding: 5px 10px;
   }
   #mission-hud strong { font-size: 12px; margin-top: 2px; }
-  #heat { top: calc(max(8px, var(--sat)) + 64px); right: max(12px, var(--sar)); }
+  #heat { top: calc(max(8px, var(--sat)) + 44px); right: max(12px, var(--sar)); }
   #heat b { font-size: 18px; letter-spacing: 2px; }
   #heat small { margin: 2px 0; }
   #heat .meter { width: 90px; }
@@ -1544,3 +1546,55 @@ body {
     box-shadow: 0 -10px 14px #102e37f0;
   }
 }
+
+/* Settings (briefing and pause): fullscreen, sound, PIP, materials, FPS.
+   The test switches live here instead of the top HUD. */
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #2c5a63;
+}
+.settings[hidden] { display: none; }
+.overlay.confirming .settings { display: none; }
+.settings-title {
+  width: 100%;
+  font: 700 10px monospace;
+  letter-spacing: 2px;
+  color: #9fbeb9;
+}
+.settings button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #72938a;
+  border-radius: 3px;
+  background: transparent;
+  color: #fff8e7;
+  font-size: 12px;
+}
+.settings button[aria-pressed="true"] { border-color: #9dffb0; color: #9dffb0; }
+.settings button:disabled { opacity: 0.7; cursor: default; }
+#fullscreen-hint { width: 100%; color: #ffd166; font-size: 11px; line-height: 1.5; }
+#fullscreen-hint[hidden] { display: none; }
+
+/* Readability over the bright city: the floating HUD text (WANTED and its
+   hint, speed) gets a dark translucent backing; every text is light. */
+#heat {
+  background: #0b1f26b8;
+  padding: 5px 8px 6px;
+  border-radius: 4px;
+}
+#heat small { color: #fff8e7; }
+#speed {
+  background: #0b1f26a8;
+  padding: 0 10px 2px;
+  border-radius: 4px;
+}
+#speed span { color: #fff8e7; }
+
+/* No gaps: the canvas fills the whole screen, notch areas included. */
+html, body { width: 100%; height: 100%; background: #102a32; }
+#game { width: 100vw; height: 100vh; height: 100dvh; }
