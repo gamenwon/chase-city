@@ -1306,3 +1306,241 @@ body.busted #arrest-countdown {
     padding: 0 4px;
   }
 }
+
+/* ===================================================================
+   PHONES, BOTH ORIENTATIONS (mobile test build)
+   Portrait: narrow and tall. Landscape: short (<= 520 px high). Every edge
+   keeps clear of the notch / rounded corners / home bar (safe-area insets).
+   Overlays (briefing, vehicles, missions, pause, result) sit above the HUD
+   and scroll inside the screen; START stays reachable at the bottom.
+   =================================================================== */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Touch steering: two big zones over the lower screen (left half, right
+   half); the round arrows only show which side is held. */
+#touch {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52vh;
+  touch-action: none;
+  pointer-events: auto;
+}
+#touch .steering {
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+#touch button {
+  flex: 1;
+  height: 100%;
+  width: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 max(16px, var(--sal)) max(18px, var(--sab));
+  pointer-events: none;
+}
+#touch button[data-control="right"] {
+  justify-content: flex-end;
+  padding-left: 0;
+  padding-right: max(16px, var(--sar));
+}
+#touch button[data-control="left"] {
+  padding-right: 0;
+}
+#touch button span {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1px solid #ffffff80;
+  background: #102a32b0;
+  box-shadow: 0 4px 0 #09252b;
+  color: #fff8e7;
+  font-size: 30px;
+}
+#touch button.pressed {
+  transform: none;
+  background: linear-gradient(0deg, #fff8e714, transparent 70%);
+}
+#touch button.pressed span {
+  transform: translateY(3px);
+  background: #fff8e7;
+  color: #102a32;
+}
+
+/* FPS (developer option: pause menu "FPS 표시", or ?fps). */
+#fps {
+  position: fixed;
+  z-index: 8;
+  left: max(6px, var(--sal));
+  bottom: calc(max(16px, var(--sab)) + 92px);
+  padding: 5px 7px;
+  background: #000a;
+  color: #9dffb0;
+  font: 600 10px/1.35 ui-monospace, monospace;
+  white-space: pre;
+  pointer-events: none;
+  border-radius: 3px;
+}
+#fps[hidden] { display: none; }
+#overlay:not([hidden]) ~ #fps,
+#mission-select:not([hidden]) ~ #fps {
+  bottom: auto;
+  top: max(4px, var(--sat));
+  opacity: 0.85;
+}
+#fps.slow { color: #ffd166; }
+#fps.bad { color: #ff7a7a; }
+.secondary.dev { font-size: 11px; opacity: 0.85; }
+.secondary.dev[aria-pressed="true"] { border-color: #9dffb0; color: #9dffb0; }
+@media (pointer: fine) and (min-width: 701px) {
+  .secondary.dev { display: none; }
+}
+
+/* ---------- phone, portrait ---------- */
+@media (orientation: portrait) and (max-width: 600px) {
+  #hud {
+    inset: max(10px, var(--sat)) max(10px, var(--sar)) auto max(10px, var(--sal));
+    gap: 8px;
+  }
+  /* (No room for the logo beside the stats on a narrow screen.) */
+  .brand { display: none; }
+  #hud { justify-content: flex-end; }
+  .stats { gap: 9px; padding: 7px 9px; }
+  .stats strong { font-size: 20px; }
+  .stats .meter { width: 46px; }
+  .stats button { width: 30px; height: 30px; }
+  #mission-hud,
+  body.pip-on #mission-hud {
+    top: calc(max(10px, var(--sat)) + 62px);
+    left: max(10px, var(--sal));
+    transform: none;
+    padding: 6px 10px;
+  }
+  #heat { top: calc(max(10px, var(--sat)) + 62px); right: max(10px, var(--sar)); }
+  #heat b { font-size: 20px; letter-spacing: 2px; }
+  #heat .meter { width: 96px; }
+  #chaos-pop { top: calc(max(10px, var(--sat)) + 150px); left: max(12px, var(--sal)); }
+  #notice:not(:empty), body.pip-on #notice:not(:empty) { top: calc(max(10px, var(--sat)) + 140px); }
+  #pip { top: calc(max(10px, var(--sat)) + 140px); right: max(10px, var(--sar)); }
+  #speed {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: calc(max(14px, var(--sab)) + 14px);
+  }
+  .playing #speed { bottom: calc(max(14px, var(--sab)) + 14px); }
+  #speed strong { font-size: 44px; }
+  #escape-guidance { bottom: calc(max(14px, var(--sab)) + 92px); }
+  .overlay,
+  .overlay.chaos-res {
+    z-index: 6;
+    align-items: center;
+    padding: max(10px, var(--sat)) max(10px, var(--sar)) max(10px, var(--sab)) max(10px, var(--sal));
+  }
+  .overlay section {
+    width: 100%;
+    padding: 20px 18px;
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - max(10px, var(--sat)) - max(10px, var(--sab)));
+  }
+  .overlay h1 { font-size: 30px; }
+  .instructions { display: none; }
+}
+
+/* ---------- phone, landscape ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud {
+    inset: max(8px, var(--sat)) max(12px, var(--sar)) auto max(12px, var(--sal));
+  }
+  .brand { font-size: 22px; }
+  .brand small { display: none; }
+  .stats { gap: 12px; padding: 6px 10px; }
+  .stats small { font-size: 8px; }
+  .stats strong { font-size: 20px; line-height: 1.3; }
+  .stats .meter { width: 52px; }
+  .stats button { width: 30px; height: 30px; }
+  .stats #pip-toggle, .stats #gfx-toggle { min-width: 30px; font-size: 9px; padding: 0 4px; }
+  #mission-hud,
+  body.pip-on #mission-hud {
+    top: calc(max(8px, var(--sat)) + 34px);
+    left: max(12px, var(--sal));
+    transform: none;
+    padding: 5px 10px;
+  }
+  #mission-hud strong { font-size: 12px; margin-top: 2px; }
+  #heat { top: calc(max(8px, var(--sat)) + 64px); right: max(12px, var(--sar)); }
+  #heat b { font-size: 18px; letter-spacing: 2px; }
+  #heat small { margin: 2px 0; }
+  #heat .meter { width: 90px; }
+  #chaos-pop { top: calc(max(8px, var(--sat)) + 120px); left: max(14px, var(--sal)); font-size: 20px; }
+  #notice:not(:empty), body.pip-on #notice:not(:empty) { top: calc(max(8px, var(--sat)) + 64px); font-size: 11px; padding: 8px 12px; }
+  #pip { top: calc(max(8px, var(--sat)) + 112px); left: max(12px, var(--sal)); }
+  #touch { height: 70vh; }
+  #touch button span { width: 64px; height: 64px; font-size: 26px; }
+  #speed {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: max(8px, var(--sab));
+  }
+  .playing #speed { bottom: max(8px, var(--sab)); }
+  #speed strong { font-size: 38px; }
+  #escape-guidance { bottom: calc(max(8px, var(--sab)) + 56px); padding: 5px 12px; }
+  #escape-guidance strong { font-size: 18px; }
+  #arrest-countdown { top: 46%; padding: 8px 16px 10px; }
+  #arrest-countdown strong { font-size: 52px; }
+  .district { display: none; }
+  .overlay,
+  .overlay.chaos-res {
+    z-index: 6;
+    align-items: center;
+    padding: max(8px, var(--sat)) max(12px, var(--sar)) max(8px, var(--sab)) max(12px, var(--sal));
+  }
+  .overlay section {
+    width: min(640px, 100%);
+    padding: 14px 20px;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - max(8px, var(--sat)) - max(8px, var(--sab)));
+  }
+  .overlay h1, .overlay.chaos-res h1 { font-size: 26px; }
+  .overlay .eyebrow { margin-bottom: 6px; }
+  .overlay p { margin: 8px 0; font-size: 12px; }
+  .wallet { top: 10px; right: 16px; }
+  .instructions, .mobile-hint { display: none; }
+  #vehicle-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .cr-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .cr-score strong { font-size: 34px; }
+  #mission-list { grid-template-columns: repeat(2, minmax(0, 1fr)); display: grid; gap: 8px; }
+}
+
+/* (Phones: the mission list opens over the briefing card.) */
+@media (max-width: 600px), (max-height: 520px) {
+  #mission-select.overlay { z-index: 7; }
+}
+/* Phones: START (and 계속 달리기) stays at the bottom of the card while the
+   card scrolls. */
+@media (max-width: 600px), (max-height: 520px) {
+  .overlay section #start {
+    position: sticky;
+    bottom: -14px;
+    z-index: 2;
+    box-shadow: 0 -10px 14px #102e37f0;
+  }
+}

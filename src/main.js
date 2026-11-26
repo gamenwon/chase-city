@@ -418,8 +418,59 @@ function govern(dtMs) {
     fps: Math.round(1000 / perf.frameMs),
   });
 }
+// Developer FPS display (mobile testing): ?fps, or "FPS 표시" in the pause
+// menu (remembered). Shows the frame rate over the last half second, the
+// average and worst frame time, the render size and pixel ratio, the
+// orientation, draw calls and triangles, and the frame-rate governor's
+// level. Measuring costs nothing when it is off.
+const fpsBox = document.querySelector("#fps");
+const fpsButton = document.querySelector("#fps-toggle");
+const fpsKey = "chase-city-fps";
+const fpsMeter = { on: false, frames: 0, sum: 0, worst: 0, since: 0 };
+function setFps(on, remember = false) {
+  fpsMeter.on = on;
+  if (fpsBox) fpsBox.hidden = !on;
+  if (fpsButton) {
+    fpsButton.textContent = on ? "FPS 표시 ON" : "FPS 표시 OFF";
+    fpsButton.setAttribute("aria-pressed", String(on));
+  }
+  if (remember)
+    try {
+      localStorage.setItem(fpsKey, on ? "on" : "off");
+    } catch {}
+}
+setFps(
+  params.has("fps") ||
+    (() => {
+      try {
+        return localStorage.getItem(fpsKey) === "on";
+      } catch {
+        return false;
+      }
+    })(),
+);
+fpsButton?.addEventListener("click", () => setFps(!fpsMeter.on, true));
+function meterFps(ms, dtMs) {
+  if (!fpsMeter.on || !fpsBox) return;
+  if (dtMs > 0 && dtMs < 1000) {
+    fpsMeter.frames++;
+    fpsMeter.sum += dtMs;
+    fpsMeter.worst = Math.max(fpsMeter.worst, dtMs);
+  }
+  if (ms - fpsMeter.since < 500) return;
+  const fps = fpsMeter.frames ? (1000 * fpsMeter.frames) / fpsMeter.sum : 0;
+  const r = renderer?.renderer, info = r?.info.render, ratio = r?.getPixelRatio() ?? 1;
+  fpsBox.textContent =
+    `FPS ${fps.toFixed(0)}  avg ${(fpsMeter.sum / Math.max(1, fpsMeter.frames)).toFixed(1)}ms  max ${fpsMeter.worst.toFixed(0)}ms\n` +
+    `${innerWidth}x${innerHeight} ${innerWidth < innerHeight ? "세로" : "가로"}  dpr ${devicePixelRatio.toFixed(2)} → ${ratio.toFixed(2)}\n` +
+    `draw ${info?.calls ?? "-"}  tri ${info ? (info.triangles / 1000).toFixed(0) + "k" : "-"}  lvl ${perf.level.toFixed(1)}  ${profile}${renderer?.gfx?.on ? "  재질" : ""}`;
+  fpsBox.className = fps < 25 ? "bad" : fps < 45 ? "slow" : "";
+  fpsMeter.frames = fpsMeter.sum = fpsMeter.worst = 0;
+  fpsMeter.since = ms;
+}
 function frame(ms) {
   requestAnimationFrame(frame);
+  meterFps(ms, ms - last);
   const dt = Math.min((ms - last) / 1000, 0.1);
   if (state === "running" && last) govern(ms - last);
   last = ms;

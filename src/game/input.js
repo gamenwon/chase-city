@@ -14,19 +14,38 @@ export class Input {
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.clear();
     });
-    for (const button of document.querySelectorAll("[data-control]")) {
-      button.addEventListener("pointerdown", (e) => {
+    // Touch steering: the lower screen is split into a left and a right
+    // half (#touch). Each finger steers by the half it is in *now*, read
+    // from the live screen width, so sliding across the middle switches
+    // and a rotated screen needs nothing recomputed. The two arrow buttons
+    // only show which side is held.
+    const zone = typeof document !== "undefined" ? document.querySelector("#touch") : null;
+    if (zone) {
+      const side = (e) => (e.clientX < window.innerWidth / 2 ? "left" : "right");
+      zone.addEventListener("pointerdown", (e) => {
         e.preventDefault();
-        if (e.isTrusted) button.setPointerCapture(e.pointerId);
-        this.pointers.set(e.pointerId, button.dataset.control);
-        button.classList.add("pressed");
+        try {
+          if (e.isTrusted) zone.setPointerCapture(e.pointerId);
+        } catch {}
+        this.pointers.set(e.pointerId, side(e));
+        this.mark();
+      });
+      zone.addEventListener("pointermove", (e) => {
+        if (!this.pointers.has(e.pointerId)) return;
+        this.pointers.set(e.pointerId, side(e));
+        this.mark();
       });
       for (const type of ["pointerup", "pointercancel", "lostpointercapture"])
-        button.addEventListener(type, (e) => {
+        zone.addEventListener(type, (e) => {
           this.pointers.delete(e.pointerId);
-          button.classList.remove("pressed");
+          this.mark();
         });
+      zone.addEventListener("contextmenu", (e) => e.preventDefault());
     }
+  }
+  mark() {
+    const held = new Set(this.pointers.values());
+    for (const b of document.querySelectorAll("[data-control]")) b.classList.toggle("pressed", held.has(b.dataset.control));
   }
   clear() {
     this.keys.clear();

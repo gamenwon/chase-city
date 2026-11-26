@@ -134,6 +134,7 @@
           <button id="result-vehicle" class="secondary" hidden>차량 선택</button>
           <button id="open-select" class="secondary">미션 선택</button>
           <button id="pause-exit" class="secondary" hidden>MISSION SELECT</button>
+          <button id="fps-toggle" class="secondary dev" type="button" aria-pressed="false">FPS 표시 OFF</button>
         </div>
         <div id="exit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title" hidden>
           <strong id="exit-title">Return to Mission Select?</strong>
@@ -170,8 +171,8 @@
     </div>
     <div id="touch">
       <div class="steering">
-        <button data-control="left" aria-label="왼쪽 조향">←</button
-        ><button data-control="right" aria-label="오른쪽 조향">→</button>
+        <button data-control="left" aria-label="왼쪽 조향"><span>←</span></button
+        ><button data-control="right" aria-label="오른쪽 조향"><span>→</span></button>
       </div>
     </div>
     <div id="speed"><strong>0</strong><span>KM/H</span></div>
@@ -183,6 +184,7 @@
       </div>
     </div>
     <div id="notice" role="status" aria-live="polite"></div>
+    <div id="fps" hidden aria-hidden="true"></div>
     <div id="arrest-countdown" hidden role="alert">
       <small>체포까지</small>
       <strong id="arrest-count">3</strong>
