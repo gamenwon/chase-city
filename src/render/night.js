@@ -8,6 +8,8 @@
 //     target and civilian traffic.
 // Signs glow by using their own texture as an emissive map (scene.js).
 import * as THREE from "three";
+import { lampSpot } from "./cartoon.js";
+import { jumpPitch } from "../game/jumps.js";
 
 export const NIGHT = Object.freeze({
   sky: 0x142247, // background and fog
@@ -203,22 +205,36 @@ export class NightLights {
       this.halos.count = this.heads.length;
       this.halos.instanceMatrix.needsUpdate = true;
     }
-    // Vehicles: a beam on the road ahead, two head lamps, two tail lamps.
-    const cars = [sim.player];
-    for (const c of sim.police) if (c.state === "active") cars.push(c);
-    if (sim.target?.state === "fleeing") cars.push(sim.target);
-    for (const t of sim.city?.traffic || []) if (t.state !== "wreck" && !t.parked) cars.push(t);
+    // Vehicles: a beam on the road ahead, two head lamps, two tail lamps,
+    // the dots sitting on each model's own lamps (lampSpot), following the
+    // car's height (elevated road, jumps) and its pitch off a ramp.
+    const cars = [[sim.player, sim.vehicleId || "starter"]];
+    for (const c of sim.police) if (c.state === "active") cars.push([c, "police:" + (c.heavy || "patrol")]);
+    if (sim.target?.state === "fleeing") cars.push([sim.target, "target"]);
+    for (const t of sim.city?.traffic || []) if (t.state !== "wreck" && !t.parked) cars.push([t, "civ:" + (t.vtype || "city")]);
     let nb = 0, nd = 0;
-    for (const car of cars) {
-      if (nb >= 64) break;
-      const fx = -Math.sin(car.angle), fz = -Math.cos(car.angle), rx = Math.cos(car.angle), rz = -Math.sin(car.angle);
-      this.q.setFromAxisAngle(this.v.set(0, 1, 0), car.angle);
-      this.m.compose(this.v.set(car.x + fx * 6.5, 0.22, car.z + fz * 6.5), this.q, this.s.set(4.6, 1, 10));
-      this.beams.setMatrixAt(nb++, this.m);
+    const e = (this.euler ||= new THREE.Euler(0, 0, 0, "YXZ")), car4 = (this.car4 ||= new THREE.Matrix4()), p3 = (this.p3 ||= new THREE.Vector3());
+    for (const [car, key] of cars) {
+      if (nd >= 128 || nb >= 64) break;
+      const y0 = car.y || 0;
+      const spot = lampSpot(key);
+      e.set(jumpPitch(car) || 0, car.angle, 0);
+      this.q.setFromEuler(e);
+      car4.compose(this.v.set(car.x, y0, car.z), this.q, this.s.set(1, 1, 1));
+      if (!car.air) {
+        const fx = -Math.sin(car.angle), fz = -Math.cos(car.angle);
+        this.q.setFromAxisAngle(this.v.set(0, 1, 0), car.angle);
+        this.m.compose(this.v.set(car.x + fx * 6.5, y0 + 0.22, car.z + fz * 6.5), this.q, this.s.set(4.6, 1, 10));
+        this.beams.setMatrixAt(nb++, this.m);
+      }
+      this.q.setFromEuler(e);
       for (const side of [-1, 1]) {
-        this.m.compose(this.v.set(car.x + fx * 2.15 + rx * side * 0.68, 0.62, car.z + fz * 2.15 + rz * side * 0.68), this.q, this.s.set(1, 0.7, 0.5));
+        const [hx, hy, hz] = spot.head, [tx, ty, tz] = spot.tail;
+        p3.set(side * hx, hy, hz).applyMatrix4(car4);
+        this.m.compose(p3, this.q, this.s.set(0.9, 0.55, 0.35));
         this.dots.setMatrixAt(nd, this.m);
-        this.m.compose(this.v.set(car.x - fx * 2.15 + rx * side * 0.7, 0.7, car.z - fz * 2.15 + rz * side * 0.7), this.q, this.s.set(1.2, 0.6, 0.5));
+        p3.set(side * tx, ty, tz).applyMatrix4(car4);
+        this.m.compose(p3, this.q, this.s.set(1.1, 0.7, 0.35));
         this.tails.setMatrixAt(nd, this.m);
         nd++;
       }

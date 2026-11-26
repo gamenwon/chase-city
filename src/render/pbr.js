@@ -6,8 +6,9 @@
 //   sidewalk   paving blocks with joints: detail + normal map
 //   building   one type: the brick walls of the city blocks (running
 //              bond, recessed mortar): detail + normal map
-//   vehicle    one car: the coupe, split into paint (clear coat), metal,
-//              glass, rubber and plastic, with a shared reflection map
+//   vehicle    the five player cars, split into paint (clear coat),
+//              metal, glass, rubber and plastic, with a shared sky
+//              reflection map and baked-in shading toward the sills
 //   contact    a soft dark contact shadow under the cars
 // The ground and the buildings keep their single merged meshes: a shader
 // patch on their existing materials picks the surface by vertex colour and
@@ -16,11 +17,10 @@
 // Mobile: textures are generated once (512 px), no extra draw calls on the
 // ground or buildings, one reflection map for the whole scene.
 import * as THREE from "three";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { asphaltTextures, pavingTextures, brickTextures } from "./textures.js";
 import { K } from "./kit.js";
-import { buildRaw, coupe } from "./cartoon.js";
+import { buildRaw, PLAYER_MODELS } from "./cartoon.js";
 
 export class MaterialPass {
   constructor(renderer, scene, theme) {
@@ -29,7 +29,7 @@ export class MaterialPass {
     this.on = false;
     this.night = false;
     const pm = new THREE.PMREMGenerator(renderer);
-    this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.env = pm.fromScene(skyEnvironment(), 0.02).texture;
     pm.dispose();
     const as = asphaltTextures(), pv = pavingTextures(), br = brickTextures();
     this.uniforms = {
@@ -136,10 +136,10 @@ uniform vec3 uRoad, uWalk, uBrick;`,
     this.night = night;
     for (const m of Object.values(this.vehicleMats)) if (m.envMapIntensity != null) m.envMapIntensity = (night ? 0.35 : 1) * (m.userData.env ?? 1);
   }
-  // The coupe with surface materials (null for other cars: test scope).
+  // A player car with surface materials (null if the id is unknown).
   vehicle(id) {
-    if (id !== "starter") return null;
-    return materialize(buildRaw(coupe), this.vehicleMats);
+    const make = PLAYER_MODELS[id];
+    return make ? materialize(buildRaw(make), this.vehicleMats) : null;
   }
   update(sim) {
     if (this.on) this.shadows.update(sim);
@@ -147,6 +147,27 @@ uniform vec3 uRoad, uWalk, uBrick;`,
 }
 
 // ------------------------------------------------------------- vehicles
+// The reflection map: a sky dome (bright zenith, pale warm horizon, a
+// darker street below) and one soft sun patch, prefiltered once (PMREM).
+function skyEnvironment() {
+  const scene = new THREE.Scene();
+  const geo = new THREE.SphereGeometry(10, 32, 16);
+  const top = new THREE.Color(0x8fc4ff), hor = new THREE.Color(0xfff4e2), low = new THREE.Color(0x4a4a50), floor = new THREE.Color(0x26262b);
+  const pos = geo.attributes.position, col = new Float32Array(pos.count * 3), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const h = pos.getY(i) / 10;
+    if (h >= 0) c.copy(hor).lerp(top, Math.pow(h, 0.6));
+    else c.copy(low).lerp(floor, Math.min(1, -h * 2.5));
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  scene.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const sun = new THREE.Mesh(new THREE.CircleGeometry(1.4, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff6e0).multiplyScalar(6) }));
+  sun.position.set(-4, 7, 4);
+  sun.lookAt(0, 0, 0);
+  scene.add(sun);
+  return scene;
+}
 const CLASS = new Map([
   [0x2a74c8, "glass"], [0x9fd6ff, "glass"],
   [0x1d1c21, "rubber"], [0x141317, "rubber"],
@@ -161,12 +182,14 @@ function vehicleMaterials(env) {
     return m;
   };
   return {
-    // (Reflections kept low: the colours stay as saturated as before.)
-    paint: mk(THREE.MeshPhysicalMaterial, { roughness: 0.42, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.15 }, 0.45),
-    metal: mk(THREE.MeshStandardMaterial, { roughness: 0.26, metalness: 0.92 }, 1.1),
-    glass: mk(THREE.MeshStandardMaterial, { roughness: 0.08, metalness: 0.1 }, 0.7),
-    rubber: mk(THREE.MeshStandardMaterial, { roughness: 0.96, metalness: 0 }, 0.2),
-    plastic: mk(THREE.MeshStandardMaterial, { roughness: 0.58, metalness: 0 }, 0.5),
+    // Paint: a satin base under a glossy clear coat. The sky map makes the
+    // roof and hood pick up a bright sky and the sides a darker street, so
+    // the shape reads without washing the colour out.
+    paint: mk(THREE.MeshPhysicalMaterial, { roughness: 0.55, metalness: 0.0, clearcoat: 0.8, clearcoatRoughness: 0.1 }, 0.38),
+    metal: mk(THREE.MeshStandardMaterial, { roughness: 0.38, metalness: 0.65 }, 0.9),
+    glass: mk(THREE.MeshPhysicalMaterial, { roughness: 0.06, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04 }, 0.6),
+    rubber: mk(THREE.MeshStandardMaterial, { roughness: 0.95, metalness: 0 }, 0.15),
+    plastic: mk(THREE.MeshStandardMaterial, { roughness: 0.62, metalness: 0 }, 0.4),
   };
 }
 // Merge an unbaked model's parts by surface class (one mesh per class,
@@ -175,6 +198,17 @@ function materialize(outer, mats) {
   const inner = outer.children[0];
   inner.updateMatrixWorld(true);
   const wheels = new Set(inner.userData.wheels || []);
+  // Height range of the body in the inner model's frame (for the baked
+  // occlusion): from the lowest body part up about a metre.
+  let yLow = Infinity;
+  inner.traverse((o) => {
+    if (!o.isMesh) return;
+    for (let q = o.parent; q && q !== inner; q = q.parent) if (wheels.has(q)) return;
+    o.geometry.computeBoundingBox();
+    const b = o.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inner.matrixWorld.clone().invert(), o.matrixWorld));
+    yLow = Math.min(yLow, b.min.y);
+  });
+  const ySpan = 0.9;
   const merge = (root, isWheel) => {
     const inv = root.matrixWorld.clone().invert();
     const by = new Map();
@@ -189,7 +223,15 @@ function materialize(outer, mats) {
       for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "normal") g.deleteAttribute(k);
       g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
       const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+      // Baked occlusion: the body darkens toward the sills and the
+      // underside (not the wheels, not the glass), so the car sits on the
+      // road instead of glowing evenly.
+      const pos = g.attributes.position;
+      for (let i = 0; i < n; i++) {
+        const y = pos.getY(i);
+        const k = isWheel || cls === "glass" ? 1 : 0.6 + 0.4 * Math.min(1, Math.max(0, (y - yLow) / ySpan));
+        col.set([c.r * k, c.g * k, c.b * k], i * 3);
+      }
       g.setAttribute("color", new THREE.BufferAttribute(col, 3));
       (by.get(cls) || by.set(cls, []).get(cls)).push(g);
       remove.push(o);

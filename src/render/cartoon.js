@@ -74,11 +74,11 @@ export function panel(p, q, t, color, inside, o) {
   const lift = (a, k) => a.clone().addScaledVector(n, k);
   return hexa(p, [lift(q[0], 0.002), lift(q[1], 0.002), lift(q[2], 0.002), lift(q[3], 0.002), lift(q[0], t), lift(q[1], t), lift(q[2], t), lift(q[3], t)], color, o);
 }
-// Glass pane on a face with two slanted planar highlight stripes.
-export function glass(p, q, inside, { stripes = 2, tint = GLASS } = {}) {
+// Glass pane on a face. (It used to carry painted white highlight
+// stripes; they read as artificial lines, so the glass is plain now and
+// its shine comes from the lighting. `stripes` is kept for callers.)
+export function glass(p, q, inside, { tint = GLASS } = {}) {
   panel(p, q, 0.03, tint, inside, GLASS_OPTS);
-  const marks = stripes === 2 ? [[0.16, 0.24], [0.3, 0.34]] : stripes === 1 ? [[0.2, 0.28]] : [];
-  for (const [a, b] of marks) panel(p, subQuad(q, a, b, 0.12, 0.88, 0.16), 0.04, GLASS_HI, inside, GLASS_OPTS);
 }
 // A chunky cartoon wheel (spins and steers: kept as a group).
 export function wheel(p, x, z, r, w, rim = STEEL, tread = false) {
@@ -275,6 +275,11 @@ export function faceKit(s, { grille = 0x55535c, bumper = STEEL, lampW = 0.44, la
   const fh = Math.max(0.3, o.belt - o.noseDrop - fy - 0.1);
   box(g, grilleW, fh, 0.08, TRIM, 0, fy, zf + 0.02);
   for (let i = 0; i < 4; i++) box(g, grilleW - 0.08, 0.04, 0.1, grille, 0, fy + 0.05 + (i * (fh - 0.1)) / 3, zf + 0.0);
+  // Where the lamps are (night.js puts its glow dots on them).
+  g.userData.lamps = {
+    head: [o.W / 2 - 0.3, round ? fy + 0.2 : fy + fh - lampH / 2 - 0.02, zf - 0.06],
+    tail: [o.W / 2 - 0.26, o.clear + 0.48, zb + 0.03],
+  };
   for (const sx of [-1, 1]) {
     if (round) {
       const m = add(g, ni(new THREE.CylinderGeometry(lampH, lampH, 0.1, 10)), 0xfff3c4, sx * (o.W / 2 - 0.3), fy + 0.2, zf - 0.02, LAMP);
@@ -338,6 +343,7 @@ export function supercar() {
       v3(sx * (o.W / 2 + 0.01), o.belt - 0.18, 0.5), v3(sx * (o.W / 2 + 0.06), o.belt - 0.18, 0.5), v3(sx * (o.W / 2 + 0.06), o.belt - 0.18, 0.9), v3(sx * (o.W / 2 + 0.01), o.belt - 0.18, 0.9)], BLK);
     box(g, 0.36, 0.2, 0.07, 0xd8202c, sx * (o.W / 2 - 0.26), o.clear + 0.34, zb - 0.02, TAIL);
   }
+  g.userData.lamps = { head: [0.6, o.clear + 0.31, zf - 0.04], tail: [o.W / 2 - 0.26, o.clear + 0.44, zb + 0.03] };
   box(g, 0.5, 0.14, 0.1, BLK, 0, o.clear + 0.0, zf - 0.02);
   box(g, o.W + 0.1, 0.06, 0.24, BLK, 0, o.clear - 0.12, zf - 0.08);
   box(g, o.W + 0.06, 0.2, 0.2, BLK, 0, o.clear - 0.06, zb + 0.04);
@@ -671,4 +677,34 @@ export function targetCar() {
   box(g, 0.4, 0.24, 0.42, 0x6b4a2a, 0.3, top + 0.2, zc - 0.05);
   bake(g);
   return scaled(g);
+}
+
+// Lamp positions per car (local metres, x = half the lamp spacing, y up,
+// z toward the rear), for night.js's glow dots: keys are player ids,
+// "police:<kind>", "civ:<type>" and "target". Built once per key.
+const LAMP_SPOTS = new Map();
+const LAMP_MAKERS = {
+  ...PLAYER_MODELS,
+  "police:patrol": policeCar, "police:armored": policeArmored, target: targetCar,
+  ...Object.fromEntries(Object.entries(TRAFFIC_TYPES).map(([k, f]) => ["civ:" + k, f])),
+};
+export function lampSpot(key) {
+  if (LAMP_SPOTS.has(key)) return LAMP_SPOTS.get(key);
+  let spot = null;
+  const make = LAMP_MAKERS[key];
+  if (make) {
+    const out = buildRaw(make);
+    let holder = null;
+    out.traverse((o) => { if (!holder && o.userData.lamps) holder = o; });
+    // Player/police/target models come wrapped (CAR_SCALE inside, the
+    // mini's own scale outside); raw civilian groups are instanced at
+    // CAR_SCALE.
+    let k = holder === out ? CAR_SCALE : 1;
+    for (let o = holder; o; o = o === out ? null : o.parent) k *= o.scale.x;
+    const lamps = holder?.userData.lamps;
+    if (lamps) spot = { head: lamps.head.map((v) => v * k), tail: lamps.tail.map((v) => v * k) };
+  }
+  spot ||= { head: [0.62, 0.62, -1.3], tail: [0.62, 0.66, 1.3] };
+  LAMP_SPOTS.set(key, spot);
+  return spot;
 }
