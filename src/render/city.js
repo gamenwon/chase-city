@@ -12,6 +12,7 @@ export function trafficType(id) {
 }
 void civilianCarGeometry;
 import { carStage } from "../game/city.js";
+import { groundHeight } from "../game/jumps.js";
 
 // Civilian car damage drawing (casual destruction pass).
 const SMOKE_MAX = 110, FLAME_MAX = 72;
@@ -273,6 +274,7 @@ export class CityLifeRenderer {
   }
   updatePeds(city, sim) {
     const M = this.pedMeshes;
+    const hills = (sim?.layout?.mounds || []).filter((m) => m.hill);
     let n = 0;
     // Colours only go to the GPU when the set of people changes.
     const key = city.pedestrians.map((q) => q.id).join(",");
@@ -289,7 +291,7 @@ export class CityLifeRenderer {
       this.q.setFromEuler(this.e);
       // A little larger than life so people read on a phone screen.
       this.base.compose(
-        this.v.set(q.x, 0.12 + dive * 0.25, q.z),
+        this.v.set(q.x, 0.12 + dive * 0.25 + (hills.length ? groundHeight(hills, q.x, q.z) : 0), q.z),
         this.q,
         this.s.setScalar(1.3),
       );
@@ -344,6 +346,7 @@ export class CityLifeRenderer {
     this.carKey = key;
     const now = sim.elapsed, p = sim.player;
     const per = Object.fromEntries(TYPES.map((k) => [k, 0]));
+    const hills = (sim.layout?.mounds || []).filter((m) => m.hill);
     for (const t of city.traffic) {
       if (n >= 40) break;
       const type = (t.vtype ??= trafficType(t.id));
@@ -369,9 +372,18 @@ export class CityLifeRenderer {
         roll = Math.PI;
         hop += 1.45;
       }
-      this.e.set(wreck ? 0.12 : 0, t.angle + (t.pop != null ? 0.5 * Math.min(1, (now - t.pop) / 0.7) : 0), roll, "YXZ");
+      // On the hill road: on the road surface, nose up or down with it.
+      let gy = 0, pitch = 0;
+      if (hills.length) {
+        gy = groundHeight(hills, t.x, t.z);
+        if (gy > 0 || groundHeight(hills, t.x - Math.sin(t.angle) * 1.4, t.z - Math.cos(t.angle) * 1.4) > 0) {
+          const fx = -Math.sin(t.angle) * 1.2, fz = -Math.cos(t.angle) * 1.2;
+          pitch = Math.atan2(groundHeight(hills, t.x + fx, t.z + fz) - groundHeight(hills, t.x - fx, t.z - fz), 2.4);
+        }
+      }
+      this.e.set((wreck ? 0.12 : 0) + pitch, t.angle + (t.pop != null ? 0.5 * Math.min(1, (now - t.pop) / 0.7) : 0), roll, "YXZ");
       this.q.setFromEuler(this.e);
-      this.m.compose(this.v.set(t.x, (t.y || 0) + hop, t.z), this.q, this.s.set(1, t.burned ? 0.9 : 1, 1));
+      this.m.compose(this.v.set(t.x, Math.max(t.y || 0, gy) + hop, t.z), this.q, this.s.set(1, t.burned ? 0.9 : 1, 1));
       mesh.setMatrixAt(slot, this.m);
       if (recolor) {
         // (The type carries its own paint; the instance colour only

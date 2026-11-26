@@ -8,15 +8,17 @@
 // on the ground (fences, pallets, signs) are flown over.
 //
 // Mound: { x, z, ux, uz (its axis), len (half length), w (half width),
-// h (height) }: a ridge across the axis, slopes both ways (usable from
-// either side), soft side edges.
+// h (height), smooth? }: a ridge across the axis, slopes both ways (usable
+// from either side), soft side edges. The hill road's hills are smooth.
 export const JUMP = Object.freeze({ gravity: 21, maxVy: 8.5, side: 1.4, land: 0.05 });
 
 export function mountHeight(m, x, z) {
   const dx = x - m.x, dz = z - m.z;
   const a = Math.abs(dx * m.ux + dz * m.uz), b = Math.abs(-dx * m.uz + dz * m.ux);
   if (a >= m.len || b >= m.w + JUMP.side) return 0;
-  const along = m.h * (1 - a / m.len);
+  // (smooth: a rolling road, a cosine hill with flat ends and a round
+  // crest; otherwise a ramp with a sharp crest.)
+  const along = m.smooth ? m.h * (0.5 + 0.5 * Math.cos((Math.PI * a) / m.len)) : m.h * (1 - a / m.len);
   return b <= m.w ? along : along * (1 - (b - m.w) / JUMP.side);
 }
 export function groundHeight(mounds, x, z) {

@@ -36,7 +36,7 @@ import { sitePlan } from "../preview/locations/sites.js";
 import { assignBrands } from "./brands.js";
 import { dinerPlan } from "../preview/locations/diner.js";
 import { bigsitePlan } from "../preview/locations/bigsite.js";
-import { dunesPlan } from "../preview/locations/dunes.js";
+import { hillRoadPlan } from "../preview/locations/dunes.js";
 import { yardPlan } from "../preview/locations/yard.js";
 import { funparkPlan } from "../preview/locations/funpark.js";
 
@@ -156,6 +156,43 @@ export function roadGraph(R) {
   const overpass = placeOverpass(nodes, list, R, { I, J, ia, ja, at });
   list.forEach((e, k) => (e.id = k));
   return { nodes, edges: list, xs, zs, removed, overpass };
+}
+
+// Hill road: a two-lane street through a block along its long axis, from
+// the middle of one side street to the middle of the opposite one. Both
+// side streets are split there (T-junctions), so it is part of the road
+// graph: traffic lanes, pavements, police routes and coins all use it.
+function addHillRoad(b, graph) {
+  const { xs, zs, nodes, edges } = graph;
+  const alongX = b.kx1 - b.kx0 >= b.kz1 - b.kz0;
+  const mid = alongX ? b.cz : b.cx;
+  const ends = alongX ? [xs[b.i0], xs[b.i1 + 1]] : [zs[b.j0], zs[b.j1 + 1]];
+  const width = 9;
+  const made = [];
+  for (const v of ends) {
+    const on = (p) => Math.abs((alongX ? p.x : p.z) - v) < 0.01;
+    const e = edges.find((q) => {
+      if (q.kind !== "road" || q.pts.length !== 2 || !on(q.pts[0]) || !on(q.pts[1])) return false;
+      const s0 = alongX ? q.pts[0].z : q.pts[0].x, s1 = alongX ? q.pts[1].z : q.pts[1].x;
+      return mid > Math.min(s0, s1) + 6 && mid < Math.max(s0, s1) - 6;
+    });
+    if (!e) return null;
+    made.push({ e, v });
+  }
+  const ends2 = [];
+  for (const { e, v } of made) {
+    const n = { id: nodes.length, i: -1, j: -1, x: alongX ? v : mid, z: alongX ? mid : v, ring: false, hill: true };
+    nodes.push(n);
+    const B = nodes[e.b];
+    const half = { ...e, id: edges.length, a: n.id, b: B.id, pts: polyline(n, B, 0) };
+    e.b = n.id;
+    e.pts = polyline(nodes[e.a], n, 0);
+    edges.push(half);
+    ends2.push(n);
+  }
+  const road = { id: edges.length, a: ends2[0].id, b: ends2[1].id, kind: "road", curve: 0, width, hill: true, pts: polyline(ends2[0], ends2[1], 0) };
+  edges.push(road);
+  return { a: ends2[0], b: ends2[1], width, alongX, edge: road };
 }
 
 // The blocks of the lattice: rectangles (two cells for a merged pair),
@@ -593,10 +630,13 @@ export function buildCity(seed) {
     b.type = kind;
     specials.push(b);
   }
-  // Sand dunes: a block of ridges to jump (a long block if one is free;
-  // left out if no block is left).
+  // Hill road (was the sand dunes): a block crossed by a real street that
+  // goes up, down, up and down (a long block if one is free; left out if
+  // no block is left). Not next to the elevated road's ramps (the new
+  // street meets its side streets at T-junctions).
   {
-    const b = spreadPick((x) => fits(x) && Math.max(x.w, x.d) >= 24) || spreadPick((x) => fits(x));
+    const clearOfRamps = (x) => !ramps.some((q) => q.x > x.kx0 - 16 && q.x < x.kx1 + 16 && q.z > x.kz0 - 16 && q.z < x.kz1 + 16);
+    const b = spreadPick((x) => fits(x) && clearOfRamps(x) && Math.max(x.w, x.d) >= 24) || spreadPick((x) => fits(x) && clearOfRamps(x));
     if (b) {
       b.type = "dunes";
       specials.push(b);
@@ -625,7 +665,16 @@ export function buildCity(seed) {
     if (b.type === "dunes") {
       counts.dunes = (counts.dunes || 0) + 1;
       cellsIn(b.kx0, b.kx1, b.kz0, b.kz1, (i) => kind[i] === LAND && (kind[i] = MODULE));
-      const plan = dunesPlan(b, R);
+      const road = addHillRoad(b, graph);
+      if (!road) continue;
+      // The new street on the raster: road and pavement cells.
+      const { a, b: e, width } = road;
+      cellsIn(Math.min(a.x, e.x) - width, Math.max(a.x, e.x) + width, Math.min(a.z, e.z) - width, Math.max(a.z, e.z) + width, (i, x, z) => {
+        const d = segDist(x, z, a.x, a.z, e.x, e.z) - width / 2;
+        if (d < near[i]) near[i] = d;
+        if (kind[i] === MODULE || kind[i] === LAND || kind[i] === WALK) kind[i] = d <= 0 ? ROAD : d <= SIDEWALK ? WALK : kind[i];
+      });
+      const plan = hillRoadPlan(b, road, SIDEWALK);
       mounds.push(...plan.mounds);
       specialFeatures.push(plan.feature);
       continue;

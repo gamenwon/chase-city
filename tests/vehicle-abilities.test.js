@@ -7,6 +7,7 @@ import { generateCity } from "../src/world/citygen.js";
 import { createLayout } from "../src/world/layout.js";
 import { Simulation } from "../src/game/simulation.js";
 import { overpassHeight } from "../src/world/citygen.js";
+import { updateJump } from "../src/game/jumps.js";
 
 const make = (vehicle, seed = 3) => {
   const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed, vehicle, reinforcements: false, barricades: false });
@@ -93,25 +94,40 @@ test("the elevated road keeps every car on the deck (no jumping off)", () => {
   assert.equal(s.stats.deckLeaps || 0, 0);
 });
 
-test("sand dunes: every city has a dune block; a fast car takes off over a crest and flies a while", () => {
+test("hill road: every city has a street that goes up, down, up and down, joined to the road graph; cars ride over it", () => {
   for (let seed = 1; seed <= 8; seed++) {
     const L = generateCity(seed);
-    assert.ok(L.features.some((f) => f.kind === "dunes"), `seed ${seed}`);
-    assert.ok(L.mounds.filter((m) => m.dune).length >= 2);
+    const f = L.features.find((q) => q.kind === "hillroad");
+    assert.ok(f, `seed ${seed}`);
+    const hills = L.mounds.filter((m) => m.hill);
+    assert.equal(hills.length, 2);
+    const e = L.graph.edges.find((q) => q.hill);
+    assert.ok(e, "a street in the road graph");
+    // Both ends are junctions with the side streets (3 roads meet there).
+    for (const id of [e.a, e.b]) assert.equal(L.graph.edges.filter((q) => q.a === id || q.b === id).length, 3);
+    assert.equal(L.features.some((q) => q.kind === "dunes"), false);
   }
-  const fly = (speed) => {
-    const s = make("starter");
-    const d = s.layout.mounds.filter((m) => m.dune)[0], p = s.player;
-    Object.assign(p, { x: d.x - d.ux * (d.len + 4), z: d.z - d.uz * (d.len + 4), angle: Math.atan2(-d.ux, -d.uz), vx: d.ux * speed, vz: d.uz * speed, speed });
-    s.previousPlayer = { x: p.x, z: p.z };
-    let frames = 0;
-    for (let i = 0; i < 90 && !s.result; i++) {
-      s.arrest = 0;
-      s.update(1 / 60, {});
-      if (p.air) frames++;
-    }
-    return frames / 60;
-  };
-  // (The game keeps the throttle open, so every car gets up to speed.)
-  assert.ok(fly(22) > 0.3, "airborne for a while");
+  // A car driving the street: up over the first hill, down, up over the
+  // second, down again, and out at street level.
+  const s = make("starter");
+  const e = s.layout.graph.edges.find((q) => q.hill), a = e.pts[0], b = e.pts[1];
+  const len = Math.hypot(b.x - a.x, b.z - a.z), ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
+  const p = s.player, speed = 9;
+  Object.assign(p, { x: a.x + ux * 2, z: a.z + uz * 2, angle: Math.atan2(-ux, -uz), vx: ux * speed, vz: uz * speed, speed });
+  s.previousPlayer = { x: p.x, z: p.z };
+  const ys = [];
+  for (let i = 0; i < Math.ceil(((len - 4) / speed) * 60) && !s.result; i++) {
+    s.arrest = 0;
+    p.vx = ux * speed;
+    p.vz = uz * speed;
+    s.move(p, 1 / 60, s.vehicle.stats.radius);
+    updateJump(s, p, 1 / 60, 1);
+    ys.push(p.y || 0);
+  }
+  // Two crests (up-down-up-down), back to street level at the far end.
+  let peaks = 0;
+  for (let i = 1; i < ys.length - 1; i++) if (ys[i] > 0.5 && ys[i] >= ys[i - 1] && ys[i] > ys[i + 1]) peaks++;
+  assert.equal(peaks, 2, `peaks ${peaks}`);
+  assert.ok(Math.max(...ys) > 1.2);
+  assert.ok(ys.at(-1) < 0.05);
 });
