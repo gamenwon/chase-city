@@ -17,7 +17,7 @@
 // by their weight); the ramp lanes and the landing area stay clear, so a
 // car can come in, jump, smash things and leave any way it likes.
 import * as THREE from "three";
-import { B, G, cyl } from "./parts.js";
+import { B, G } from "./parts.js";
 import { JUMP } from "../../game/jumps.js";
 
 const SIDEWALK = 2.4;
@@ -75,6 +75,13 @@ export function bigsitePlan(b, R) {
   item("barrier", -7.2, -4.8, 0);
   for (const [u, v] of [[4.4, -mv + 0.6], [-4.4, mv - 0.6], [0.8, mv + 0.4], [L / 2 - 6, -mv - 0.2]]) item("pallet", u, v, R() - 0.5);
   for (const [u, v, r] of [[-L / 2 + 1.4, 5.6, 0.3], [L / 2 - 1.4, -5.6, -0.3], [0, S / 2 - 1.2, 0]]) fly("workSign", u, v, r);
+  // A tower crane in the far corner: its mast foot is solid (cranes.js
+  // brings it down into the site).
+  {
+    const tx = alongX ? x0 + 1.4 : x1 - 1.4, tz = alongX ? z1 - 1.4 : z0 + 1.4;
+    f.tower = { x: tx, z: tz, ry: alongX ? 0.6 : -0.9 };
+    f.solids.push({ x: tx, z: tz, w: 1.4, d: 1.4, kind: "craneMast" });
+  }
   return { feature: f, mounds };
 }
 
@@ -133,13 +140,6 @@ export function bigsiteDecor(root, f) {
   B(cb, c.w + 0.1, 0.15, c.d + 0.1, 0x2457c5, 0, 2.5, 0);
   for (const u of [-1.4, 0.4]) B(cb, 1.0, 0.7, 0.04, 0x2a3a48, u, 1.3, c.d / 2 + 0.01);
   B(cb, 0.8, 1.9, 0.04, 0x8a6a4a, 1.7, 0.15, c.d / 2 + 0.01);
-  // A tower crane over the far corner (scenery, well above the cars).
-  const tc = G(root, alongX ? x0 + 1.4 : x1 - 1.4, 0.05, alongX ? z1 - 1.4 : z0 + 1.4, alongX ? 0.6 : -0.9);
-  B(tc, 1.4, 0.4, 1.4, 0x8a8d93, 0, 0, 0);
-  for (let k = 0; k < 7; k++) B(tc, 0.9, 2.4, 0.9, k % 2 ? 0xf5c01a : 0xe8a516, 0, 0.4 + k * 2.4, 0);
-  B(tc, 14, 0.7, 0.7, 0xf5c01a, 3.5, 17.2, 0);
-  B(tc, 2, 1.6, 1.2, 0x55535c, -3, 16.6, 0);
-  cyl(tc, 0.04, 0.04, 8, 0x232227, 9, 9.2, 0, 4);
-  B(tc, 1.6, 0.6, 1.0, 0x8a8d93, 9, 8.6, 0);
+  // (The tower crane is drawn and brought down by cranes.js.)
   return root;
 }

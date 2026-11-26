@@ -410,7 +410,7 @@ export class BigProps {
       }
       // Not into buildings or other solids.
       for (const box of sim.nearSolids(c.x, c.z, 4)) {
-        if (box.kind === "craneFoot" || box.w > 60) continue;
+        if (box.kind === "craneFoot" || box.kind === "craneMast" || box.w > 60) continue;
         const px = box.w / 2 + 1.3 - Math.abs(c.x - box.x), pz = box.d / 2 + 1.3 - Math.abs(c.z - box.z);
         if (px > 0 && pz > 0) {
           if (px < pz) (c.x += Math.sign(c.x - box.x || 1) * px), (c.vx = 0);

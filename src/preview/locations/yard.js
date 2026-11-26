@@ -89,27 +89,7 @@ export function yardDecor(root, f) {
   for (const sv of [-1, 1]) B(g, L - 1, 0.02, 0.14, 0xf5c01a, 0, 0.06, sv * 3.6);
   for (const su of [-1, 1]) B(g, 0.14, 0.02, S - 1, 0xf5c01a, su * 3.3, 0.06, 0);
   for (let u = -L / 2 + 2; u < L / 2 - 1; u += 2.2) B(g, 1.1, 0.02, 0.18, 0xe8e4da, u, 0.06, 0);
-  // Gantry crane.
-  const c = f.crane;
-  const H = c.h;
-  for (const su of [-1, 1])
-    for (const sv of [-1, 1]) {
-      B(g, 0.7, H, 0.7, 0xf5c01a, su * c.footU, 0, sv * c.footV);
-      B(g, 1.1, 0.4, 1.1, 0x3a3940, su * c.footU, 0, sv * c.footV);
-    }
-  for (const su of [-1, 1]) {
-    B(g, 0.9, 1.0, S - 0.4, 0xf5c01a, su * c.footU, H, 0);
-    for (let k = 0; k < 6; k++) {
-      const d = B(g, 0.12, 2.0, 0.12, 0xc89a10, su * c.footU, H - 2, -S / 2 + 1 + k * (S - 2) / 5);
-      d.rotation.x = (k % 2 ? 1 : -1) * 0.6;
-    }
-  }
-  for (const sv of [-1, 1]) B(g, c.footU * 2 + 0.9, 0.8, 0.9, 0xf5c01a, 0, H + 0.1, sv * (S / 2 - 1.2));
-  // Trolley with a cabin and a spreader hanging from cables.
-  B(g, c.footU * 2 + 0.4, 0.6, 2.2, 0xe8e4da, 0, H + 0.9, 1.0);
-  B(g, 1.6, 1.4, 1.6, 0x2457c5, 1.6, H - 0.6, 1.0);
-  for (const s of [-0.6, 0.6]) B(g, 0.05, 4.5, 0.05, 0x3a3940, s, H - 4.4, 1.0);
-  B(g, 5.6, 0.3, 2.2, 0xf0781e, 0, H - 4.7, 1.0);
+  // (The gantry crane is drawn and brought down by cranes.js.)
   // A container office (decor, in a corner behind the fence line).
   B(g, 0.2, 2.2, 0.2, 0x3a3940, -L / 2 + 0.3, 0, -S / 2 + 0.3);
 }

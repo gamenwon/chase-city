@@ -21,6 +21,7 @@ import { FlyerSystem } from "./furniture.js";
 import { dinerDecor } from "./diner.js";
 import { bigsiteDecor } from "./bigsite.js";
 import { hillRoadDecor } from "./dunes.js";
+import { Cranes } from "./cranes.js";
 import { yardDecor } from "./yard.js";
 import { funparkDecor } from "./funpark.js";
 import { BigProps } from "./bigprops.js";
@@ -90,6 +91,7 @@ export class LocationsRuntime {
     this.gas = buildGas(scene);
     this.collapse = new GasCollapse(this.gas, { x: GAS.x, y: 0, z: GAS.z });
     this.gantries = new Gantries(scene, [...(layout.yards || []), ...(layout.arches || [])]);
+    this.cranes = new Cranes(scene, layout, this);
     this.court = buildCourt(scene);
     this.park = buildPark(scene);
     this.m = new THREE.Matrix4();
@@ -331,6 +333,7 @@ export class LocationsRuntime {
     g.glassBroken.visible = false;
     this.collapse.reset(sim);
     this.gantries.reset(sim);
+    this.cranes.reset();
     this.depot?.reset();
     const f = this.park.fountain;
     f.state = "intact";
@@ -370,6 +373,7 @@ export class LocationsRuntime {
       this.storefronts.touch(sim, hit, radius);
       this.big.touch(sim, car, radius, speed * env, car === sim.player);
       this.gantries.touch(sim, car, radius);
+      this.cranes.touch(sim, car, radius, env);
       this.depot?.touch(sim, car, radius, speed);
       this.flyers.touch(sim, hit, radius, speed * env);
       if (near(GAS, 13)) this.touchGas(sim, car, radius, speed);
@@ -409,6 +413,7 @@ export class LocationsRuntime {
     this.vehicles.blast(sim, e.x, e.z, R, s, later, jitter);
     this.ads?.blast(sim, e, R, s);
     this.big?.blast(sim, e, R, s);
+    if (e.cause !== "crane") this.cranes?.blast(sim, e, R, s);
     for (const it of this.flyers.items) {
       if (it.state === "fly" || it.hidden || it.hits >= 3) continue;
       const dx = it.x - e.x, dz = it.z - e.z, d = Math.hypot(dx, dz);
@@ -747,6 +752,7 @@ export class LocationsRuntime {
     this.spinBrushes(now);
     this.collapse.step(this.sim, this.time);
     this.gantries.step(this.sim, this.time);
+    if (this.sim) this.cranes.step(this.sim, this.time);
     if (this.depot && this.sim) this.depot.step(this.sim, this.time, dt);
     this.fxStep(now);
     this.waterStep(dt, now);
