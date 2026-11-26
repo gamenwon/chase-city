@@ -150,7 +150,17 @@ export class CityRenderer {
     this.resetMetrics();
     this.follow = new THREE.Vector3(0, 0, 0);
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    // Rotation and browser bars: resize on every signal, and again a
+    // moment later (some phones report the new size late after a turn).
+    // Nothing else is touched: the run goes on as it was.
+    const again = () => {
+      this.resize();
+      clearTimeout(this.resizeLater);
+      this.resizeLater = setTimeout(() => this.resize(), 350);
+    };
+    window.addEventListener("resize", again);
+    window.addEventListener("orientationchange", again);
+    window.visualViewport?.addEventListener("resize", again);
   }
   // The downtown grid (roads, pavement blocks, parks, buildings).
   buildGridWorld(layout, theme) {
@@ -378,8 +388,13 @@ export class CityRenderer {
   resize() {
     const w = innerWidth,
       h = innerHeight;
+    if (w === this.lastW && h === this.lastH && this.renderer.getPixelRatio() === this.lastRatio) return;
+    this.lastW = w;
+    this.lastH = h;
+    this.lastRatio = this.renderer.getPixelRatio();
     this.renderer.setSize(w, h);
     this.cameraRig.resize(w, h);
+    document.documentElement.dataset.orient = w < h ? "portrait" : "landscape";
   }
   render(sim, dt, running = sim.started && !sim.result) {
     this.lastSimChaos = !!sim.chaos;

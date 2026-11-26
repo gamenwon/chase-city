@@ -149,7 +149,10 @@ test("normal fixed starts and different legal right-steering routes can both pro
   for (const [width, delay] of [
     [1100, 0],
     [1100, 8], // V2.1: was 5 s (that route now meets a closed building gap)
-    [390, 0],
+    // (Mobile test build: the portrait phone camera sees more road, so the
+    // police spawn further out; the immediate right turn now gets away for
+    // the full minute, so the phone routes turn after 1 s and 3 s.)
+    [390, 1],
     [390, 3],
   ]) {
     const s = new Simulation(createLayout(), {

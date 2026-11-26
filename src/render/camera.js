@@ -4,19 +4,34 @@ export class ChaseCamera {
   constructor(width = 1100, height = 740) {
     this.camera = new THREE.PerspectiveCamera(43, width / height, 0.1, 350);
     this.follow = new THREE.Vector3(0, 0, 8);
-    this.mobile = width < 700;
-    this.camera.fov = this.mobile ? 48 : 43;
-    this.camera.updateProjectionMatrix();
+    this.lead = new THREE.Vector3();
     this.point = new THREE.Vector3();
+    this.resize(width, height);
   }
+  // Phones (either orientation) and desktop. The view keeps its angle; on
+  // a phone the field of view and the distance follow the screen shape so
+  // a portrait screen still sees enough road to the sides and ahead:
+  //   desktop             fov 43, distance as before
+  //   phone, landscape    fov 48 (as before)
+  //   phone, portrait     fov up to 64 and up to 15 % further back as the
+  //                       screen gets narrower, plus a look-ahead along
+  //                       the car's motion (see update)
   resize(width, height) {
-    this.mobile = width < 700;
-    this.camera.aspect = width / height;
-    this.camera.fov = this.mobile ? 48 : 43;
+    const aspect = width / height;
+    this.phone = Math.min(width, height) < 600;
+    this.mobile = this.phone || width < 700;
+    this.portrait = aspect < 1;
+    const t = this.mobile ? Math.min(1, Math.max(0, (1.2 - aspect) / 0.75)) : 0;
+    this.distance = 1 + 0.15 * t;
+    // Look-ahead (m) at full speed: more where the view is narrow.
+    this.leadMax = !this.mobile ? 0 : 5 + 3 * t;
+    this.camera.aspect = aspect;
+    this.camera.fov = this.mobile ? 48 + 16 * t : 43;
     this.camera.updateProjectionMatrix();
   }
   reset() {
     this.follow.set(0, 0, 8);
+    this.lead.set(0, 0, 0);
     this.shake = 0;
   }
   // V1.8 crash shake. It is only added around the actual draw call (see
@@ -55,12 +70,21 @@ export class ChaseCamera {
       this.point.set(player.x, player.y || 0, player.z),
       1 - Math.exp(-dt * 5),
     );
+    // Look ahead along the car's motion (phones): the car sits back from
+    // the centre, leaving more of the road in front of it on screen.
+    if (this.leadMax) {
+      const k = Math.min(1, Math.hypot(player.vx || 0, player.vz || 0) / 24) * this.leadMax;
+      const sp = Math.hypot(player.vx || 0, player.vz || 0) || 1;
+      this.point.set(((player.vx || 0) / sp) * k, 0, ((player.vz || 0) / sp) * k);
+      this.lead.lerp(this.point, dt ? 1 - Math.exp(-dt * 1.6) : 1);
+    } else this.lead.set(0, 0, 0);
+    const d = this.distance || 1, fx = this.follow.x + this.lead.x, fz = this.follow.z + this.lead.z;
     this.camera.position.set(
-      this.follow.x + (this.mobile ? 26 : 30),
-      (this.mobile ? 64 : 60) + this.follow.y,
-      this.follow.z + 40,
+      fx + (this.mobile ? 26 : 30) * d,
+      (this.mobile ? 64 : 60) * d + this.follow.y,
+      fz + 40 * d,
     );
-    this.camera.lookAt(this.follow.x, this.follow.y, this.follow.z - 6);
+    this.camera.lookAt(fx, this.follow.y, fz - 6);
     this.camera.updateMatrixWorld(true);
   }
   visible(point, entries, player = null) {
