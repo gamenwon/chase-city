@@ -15,6 +15,7 @@ import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { MaterialPass } from "./pbr.js";
+import { CITY_HALF } from "../world/citygen.js";
 import { OverpassRenderer } from "./overpass.js";
 import { HelicopterRenderer } from "./helicopter.js";
 import { CoinRenderer } from "./coins.js";
@@ -42,6 +43,7 @@ export class CityRenderer {
       canvas,
       antialias: true,
       powerPreference: "high-performance",
+      stencil: true, // (the player car's see-through silhouette)
     });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.7));
     this.renderer.shadowMap.enabled = true;
@@ -52,6 +54,8 @@ export class CityRenderer {
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(theme.sky, theme.fogNear, theme.fogFar);
     this.cameraRig = new ChaseCamera(innerWidth, innerHeight);
+    // (Phones: the view stops at the city edge plus a strip of outskirts.)
+    if (layout.generated !== false) this.cameraRig.bounds = CITY_HALF + 8;
     this.camera = this.cameraRig.camera;
     // Clear, warm sun with readable shadows; neutral fill.
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x5f5a58, 1.35);
@@ -306,6 +310,7 @@ export class CityRenderer {
     this.playerModelId = id;
     const old = this.player;
     this.player = (this.gfx.on && this.gfx.vehicle(id)) || make();
+    addXray(this.player);
     if (old) {
       this.player.position.copy(old.position);
       this.player.rotation.copy(old.rotation);
@@ -672,5 +677,49 @@ export class CityRenderer {
     this.occlusion.reset();
     this.effects.reset();
     this.player.rotation.set(0, 0, 0);
+  }
+}
+
+// The player car stays visible behind buildings, facilities and the
+// elevated road: its own pixels are marked in the stencil buffer, and a
+// flat bright silhouette is drawn only where something nearer covers it
+// (never over the car itself). The car's materials are its own copies.
+const XRAY = new THREE.MeshBasicMaterial({
+  color: 0xffe14a,
+  transparent: true,
+  opacity: 0.55,
+  depthWrite: false,
+  depthFunc: THREE.GreaterDepth,
+  stencilWrite: true,
+  stencilRef: 1,
+  stencilFunc: THREE.NotEqualStencilFunc,
+  stencilFail: THREE.KeepStencilOp,
+  stencilZFail: THREE.KeepStencilOp,
+  stencilZPass: THREE.KeepStencilOp,
+});
+function addXray(model) {
+  const meshes = [];
+  model.traverse((o) => {
+    if (o.isMesh && !o.userData.xray) meshes.push(o);
+  });
+  for (const o of meshes) {
+    const own = (m) => {
+      const c = m.clone();
+      c.onBeforeCompile = m.onBeforeCompile;
+      c.customProgramCacheKey = m.customProgramCacheKey;
+      c.stencilWrite = true;
+      c.stencilRef = 1;
+      c.stencilFunc = THREE.AlwaysStencilFunc;
+      c.stencilZPass = THREE.ReplaceStencilOp;
+      return c;
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
+    if (o.material.map || o.material.transparent) continue; // decals, glass: the body covers them
+    const x = new THREE.Mesh(o.geometry, XRAY);
+    x.userData.xray = true;
+    x.renderOrder = 20;
+    x.castShadow = x.receiveShadow = false;
+    x.frustumCulled = o.frustumCulled;
+    o.add(x);
   }
 }
