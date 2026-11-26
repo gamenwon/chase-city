@@ -110,7 +110,8 @@ export function placeCoins(sim) {
     coins.push({ id: coins.length, x, z, y: y ?? ground + 1.0, kind, value: COINS.value[kind], taken: false });
   };
   // Roads: short rows on a lane of random street edges.
-  const roads = (L.graph?.edges || []).filter((e) => e.kind === "road" && e.pts?.length >= 2);
+  // (The hill road has coins over its crests instead.)
+  const roads = (L.graph?.edges || []).filter((e) => e.kind === "road" && !e.hill && e.pts?.length >= 2);
   for (let g = 0, tries = 0; g < COINS.groups.road && tries < 200 && roads.length; tries++) {
     const e = roads[Math.floor(R() * roads.length)];
     const lane = (e.width || 8) / 4 * (R() < 0.5 ? -1 : 1);

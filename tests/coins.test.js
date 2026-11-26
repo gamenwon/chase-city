@@ -41,7 +41,10 @@ test("the player collects a coin by driving near it (forgiving radius); police a
   s.update(1 / 60, {});
   assert.equal(c.taken, false);
   s.police = [];
-  Object.assign(s.player, { x: c.x + 2.0, z: c.z, vx: 0, vz: 0, speed: 0 });
+  // 2 m beside it, off the line of its row (the next coin is 3 m along).
+  const next = s.coins.filter((q) => q !== c).reduce((a, q) => (Math.hypot(q.x - c.x, q.z - c.z) < Math.hypot(a.x - c.x, a.z - c.z) ? q : a));
+  const rl = Math.hypot(next.x - c.x, next.z - c.z) || 1, ox = -(next.z - c.z) / rl, oz = (next.x - c.x) / rl;
+  Object.assign(s.player, { x: c.x + ox * 2.0, z: c.z + oz * 2.0, vx: 0, vz: 0, speed: 0 });
   s.update(1 / 60, {});
   assert.equal(c.taken, true);
   assert.equal(s.runCoins, c.value);

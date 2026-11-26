@@ -635,7 +635,8 @@ export function buildCity(seed) {
   // no block is left). Not next to the elevated road's ramps (the new
   // street meets its side streets at T-junctions).
   {
-    const clearOfRamps = (x) => !ramps.some((q) => q.x > x.kx0 - 16 && q.x < x.kx1 + 16 && q.z > x.kz0 - 16 && q.z < x.kz1 + 16);
+    const under = [...ramps, ...(graph.overpass?.pillars || [])];
+    const clearOfRamps = (x) => !under.some((q) => q.x > x.kx0 - 16 && q.x < x.kx1 + 16 && q.z > x.kz0 - 16 && q.z < x.kz1 + 16);
     const b = spreadPick((x) => fits(x) && clearOfRamps(x) && Math.max(x.w, x.d) >= 24) || spreadPick((x) => fits(x) && clearOfRamps(x));
     if (b) {
       b.type = "dunes";
