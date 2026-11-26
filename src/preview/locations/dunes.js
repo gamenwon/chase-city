@@ -98,5 +98,6 @@ export function hillRoadDecor(root, f) {
   geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide }));
   mesh.receiveShadow = true;
+  mesh.userData.keep = true; // (its own vertex colours: not re-baked by material colour)
   root.add(mesh);
 }
