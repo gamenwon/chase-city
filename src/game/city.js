@@ -25,7 +25,8 @@ export const PROPS = {
   sign: { r: 0.25, breakAt: 6, solid: true },
   lamp: { r: 0.3, breakAt: 9, solid: true },
   tree: { r: 0.4, breakAt: 11, solid: true },
-  bigTree: { r: 0.75, breakAt: Infinity, solid: true },
+  // (Big trees come down too, to a harder hit than a small one.)
+  bigTree: { r: 0.75, breakAt: 13, solid: true },
   // Fire hydrant: knocked loose by any real hit (it never stops the car);
   // a water jet then shoots up from the broken pipe until restart.
   hydrant: { r: 0.3, breakAt: 4, solid: false },
@@ -361,7 +362,7 @@ export function blastCity(sim, city, x, z, R, s) {
     const impact = 22 * k * Math.sqrt(s);
     const spec = PROPS[prop.kind];
     const push = { vx: (dx / d) * impact, vz: (dz / d) * impact };
-    if (impact >= spec.breakAt) breakProp(sim, city, prop, push, impact);
+    if (impact >= (prop.breakAt ?? spec.breakAt)) breakProp(sim, city, prop, push, impact);
     else {
       prop.wobble = Math.min(1, prop.wobble + impact / 8);
       prop.dirty = true;
@@ -437,11 +438,16 @@ function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
       sim.elapsed - car.propContact.at > 0.35;
     car.propContact = { id: prop.id, at: sim.elapsed };
     city.stats.propHits++;
-    if (impact >= spec.breakAt * ram) {
+    if (impact >= (prop.breakAt ?? spec.breakAt) * ram) {
       breakProp(sim, city, prop, car, impact);
       // Knocking it over costs some speed: more for heavier props.
       const keep =
-        prop.kind === "trash" ? 0.96 : prop.kind === "sign" ? 0.9 : 0.75;
+        prop.kind === "trash" ? 0.96 : prop.kind === "sign" ? 0.9 : prop.kind === "bigTree" ? 0.6 : 0.75;
+      // Uprooting a big tree is still a hard knock (less than not moving it).
+      if (prop.kind === "bigTree" && fresh) {
+        if (isPlayer) hurtImpact(sim, "wall", impact, `tree:${prop.id}`);
+        else car.health = Math.max(0, car.health - impact * 0.6);
+      }
       // Heavy machines lose much less (vehicles.js propRetain).
       const k = isPlayer ? keep + (1 - keep) * (sim.vehicle?.stats.propRetain || 0) : keep;
       car.vx *= k;

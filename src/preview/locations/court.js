@@ -95,8 +95,7 @@ export function buildCourt(scene) {
   const rack = G(s, 5.8, TOP, -5.45);
   for (const x of [-0.6, 0.6]) B(rack, 0.06, 0.8, 0.5, C.metal, x, 0, 0);
   for (const z of [-0.18, 0.18]) B(rack, 1.3, 0.05, 0.05, C.metal, 0, 0.62, z);
-  // Trees outside the fence (solid in the layout).
-  [[-7.0, -7.5], [4.3, -7.5], [-7.0, 7.5], [4.3, 7.5]].forEach(([x, z], k) => tree(G(s, x, TOP, z, k), k, 0.9));
+  // (The trees outside the fence are breakable city trees: locationTrees.)
   root.add(bake(s));
 
   // Breakables (positions in world space, for runtime.js).

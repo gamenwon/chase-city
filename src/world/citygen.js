@@ -29,7 +29,7 @@
 // closed pockets.
 import { CONFIG } from "../game/config.js";
 import { setLocations } from "../preview/locations/layout-consts.js";
-import { locationSolids } from "../preview/locations/layout.js";
+import { locationSolids, locationTrees } from "../preview/locations/layout.js";
 import { depotFlyers } from "../preview/locations/gasdepot.js";
 import { parkPlan } from "../preview/locations/plan.js";
 import { sitePlan } from "../preview/locations/sites.js";
@@ -729,6 +729,7 @@ export function buildCity(seed) {
   for (const y of yards) if (y.kind !== "corner" && R() < 0.45) y.perimeter = PER[y.kind] || "shops";
   // ---- solids: the landmarks, park features, yards, the edge wall.
   const obstacles = [...ramps, ...locationSolids()];
+  trees.push(...locationTrees());
   const features = [...parkPlan(parks, 0.4), ...specialFeatures];
   features.push({ kind: "gasdepot", items: [], vehicles: [], flyers: depotFlyers(), solids: [] });
   features.push({ kind: "strip", items: stripItems, vehicles: [], flyers: stripFlyers, solids: [] });

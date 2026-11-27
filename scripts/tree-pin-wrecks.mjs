@@ -6,11 +6,14 @@ import { createLayout } from "../src/world/layout.js";
 import { random } from "./autoplay.js";
 import { escapeAttempts } from "./audit-arrests.js";
 const layout = createLayout();
-export function wreckScene({ treeIndex = 3, heading = 0, seed = 1, sides = [-1, 1], f = 0.4, gap = 0.15, rear = false } = {}) {
+export function wreckScene({ treeIndex = 3, heading = 0, seed = 1, sides = [-1, 1], f = 0.4, gap = 0.15, rear = false, fixedTree = false } = {}) {
   const s = new Simulation(layout, { width: 390, height: 664, random: random(seed), city: true,
     cityBudget: { profile: "test", level: 1, peds: 0, traffic: 0, parked: 0, range: 70 } });
   s.start();
   const tree = s.city.props.filter((q) => q.kind === "bigTree")[treeIndex];
+  // (Big trees can be knocked down now; fixedTree keeps this one standing,
+  // a stand-in for any obstacle the car cannot break.)
+  if (fixedTree) tree.breakAt = Infinity;
   const p = s.player;
   const fx = -Math.sin(heading), fz = -Math.cos(heading), rx = Math.cos(heading), rz = -Math.sin(heading);
   Object.assign(p, { x: tree.x - fx * 1.95, z: tree.z - fz * 1.95, angle: heading, speed: 3, vx: 0, vz: 0 });

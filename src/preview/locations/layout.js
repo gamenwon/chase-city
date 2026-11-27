@@ -46,14 +46,21 @@ export function locationSolids() {
   solid(GAS, m.x, m.z + 0.45, m.w, m.d + 0.9, "gas-mart");
   for (const i of GAS_PLAN.islands) solid(GAS, i.x, i.z, 6.4, 1.2, "gas-island");
   solid(GAS, GAS_PLAN.pylon.x, GAS_PLAN.pylon.z, 2.6, 0.9, "gas-pylon");
-  // Court trees (outside the fence, north and south strips).
-  for (const x of [-7.0, 4.3]) for (const z of [-7.5, 7.5]) solid(COURT, x, z, 0.6, 0.6, "tree");
-  // Fountain and park trees.
+  // Fountain. (The court and park trees are breakable trees now:
+  // locationTrees, city props.)
   const f = FOUNTAIN_R;
   solid(PARK, 0, 0, 2 * f, f * 0.9, "fountain");
   solid(PARK, 0, 0, f * 0.9, 2 * f, "fountain");
-  for (const x of [-6.8, 6.8]) for (const z of [-6.8, 6.8]) solid(PARK, x, z, 0.6, 0.6, "tree");
   out.push(...depotSolids());
+  return out;
+}
+
+// The court's and the park's trees, at their current centres: big trees
+// in the city (game/city.js), knocked down by a hard hit like any other.
+export function locationTrees() {
+  const out = [];
+  for (const x of [-7.0, 4.3]) for (const z of [-7.5, 7.5]) out.push({ x: COURT.x + x, z: COURT.z + z });
+  for (const x of [-6.8, 6.8]) for (const z of [-6.8, 6.8]) out.push({ x: PARK.x + x, z: PARK.z + z });
   return out;
 }
 

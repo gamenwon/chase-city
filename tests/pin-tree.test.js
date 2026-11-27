@@ -31,9 +31,11 @@ function play(s, seconds, steer = {}) {
 // Truly boxed in: tree in front, police wrecks on both sides and across
 // the back (screenshot 04 style). With wrecks only at the sides the car now
 // slides out backwards on its own, so those scenes are no longer traps.
+// (fixedTree: big trees can be knocked down now; here the tree stands in
+// for an obstacle the car cannot break.)
 const TRAPPED = [
-  { treeIndex: 0, heading: 4.7, sides: [-1, 1], seed: 11, rear: true },
-  { treeIndex: 3, heading: 4.7, sides: [-1, 1], seed: 14, rear: true },
+  { treeIndex: 0, heading: 4.7, sides: [-1, 1], seed: 11, rear: true, fixedTree: true },
+  { treeIndex: 3, heading: 4.7, sides: [-1, 1], seed: 14, rear: true, fixedTree: true },
 ];
 for (const cfg of TRAPPED)
   test(`tree + police wrecks + police (${JSON.stringify(cfg)}): truly trapped, BUSTED after the 3 s countdown`, () => {
@@ -93,7 +95,7 @@ test("the escape check uses the game's tree size and lets lamps fall at the game
   const w = P.probeWorld(s);
   const tree = w.probePosts.find((q) => Math.abs(q.r - PROPS.bigTree.r) < 1e-9);
   assert.ok(tree, "park trees are circles of the game's radius");
-  assert.equal(tree.breakAt, Infinity);
+  assert.equal(tree.breakAt, PROPS.bigTree.breakAt);
   // A lamp straight ahead at 12 m/s (above its 9 m/s break speed) falls;
   // the same lamp at 5 m/s stops the car.
   for (const [speed, falls] of [[12, true], [5, false]]) {

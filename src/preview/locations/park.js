@@ -114,8 +114,7 @@ export function buildPark(scene) {
     const a = Math.PI / 4 + (k * Math.PI) / 2;
     bed(G(s, Math.sin(a) * 7.0, TOP, Math.cos(a) * 7.0, a));
   }
-  // Corner trees (solid in the layout).
-  [[-6.8, -6.8], [6.8, -6.8], [-6.8, 6.8], [6.8, 6.8]].forEach(([x, z], k) => tree(G(s, x, TOP, z, k * 1.3), k));
+  // (The corner trees are breakable city trees: locationTrees.)
   // Fountain foundation (never breaks) under both states.
   root.add(bake(s));
 

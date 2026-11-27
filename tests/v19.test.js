@@ -120,35 +120,19 @@ test("reaction depends on impact speed and size: light props go at a touch, post
   assert.ok(td > CONFIG.radius + PROPS.lamp.r - 0.05);
 });
 
-test("a big tree never breaks and damages the car that hits it", () => {
+test("a big tree comes down to a hard hit (and damages the car that hits it); a soft one leaves it standing", () => {
   const s = citySim();
-  const prop = s.city.props.find((p) => p.kind === "bigTree");
-  Object.assign(s.player, {
-    x: prop.x,
-    z: prop.z - (CONFIG.radius + PROPS.bigTree.r + 0.25),
-    angle: Math.PI,
-    vx: 0,
-    vz: 22,
-    speed: 22,
-  });
-  run(s, 0.3);
-  assert.equal(prop.state, "stand");
+  const trees = s.city.props.filter((p) => p.kind === "bigTree");
+  const hit = (prop, speed) => {
+    Object.assign(s.player, { x: prop.x, z: prop.z - (CONFIG.radius + PROPS.bigTree.r + 0.25), angle: Math.PI, vx: 0, vz: speed, speed });
+    s.previousPlayer = { x: s.player.x, z: s.player.z };
+    run(s, 0.3);
+  };
+  hit(trees[0], 22);
+  assert.notEqual(trees[0].state, "stand", "a hard hit knocks it down");
   assert.ok(s.health < 100, "the player car is damaged");
-  const police = Object.assign(makePolice(0), {
-    x: prop.x,
-    z: prop.z - (CONFIG.policeRadius + PROPS.bigTree.r + 0.25),
-    angle: Math.PI,
-    vx: 0,
-    vz: 22,
-    // Coasting straight on (the police route planner itself steers round
-    // big trees).
-    stunTimer: 1,
-  });
-  s.police = [police];
-  Object.assign(s.player, { x: prop.x + 30, z: prop.z + 30 });
-  run(s, 0.1);
-  assert.equal(prop.state, "stand");
-  assert.ok(police.health < 100);
+  hit(trees[1], 8);
+  assert.equal(trees[1].state, "stand", "a soft hit does not");
 });
 
 test("a felled tree stays on the road as an obstacle the police route around", () => {

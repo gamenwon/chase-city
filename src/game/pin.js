@@ -114,7 +114,7 @@ function probeWorld(sim, { noWrecks = false } = {}) {
         Math.abs(q.x - p.x) < 16 &&
         Math.abs(q.z - p.z) < 16,
     )
-    .map((q) => ({ x: q.x, z: q.z, r: PROPS[q.kind].r, breakAt: PROPS[q.kind].breakAt }));
+    .map((q) => ({ x: q.x, z: q.z, r: PROPS[q.kind].r, breakAt: q.breakAt ?? PROPS[q.kind].breakAt }));
   // (Without the police: their wrecks and their barricades go too.)
   w.solids = noWrecks ? sim.solids.filter((b) => b.kind !== "wreck" && b.kind !== "barricade") : sim.solids;
   // Civilian cars near the player (parked, stopped, wrecked): the car can
