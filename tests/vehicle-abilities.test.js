@@ -102,10 +102,15 @@ test("hill streets: about four places on the city's own streets go flat, up, dow
     assert.ok(fs.length >= 3 && fs.length <= 4, `seed ${seed}: ${fs.length}`);
     // Existing streets (no new ones), no hill block.
     assert.equal(L.features.some((q) => q.kind === "hillroad" || q.kind === "dunes"), false);
+    // One of them a single tall hill, about two storeys high.
+    const tall = fs.filter((f) => f.tall);
+    assert.equal(tall.length, 1, `seed ${seed}: one tall hill`);
+    assert.equal(tall[0].mounds.length, 1);
+    assert.ok(tall[0].mounds[0].h >= 5.5 && tall[0].mounds[0].h <= 6.4, `seed ${seed}: tall ${tall[0].mounds[0].h}`);
     for (const f of fs) {
       // Two hills: one long hill on each of two streets in line through a
       // junction (or two on one street).
-      assert.equal(f.mounds.length, 2);
+      if (!f.tall) assert.equal(f.mounds.length, 2);
       const ids = new Set(f.mounds.map((m) => m.edge));
       for (const id of ids) {
         const e = L.graph.edges.find((q) => q.id === id);
@@ -142,4 +147,30 @@ test("hill street: a car drives over both crests and back to level; fast over a 
   assert.equal(slow.air, 0, "slow: no jump");
   assert.ok(slow.ys.at(-1) < 0.05);
   assert.ok(run(22).air > 6, "fast: airborne over a crest");
+});
+
+test("tall hill street: slowly up two storeys and down to level; fast over the crest it flies", () => {
+  const run = (speed) => {
+    const s = make("starter");
+    const f = s.layout.features.find((q) => q.kind === "hillstreet" && q.tall);
+    const p = s.player, { a, ux, uz, L } = f.segs[0];
+    Object.assign(p, { x: a.x + ux * 1, z: a.z + uz * 1, angle: Math.atan2(-ux, -uz), vx: ux * speed, vz: uz * speed, speed, y: 0 });
+    let top = 0, air = 0;
+    const ys = [];
+    for (let i = 0; i < Math.ceil(((L - 2) / speed) * 60); i++) {
+      p.vx = ux * speed;
+      p.vz = uz * speed;
+      s.move(p, 1 / 60, s.vehicle.stats.radius);
+      updateJump(s, p, 1 / 60, 1);
+      top = Math.max(top, p.y || 0);
+      ys.push(p.y || 0);
+      if (p.air) air++;
+    }
+    return { top, air, end: ys.at(-1) };
+  };
+  const slow = run(7);
+  assert.ok(slow.top > 5.4, `top ${slow.top}`);
+  assert.equal(slow.air, 0, "slow: no jump");
+  assert.ok(slow.end < 0.05);
+  assert.ok(run(22).air > 6, "fast: airborne over the crest");
 });

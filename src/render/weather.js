@@ -15,6 +15,7 @@
 // puffs. Works in both orientations (everything follows the camera).
 import * as THREE from "three";
 import { bakedMaterial } from "./kit.js";
+import { groundHeight } from "../game/jumps.js";
 
 const SNOW_SKY = 0xdbe4ec, RAIN_SKY = 0x7d8993;
 
@@ -127,8 +128,9 @@ export class Weather {
             // roads (worn into darker ruts), a light frost on the walls.
             float cover = uSnow * up * mix(0.72, 1.0, n) * (1.0 - road * mix(0.72, 0.5, n));
             // Tyre tracks: where cars have driven, the surface shows through.
-            // (Two layers: the streets (red) and the elevated road's deck
-            // (green), so tracks on one do not show on the other.)
+            // (Two layers by height: the streets (red) and, above 3.2 m,
+            // the elevated road's deck and the tall hill's top (green), so
+            // tracks on the deck do not show on the street under it.)
             vec4 wxT = texture2D(uWxTracks, (vWxWorld.xz + 120.0) / 240.0);
             cover *= 1.0 - 0.92 * min(1.0, vWxWorld.y > 3.2 ? wxT.g : wxT.r);
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.98), clamp(cover, 0.0, 1.0));
@@ -219,8 +221,10 @@ export class Weather {
         this.trackLast.delete(c);
         continue;
       }
-      // On the deck (and the upper part of its ramps): the deck layer.
-      const deck = c.level > 0 && (c.y || 0) > 3.2;
+      // High up (the deck, the upper part of its ramps, the top of the
+      // tall hill): the upper layer, as the shader picks it by height.
+      const cy = c.level > 0 ? c.y || 0 : groundHeight(sim.layout?.mounds || [], c.x, c.z);
+      const deck = cy > 3.2;
       const fx = -Math.sin(c.angle), fz = -Math.cos(c.angle), rx = Math.cos(c.angle), rz = -Math.sin(c.angle);
       const pts = [-1, 1].map((s) => [c.x - fx * 1.1 + rx * s * 0.7, c.z - fz * 1.1 + rz * s * 0.7]);
       const last = this.trackLast.get(c);

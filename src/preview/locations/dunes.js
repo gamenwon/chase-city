@@ -18,6 +18,7 @@ import * as THREE from "three";
 import { groundHeight } from "../../game/jumps.js";
 
 const ROAD_Y = 0.1, WALK_Y = 0.4;
+const TALL_H = 6.4, TALL_F = 4;
 const ASPHALT = 0x37363b, WALK = 0xbdbab3, KERB = 0xd9d6cf, LINE = 0xf2efe6, WALL = 0x9a968e;
 
 export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND, MODULE, SIDEWALK }) {
@@ -71,6 +72,13 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
   const plans = [];
   const apart = (m) => plans.every((p) => Math.hypot(p.mid.x - m.x, p.mid.z - m.z) > 36);
   const used = (e) => plans.some((p) => p.edges.includes(e));
+  // One of them a single tall hill, as high as a two-storey building, on
+  // one long street (a random one of the longest).
+  const longs = cands.filter((c) => c.L >= 34).sort((p, q) => q.L - p.L).slice(0, 3);
+  if (longs.length) {
+    const c = longs[Math.floor(R() * longs.length)];
+    plans.push({ mid: c.mid, edges: [c.e], tall: true, segs: [{ a: c.a, ux: c.ux, uz: c.uz, L: c.L, c, hills: 1, tall: true }] });
+  }
   for (const ch of chains.sort(() => R() - 0.5)) {
     if (plans.length >= WANT - 1) break;
     if (!apart(ch.mid) || plans.some((p) => p.edges.some((e) => ch.segs.some((c) => c.e === e)))) continue;
@@ -89,12 +97,15 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
   const F = 5;
   for (const plan of plans) {
     const ms = [];
+    const Fp = plan.tall ? TALL_F : F;
     for (const sg of plan.segs) {
       const { a, ux, uz, L, hills } = sg, band = sg.c.band;
-      const span = L - 2 * F, len = span / (2 * hills);
-      const h = hills === 1 ? Math.min(2.0, len * 0.13) : Math.min(1.8, len * 0.2);
+      const span = L - 2 * Fp, len = span / (2 * hills);
+      // The tall one: two storeys (a 3.4 m ground floor and a 3 m floor),
+      // climbing almost evenly (an easy foot, a firm crest).
+      const h = sg.tall ? Math.min(TALL_H, len * 0.42) : hills === 1 ? Math.min(2.0, len * 0.13) : Math.min(1.8, len * 0.2);
       for (let k = 0; k < hills; k++)
-        ms.push({ x: a.x + ux * (F + len * (2 * k + 1)), z: a.z + uz * (F + len * (2 * k + 1)), ux, uz, len, w: band, h: h * (k ? 0.85 : 1), crest: true, takeoff: 4, hill: true, edge: sg.c.e.id });
+        ms.push({ x: a.x + ux * (Fp + len * (2 * k + 1)), z: a.z + uz * (Fp + len * (2 * k + 1)), ux, uz, len, w: band, h: h * (k ? 0.85 : 1), crest: true, ...(sg.tall ? { pow: 1.15, tall: true } : {}), takeoff: 4, hill: true, edge: sg.c.e.id });
       sg.c.e.hill = true;
     }
     mounds.push(...ms);
@@ -108,8 +119,10 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
         if (y > 0.05) q.baseY = Math.max(q.baseY || 0, Math.round(y * 20) / 20);
       }
     }
-    features.push({ kind: "hillstreet", segs: plan.segs.map(({ a, ux, uz, L, c }) => ({ a: { x: a.x, z: a.z }, ux, uz, L, width: c.e.width })), sidewalk: SIDEWALK, F, mounds: ms, items: [], flyers: [], vehicles: [], solids: [] });
+    features.push({ kind: "hillstreet", tall: !!plan.tall, segs: plan.segs.map(({ a, ux, uz, L, c }) => ({ a: { x: a.x, z: a.z }, ux, uz, L, width: c.e.width })), sidewalk: SIDEWALK, F: Fp, mounds: ms, items: [], flyers: [], vehicles: [], solids: [] });
   }
+  // (The tall hill listed last.)
+  features.sort((p, q) => (p.tall ? 1 : 0) - (q.tall ? 1 : 0));
   return { mounds, features };
 }
 

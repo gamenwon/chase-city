@@ -21,7 +21,7 @@ export function mountHeight(m, x, z) {
   // (crest: a hill street, easing in from the flat and firm over the top,
   // so a fast car takes off there; smooth: a cosine hill; otherwise a
   // ramp with a sharp crest.)
-  const along = m.crest ? m.h * Math.pow(1 - a / m.len, 1.7) : m.smooth ? m.h * (0.5 + 0.5 * Math.cos((Math.PI * a) / m.len)) : m.h * (1 - a / m.len);
+  const along = m.crest ? m.h * Math.pow(1 - a / m.len, m.pow ?? 1.7) : m.smooth ? m.h * (0.5 + 0.5 * Math.cos((Math.PI * a) / m.len)) : m.h * (1 - a / m.len);
   return b <= m.w ? along : along * (1 - (b - m.w) / JUMP.side);
 }
 // The mound under a point (the highest), for its take-off speed.
@@ -96,6 +96,6 @@ export function updateJump(sim, body, dt, mass = 1) {
 export function jumpPitch(body) {
   const sp = Math.hypot(body.vx || 0, body.vz || 0) || 1;
   if (body.air) return Math.max(-0.45, Math.min(0.45, Math.atan2(body.vy || 0, sp)));
-  if (body.onMound) return Math.max(-0.35, Math.min(0.35, Math.atan2(body.jumpVy || 0, sp)));
+  if (body.onMound) return Math.max(-0.45, Math.min(0.45, Math.atan2(body.jumpVy || 0, sp)));
   return 0;
 }
