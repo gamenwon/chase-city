@@ -879,7 +879,8 @@ function coinFace(size = 0.6) {
 // on a stand (it spins: render/target.js), so it reads at a glance from
 // the phone camera and is never taken for traffic.
 export function targetCar() {
-  const BLUE = 0x1f6bff, NAVY = 0x123a8c, GOLD = 0xffc61a, GOLD2 = 0xe0a000;
+  // (A bright azure body: it stands out in any street, day or night.)
+  const BLUE = 0x2eaaff, NAVY = 0x1667d9, GOLD = 0xffc61a, GOLD2 = 0xe0a000;
   const s = shell({ body: BLUE, cabin: BLUE, roof: NAVY, W: 2.0, L: 3.3, belt: 1.0, hood: 0.34, tail: 0.04, cabH: 1.82, lean: 0.36, backLean: 0.02, taper: 0.88 });
   faceKit(s, { bumper: NAVY, grille: GOLD2, lampW: 0.36, lampH: 0.24 });
   const { g, o, top, cf, cb } = s;

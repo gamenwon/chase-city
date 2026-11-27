@@ -207,10 +207,11 @@ export function awardCoins(sim, key, kind, x, z, chainDepth = 0) {
   return amount;
 }
 
-// CITY CHAOS coin carrier: every hit throws coins out round it (they arc
-// out from the van and land on open ground, never in a building). Spilled
-// coins left lying are capped (the oldest go first).
-export const SPILL = Object.freeze({ count: 10, value: 1, r0: 2.6, r1: 4.6, cap: 120, flight: 0.45 });
+// CITY CHAOS coin carrier: every hit throws out one BIG coin worth 10 (it
+// arcs out from the van and lands beside it on open ground, never in a
+// building); big, and picked up from further away, so it is easy to grab
+// while driving. Big coins left lying are capped (the oldest go first).
+export const SPILL = Object.freeze({ count: 1, value: 10, size: 2.4, reach: 1.8, r0: 3.2, r1: 4.2, cap: 12, flight: 0.45 });
 export function spillCoins(sim, x, z, n = SPILL.count) {
   if (!sim.coins) return 0;
   let made = 0;
@@ -222,7 +223,7 @@ export function spillCoins(sim, x, z, n = SPILL.count) {
       const cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r;
       if (sim.nearSolids && sim.nearSolids(cx, cz, 0.6).length) continue;
       const ground = groundHeight(sim.layout?.mounds || [], cx, cz);
-      sim.coins.push({ id: sim.coins.length, x: cx, z: cz, y: ground + 1.0, kind: "spill", value: SPILL.value, taken: false, born: sim.elapsed, fromX: x, fromZ: z });
+      sim.coins.push({ id: sim.coins.length, x: cx, z: cz, y: ground + 1.9, kind: "spill", value: SPILL.value, size: SPILL.size, taken: false, born: sim.elapsed, fromX: x, fromZ: z });
       made++;
       break;
     }
@@ -243,15 +244,21 @@ export function updateCoins(sim) {
   for (const c of sim.coins) {
     if (c.taken) continue;
     if (c.born != null && sim.elapsed - c.born < SPILL.flight) continue; // (still flying out)
-    if (Math.abs(c.x - p.x) > R || Math.abs(c.z - p.z) > R) continue;
-    if (Math.hypot(c.x - p.x, c.z - p.z) > R || Math.abs(c.y - py) > COINS.height) continue;
+    const r = c.size ? R + SPILL.reach : R;
+    if (Math.abs(c.x - p.x) > r || Math.abs(c.z - p.z) > r) continue;
+    if (Math.hypot(c.x - p.x, c.z - p.z) > r || Math.abs(c.y - py) > COINS.height) continue;
     c.taken = true;
     c.takenAt = sim.elapsed;
     sim.runCoins += c.value;
     sim.coinStats.picked++;
     sim.coinStats.pickedValue += c.value;
     sim.coinStats.byKind[c.kind] = (sim.coinStats.byKind[c.kind] || 0) + c.value;
-    sim.coinFx.push({ x: c.x, y: c.y, z: c.z, value: c.value, time: sim.elapsed, kind: "pick", id: c.id });
+    sim.coinFx.push({ x: c.x, y: c.y, z: c.z, value: c.value, time: sim.elapsed, kind: "pick", id: c.id, size: c.size || 1 });
+    // (A big coin: a call-out on screen too.)
+    if (c.size && sim.chaos?.feed) {
+      sim.chaos.feed.push({ text: `+${c.value} 코인!`, kind: "big", time: sim.elapsed });
+      if (sim.chaos.feed.length > 6) sim.chaos.feed.shift();
+    }
     if (sim.coinFx.length > 40) sim.coinFx.shift();
   }
 }
