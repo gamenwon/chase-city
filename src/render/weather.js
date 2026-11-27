@@ -72,12 +72,14 @@ export class Weather {
     });
   }
   patch(m) {
-    if (!m || this.patched.has(m) || m.transparent || m.userData.noWeather || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
+    if (!m || this.patched.has(m) || (m.transparent && !m.userData.wxFade) || m.userData.noWeather || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
     this.patched.add(m);
     const U = this.uniforms, prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey;
     m.onBeforeCompile = (shader, r) => {
       prev?.call(m, shader, r);
       Object.assign(shader.uniforms, U);
+      // (The elevated deck: snowed over like the streets below look.)
+      if (m.userData.wxNoSlush) shader.fragmentShader = "#define WX_NO_SLUSH\n" + shader.fragmentShader;
       shader.vertexShader = shader.vertexShader
         .replace("#include <common>", "#include <common>\nvarying vec3 vWxWorld;")
         .replace(
@@ -118,14 +120,17 @@ export class Weather {
             float up = smoothstep(0.45, 0.85, wxN.y);
             float n = wxNoise(vWxWorld.xz * 0.35) * 0.6 + wxNoise(vWxWorld.xz * 1.7) * 0.4;
             float road = 0.0;
-            #ifdef USE_COLOR
+            #if defined(USE_COLOR) && !defined(WX_NO_SLUSH)
               road = 1.0 - smoothstep(0.015, 0.05, distance(vColor.rgb, uWxRoad));
             #endif
             // Snow: thick on roofs, pavements and grass, thin slush on the
             // roads (worn into darker ruts), a light frost on the walls.
             float cover = uSnow * up * mix(0.72, 1.0, n) * (1.0 - road * mix(0.72, 0.5, n));
             // Tyre tracks: where cars have driven, the surface shows through.
-            cover *= 1.0 - 0.92 * texture2D(uWxTracks, (vWxWorld.xz + 120.0) / 240.0).r;
+            // (Two layers: the streets (red) and the elevated road's deck
+            // (green), so tracks on one do not show on the other.)
+            vec4 wxT = texture2D(uWxTracks, (vWxWorld.xz + 120.0) / 240.0);
+            cover *= 1.0 - 0.92 * min(1.0, vWxWorld.y > 3.2 ? wxT.g : wxT.r);
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.98), clamp(cover, 0.0, 1.0));
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.9, 0.95), uSnow * 0.1 * (1.0 - up));
             // Rain: wet, darker upward surfaces, darker still in puddles.
@@ -139,7 +144,7 @@ export class Weather {
           }`,
         );
     };
-    m.customProgramCacheKey = () => (prevKey ? prevKey.call(m) : "") + "|wx";
+    m.customProgramCacheKey = () => (prevKey ? prevKey.call(m) : "") + (m.userData.wxNoSlush ? "|wxns" : "|wx");
     m.needsUpdate = true;
   }
   // Wet ground picks up the sky (prefiltered map, no real-time
@@ -177,6 +182,8 @@ export class Weather {
     this.trackN = n;
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.NoColorSpace;
+    // (Canvas row = world z, as the shader reads it: not flipped.)
+    t.flipY = false;
     t.generateMipmaps = false;
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
@@ -186,6 +193,7 @@ export class Weather {
     this.trackClock = 0;
   }
   clearTracks() {
+    this.trackCtx.globalCompositeOperation = "source-over";
     this.trackCtx.fillStyle = "#000";
     this.trackCtx.fillRect(0, 0, this.trackN, this.trackN);
     this.trackTex.needsUpdate = true;
@@ -198,34 +206,47 @@ export class Weather {
       this.clearTracks();
     }
     const k = this.trackN / 240, g = this.trackCtx;
-    g.strokeStyle = "rgba(255,255,255,0.85)";
-    g.lineWidth = Math.max(1.2, 0.34 * k);
-    g.lineCap = "round";
+    // Added up (each layer in its own channel; a lane driven again and
+    // again wears deeper); butt ends, so the joins do not double up.
+    g.globalCompositeOperation = "lighter";
+    g.lineCap = "butt";
+    const w = Math.max(1.2, 0.34 * k);
     const cars = [sim.player, ...sim.police.filter((c) => c.state === "active"), ...(sim.target?.state === "fleeing" ? [sim.target] : [])];
     for (const t of sim.city?.traffic || []) if (!t.parked && t.state !== "wreck" && Math.abs(t.x - center.x) < 70 && Math.abs(t.z - center.z) < 70) cars.push(t);
     let drew = false;
     for (const c of cars) {
-      if (c.air || c.level > 0) {
+      if (c.air || c.falling) {
         this.trackLast.delete(c);
         continue;
       }
+      // On the deck (and the upper part of its ramps): the deck layer.
+      const deck = c.level > 0 && (c.y || 0) > 3.2;
       const fx = -Math.sin(c.angle), fz = -Math.cos(c.angle), rx = Math.cos(c.angle), rz = -Math.sin(c.angle);
       const pts = [-1, 1].map((s) => [c.x - fx * 1.1 + rx * s * 0.7, c.z - fz * 1.1 + rz * s * 0.7]);
       const last = this.trackLast.get(c);
       if (last) {
-        const d = Math.hypot(pts[0][0] - last[0][0], pts[0][1] - last[0][1]);
+        const d = Math.hypot(pts[0][0] - last.pts[0][0], pts[0][1] - last.pts[0][1]);
         if (d < 0.25) continue;
-        if (d < 4) {
+        if (d < 4 && last.deck === deck) {
+          // Faint driving straight; the full, deep track in a turn or a
+          // slide (how fast it turns per metre, how much it slides sideways).
+          let da = c.angle - last.angle;
+          da = Math.atan2(Math.sin(da), Math.cos(da));
+          const slide = Math.abs((c.vx || 0) * rx + (c.vz || 0) * rz);
+          const turn = Math.min(1, Math.max(0, (Math.abs(da) / d - 0.025) / 0.09, (slide - 1.5) / 4));
+          const a = 0.26 + 0.59 * turn;
+          g.strokeStyle = deck ? `rgba(0,255,0,${a})` : `rgba(255,0,0,${a})`;
+          g.lineWidth = w * (0.8 + 0.2 * turn);
           g.beginPath();
           for (let i = 0; i < 2; i++) {
-            g.moveTo((last[i][0] + 120) * k, (last[i][1] + 120) * k);
+            g.moveTo((last.pts[i][0] + 120) * k, (last.pts[i][1] + 120) * k);
             g.lineTo((pts[i][0] + 120) * k, (pts[i][1] + 120) * k);
           }
           g.stroke();
           drew = true;
         }
       }
-      this.trackLast.set(c, pts);
+      this.trackLast.set(c, { pts, angle: c.angle, deck });
     }
     this.trackClock += dt;
     if (drew && this.trackClock > (this.mobile ? 0.25 : 0.15)) {

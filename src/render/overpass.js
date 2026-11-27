@@ -43,6 +43,9 @@ export class OverpassRenderer {
     // light it the same way.
     this.deckMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true, side: THREE.DoubleSide });
     this.pillarMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    // (Faded see-through now and then for the camera: snow all the same.)
+    this.deckMat.userData.wxFade = this.pillarMat.userData.wxFade = true;
+    this.deckMat.userData.wxNoSlush = true;
     this.crackMat = new THREE.MeshStandardMaterial({ color: 0x3a3632, roughness: 1 });
     this.opacity = 1;
   }
