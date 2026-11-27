@@ -94,11 +94,12 @@ test("the elevated road keeps every car on the deck (no jumping off)", () => {
   assert.equal(s.stats.deckLeaps || 0, 0);
 });
 
-test("hill streets: one or two of the city's own streets go flat, up, down, up, down, flat; buildings along them stand on the slope", () => {
+test("hill streets: about four places on the city's own streets go flat, up, down, up, down, flat; buildings along them stand on the slope", () => {
   for (let seed = 1; seed <= 10; seed++) {
     const L = generateCity(seed);
     const fs = L.features.filter((q) => q.kind === "hillstreet");
-    assert.ok(fs.length >= 1 && fs.length <= 2, `seed ${seed}: ${fs.length}`);
+    // About four places per city.
+    assert.ok(fs.length >= 3 && fs.length <= 4, `seed ${seed}: ${fs.length}`);
     // Existing streets (no new ones), no hill block.
     assert.equal(L.features.some((q) => q.kind === "hillroad" || q.kind === "dunes"), false);
     for (const f of fs) {

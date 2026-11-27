@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { clamp } from "../game/config.js";
+import { groundHeight } from "../game/jumps.js";
 export function trailIntensity(player) {
   const speed = Math.hypot(player.vx, player.vz);
   return {
@@ -63,6 +64,8 @@ export class SkidMarks {
     this.v = new THREE.Vector3();
     this.s = new THREE.Vector3();
     this.up = new THREE.Vector3(0, 1, 0);
+    this.xAxis = new THREE.Vector3(1, 0, 0);
+    this.tilt = new THREE.Quaternion();
     this.c = new THREE.Color();
     this.light = new THREE.Color(0x2c2b30);
     this.dark = new THREE.Color(0x0b0b0d);
@@ -132,7 +135,16 @@ export class SkidMarks {
     if (j === 0 && this.total > this.capacity) chunk.box.makeEmpty();
     // Overlap a little so a curve has no gaps between strips.
     this.q.setFromAxisAngle(this.up, Math.atan2(-dx, -dz));
-    this.m.compose(this.v.set(from.x, ROAD_Y, from.z), this.q, this.s.set(0.32, 1, d + 0.06));
+    // (On a hill street: on its surface, tilted with it.)
+    let y = ROAD_Y;
+    if (this.hills?.length) {
+      const h0 = groundHeight(this.hills, from.x, from.z), h1 = groundHeight(this.hills, from.x + dx, from.z + dz);
+      if (h0 > 0 || h1 > 0) {
+        y += h0 + 0.02;
+        this.q.multiply(this.tilt.setFromAxisAngle(this.xAxis, Math.atan2(h1 - h0, d)));
+      }
+    }
+    this.m.compose(this.v.set(from.x, y, from.z), this.q, this.s.set(0.32, 1, d + 0.06));
     chunk.mesh.setMatrixAt(j, this.m);
     chunk.mesh.setColorAt(j, this.snow ? this.c.copy(this.snowLight).lerp(this.snowDark, amount) : this.c.copy(this.light).lerp(this.dark, 0.45 + 0.55 * amount));
     chunk.mesh.count = Math.max(chunk.mesh.count, j + 1);

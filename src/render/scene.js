@@ -496,6 +496,10 @@ export class CityRenderer {
     this.effects.update(sim.events, sim.elapsed);
     if (sim.cameraRig !== this.cameraRig || !running)
       this.cameraRig.update(p, dt);
+    if (this.trailsLayout !== sim.layout) {
+      this.trailsLayout = sim.layout;
+      this.trails.skids.hills = (sim.layout?.mounds || []).filter((m) => m.hill);
+    }
     this.trails.update(p, dt, running);
     this.weather.update(sim, dt, this.cameraRig.follow);
     this.camera.updateMatrixWorld(true);

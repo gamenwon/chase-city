@@ -25,12 +25,12 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
     const c = cellOf(x), r = cellOf(z);
     return c < 0 || r < 0 || c >= N || r >= N ? -1 : kind[r * N + c];
   };
-  const ok = new Set([KIND.BUILT, KIND.LAND, KIND.ALLEY, KIND.LOT, KIND.PARKING, KIND.ROAD, KIND.WALK]);
+  const ok = new Set([KIND.BUILT, KIND.LAND, KIND.ALLEY, KIND.LOT, KIND.PARKING, KIND.ROAD, KIND.WALK, KIND.PARK, KIND.PLAZA]);
   const cands = [];
   for (const e of graph.edges) {
     if (e.kind !== "road" || e.ring || e.avenue || e.pts.length !== 2) continue;
     const a = e.pts[0], b = e.pts[1], L = Math.hypot(b.x - a.x, b.z - a.z);
-    if (L < 32) continue;
+    if (L < 30) continue;
     const ux = (b.x - a.x) / L, uz = (b.z - a.z) / L, nx = -uz, nz = ux;
     const band = e.width / 2 + SIDEWALK;
     // Both sides: built ground just past the pavement (no facility, park
@@ -43,7 +43,7 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
           if (k === KIND.BUILT) built++;
           if (k === MODULE || !ok.has(k)) good = false;
         }
-    if (!good || built < 8) continue;
+    if (!good || built < 4) continue;
     const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
     if (avoid.some((q) => Math.abs((q.x - mid.x) * ux + (q.z - mid.z) * uz) < L / 2 + 14 && Math.abs((q.x - mid.x) * nx + (q.z - mid.z) * nz) < band + 14)) continue;
     const near = buildings.filter((q) => Math.abs((q.x - mid.x) * ux + (q.z - mid.z) * uz) < L / 2 + Math.max(q.w, q.d) && Math.abs((q.x - mid.x) * nx + (q.z - mid.z) * nz) < band + Math.max(q.w, q.d) / 2 + 1.5);
@@ -66,10 +66,13 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
       }
   }
   void byId;
+  // About four places per city, spread out (a new set each new city).
+  const WANT = 4;
   const plans = [];
-  const apart = (m) => plans.every((p) => Math.hypot(p.mid.x - m.x, p.mid.z - m.z) > 70);
+  const apart = (m) => plans.every((p) => Math.hypot(p.mid.x - m.x, p.mid.z - m.z) > 36);
+  const used = (e) => plans.some((p) => p.edges.includes(e));
   for (const ch of chains.sort(() => R() - 0.5)) {
-    if (plans.length >= 2) break;
+    if (plans.length >= WANT - 1) break;
     if (!apart(ch.mid) || plans.some((p) => p.edges.some((e) => ch.segs.some((c) => c.e === e)))) continue;
     // Oriented through the junction: first segment toward it, second away.
     const [c1, c2] = ch.segs;
@@ -77,11 +80,11 @@ export function hillStreets({ graph, kind, buildings, R, avoid, cellOf, N, KIND,
     const away2 = c2.e.a === ch.n.id ? { a: c2.a, ux: c2.ux, uz: c2.uz } : { a: c2.b, ux: -c2.ux, uz: -c2.uz };
     plans.push({ mid: ch.mid, edges: [c1.e, c2.e], segs: [{ ...toward, L: c1.L, c: c1, hills: 1 }, { ...away2, L: c2.L, c: c2, hills: 1 }] });
   }
-  if (!plans.length)
-    for (const c of cands.sort(() => R() - 0.5)) {
-      if (plans.length >= 1) break;
-      plans.push({ mid: c.mid, edges: [c.e], segs: [{ a: c.a, ux: c.ux, uz: c.uz, L: c.L, c, hills: 2 }] });
-    }
+  for (const c of cands.sort(() => R() - 0.5)) {
+    if (plans.length >= WANT) break;
+    if (used(c.e) || !apart(c.mid)) continue;
+    plans.push({ mid: c.mid, edges: [c.e], segs: [{ a: c.a, ux: c.ux, uz: c.uz, L: c.L, c, hills: 2 }] });
+  }
   const mounds = [], features = [];
   const F = 5;
   for (const plan of plans) {
@@ -167,7 +170,8 @@ function finishMesh(root, pos, col) {
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide, flatShading: true }));
+  // (Drawn over the flat street it lies on: no flicker where they meet.)
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide, flatShading: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
   mesh.receiveShadow = true;
   mesh.userData.keep = true; // (its own vertex colours: not re-baked by material colour)
   mesh.userData.hillStreet = true;

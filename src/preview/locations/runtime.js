@@ -120,7 +120,12 @@ export class LocationsRuntime {
       if (f.kind === "diner") dinerDecor(decor, f);
       if (f.kind === "bigsite") bigsiteDecor(decor, f);
       // (A hill street is its own mesh, straight into the scene.)
-      if (f.kind === "hillstreet") renderer?.gfx?.patch(hillStreetDecor(scene, f).material);
+      if (f.kind === "hillstreet") {
+        // Same surfaces as the flat streets: asphalt / paving, snow, rain.
+        const m = hillStreetDecor(scene, f).material;
+        renderer?.gfx?.patch(m);
+        renderer?.weather?.patch(m);
+      }
       if (f.kind === "containers") yardDecor(decor, f);
       if (f.kind === "funpark") funparkDecor(decor, f);
       if (decor.children.length) scene.add(bake(decor));
