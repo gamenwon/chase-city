@@ -24,7 +24,8 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { asphaltTextures, pavingTextures, brickTextures } from "./textures.js";
 import { K } from "./kit.js";
-import { buildRaw, buildDetailed, PLAYER_MODELS, policeCar, INTERIOR, DASH, LENS } from "./cartoon.js";
+import { buildDetailed, PLAYER_MODELS, TRAFFIC_TYPES, policeCar, INTERIOR, DASH, LENS } from "./cartoon.js";
+import { scaled } from "./kit.js";
 
 export class MaterialPass {
   constructor(renderer, scene, theme) {
@@ -140,11 +141,30 @@ uniform vec3 uRoad, uWalk, uBrick;`,
     this.night = night;
     for (const m of Object.values(this.vehicleMats)) if (m.envMapIntensity != null) m.envMapIntensity = (night ? 0.35 : 1) * (m.userData.env ?? 1);
   }
-  // A player car with surface materials (null if the id is unknown).
+  // A player car with surface materials (null if the id is unknown):
+  // every car in the detailed build (see-through glass over an interior,
+  // frames, mouldings, wheels, lamps).
   vehicle(id) {
     const make = PLAYER_MODELS[id];
     if (!make) return null;
-    return materialize((DETAILED.has(id) ? buildDetailed : buildRaw)(make), this.vehicleMats);
+    return materialize(buildDetailed(make), this.vehicleMats);
+  }
+  // Any other shell-built car (the coin carrier, the armoured police unit).
+  model(make) {
+    return materialize(buildDetailed(make), this.vehicleMats);
+  }
+  // A civilian type for the city's instanced traffic: the detailed build,
+  // flattened to one geometry per material (built once per type).
+  trafficParts(type) {
+    this.trafficCache ||= new Map();
+    // (Fewer materials than the player's car, for fewer draw calls with
+    // up to 40 cars: interior, rubber and plastic as one dark trim, lenses
+    // as glass, every lamp one unlit material in its own colour.)
+    const M = this.vehicleMats;
+    this.trafficLamp ||= new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    const remap = (m) => (m === M.interior || m === M.rubber ? M.plastic : m === M.lens ? M.glass : m.emissive && m.emissive.getHex() && m !== M.paint ? this.trafficLamp : m);
+    if (!this.trafficCache.has(type)) this.trafficCache.set(type, flattenByMaterial(materialize(buildDetailed(() => scaled(TRAFFIC_TYPES[type]())), M), remap));
+    return this.trafficCache.get(type);
   }
   // The patrol car, detailed (the armoured unit keeps its own model).
   police() {
@@ -177,8 +197,6 @@ function skyEnvironment() {
   scene.add(sun);
   return scene;
 }
-// Detailed builds so far (test scope: the coupe; the patrol car too).
-const DETAILED = new Set(["starter"]);
 const CLASS = new Map([
   [INTERIOR, "interior"], [DASH, "interior"], [LENS, "lens"], [0xf2f2ee, "lens"], [0x26252b, "rubber"],
   [0x2a74c8, "glass"], [0x9fd6ff, "glass"],
@@ -228,7 +246,9 @@ function materialize(outer, mats) {
   const wheels = new Set(inner.userData.wheels || []);
   const belt = inner.userData.belt;
   // Meshes the renderer still drives (police light bar lenses) stay apart.
-  const keep = new Set(Object.values(outer.userData).filter((v) => v?.isMesh));
+  // (So do the parts it moves as a whole: the coin carrier's roof coin.)
+  const keep = new Set();
+  for (const v of Object.values(outer.userData)) if (v?.isObject3D) v.traverse((q) => q.isMesh && keep.add(q));
   // Height range of the body in the inner model's frame (for the baked
   // occlusion): from the lowest body part up about a metre.
   let yLow = Infinity;
@@ -283,6 +303,32 @@ function materialize(outer, mats) {
   for (const w of wheels) merge(w, true);
   outer.userData.pbr = true;
   return outer;
+}
+
+// A car built the other way (toon-vehicles.js: one baked body mesh in
+// vertex colours): the body gets the clear-coat paint and the sky
+// reflection; lamps and decals stay as they are.
+export function paintToon(model, gfx) {
+  if (!gfx?.on) return model;
+  model.traverse((o) => {
+    const m = o.material;
+    if (o.isMesh && m?.vertexColors && !m.map && !(m.emissive?.getHex())) o.material = gfx.vehicleMats.paint;
+  });
+  return model;
+}
+
+// One geometry per material of a built model, in its own frame (for an
+// instanced mesh per material).
+function flattenByMaterial(outer, remap = (m) => m) {
+  outer.updateMatrixWorld(true);
+  const inv = outer.matrixWorld.clone().invert(), by = new Map();
+  outer.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+    const mat = remap(o.material);
+    (by.get(mat) || by.set(mat, []).get(mat)).push(g);
+  });
+  return [...by].map(([material, list]) => ({ material, geometry: list.length > 1 ? mergeGeometries(list) : list[0] }));
 }
 
 // ------------------------------------------------------ contact shadows

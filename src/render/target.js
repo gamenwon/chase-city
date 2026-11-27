@@ -51,6 +51,20 @@ export class TargetRenderer {
     this.point = new THREE.Vector3();
     this.view = null;
   }
+  // The material pass (pbr.js): the van in its detailed build (see-through
+  // glass, interior, paint), or back to the flat one.
+  setGfx(gfx) {
+    const want = gfx?.on ? gfx : null;
+    if (want === (this.gfx || null)) return;
+    this.gfx = want;
+    const old = this.car;
+    this.car = want ? want.model(targetCar) : targetCar();
+    this.car.position.copy(old.position);
+    this.car.rotation.copy(old.rotation);
+    this.car.visible = old.visible;
+    this.group.remove(old);
+    this.group.add(this.car);
+  }
   reset() {
     this.group.visible = false;
     this.lastEvent = 0;

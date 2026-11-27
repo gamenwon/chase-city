@@ -4,6 +4,27 @@ import { trafficGeometry, TRAFFIC_TYPES } from "./cartoon.js";
 // Civilian traffic types (cartoon redesign) and how common each is: the
 // type of a car follows from its id (stable for the whole run).
 const TYPES = Object.keys(TRAFFIC_TYPES);
+// Several instanced meshes (one per material) moved as one: the calls the
+// traffic code makes on a single instanced mesh, passed on to each.
+class InstancedSet {
+  constructor(owner, parts, count) {
+    this.meshes = parts.map(({ geometry, material }) => {
+      const m = owner.instanced(geometry, material, count);
+      m.castShadow = false; // (as the flat cars: no shadow pass for traffic)
+      return m;
+    });
+    const list = this.meshes;
+    this.instanceMatrix = { set needsUpdate(v) { for (const m of list) m.instanceMatrix.needsUpdate = v; } };
+    this.instanceColor = { set needsUpdate(v) { for (const m of list) if (m.instanceColor) m.instanceColor.needsUpdate = v; } };
+  }
+  setMatrixAt(i, m) { for (const x of this.meshes) x.setMatrixAt(i, m); }
+  setColorAt(i, c) { for (const x of this.meshes) x.setColorAt(i, c); }
+  set count(n) { for (const x of this.meshes) x.count = n; }
+  get count() { return this.meshes[0]?.count ?? 0; }
+  set visible(v) { for (const x of this.meshes) x.visible = v; }
+  get visible() { return this.meshes[0]?.visible ?? false; }
+  traverse(fn) { for (const x of this.meshes) fn(x); }
+}
 const TYPE_SHARE = { city: 0.28, compact: 0.22, taxi: 0.16, van: 0.14, bus: 0.08, cargo: 0.12 };
 export function trafficType(id) {
   let h = ((id * 2654435761) >>> 0) / 4294967296, acc = 0;
@@ -106,6 +127,39 @@ export class CityLifeRenderer {
     this.scene.add(mesh);
     return mesh;
   }
+  // Civilian cars: one instanced mesh per type (flat colours), or, with
+  // the material pass on (gfx: pbr.js), the detailed build per type (see-
+  // through glass, interior, paint, metal, rubber), one instanced mesh per
+  // material, driven together.
+  buildCars() {
+    const gfx = this.gfx;
+    const carMat = gfx ? null : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, flatShading: true });
+    this.carMeshes = Object.fromEntries(TYPES.map((t) => {
+      const m = gfx ? new InstancedSet(this, gfx.trafficParts(t), 40) : this.instanced(trafficGeometry(t), carMat, 40);
+      m.count = 0;
+      return [t, m];
+    }));
+    this.carKey = null;
+  }
+  // The material pass switched on or off: the cars rebuilt to match.
+  setGfx(gfx) {
+    if ((gfx || null) === (this.gfx || null)) return;
+    this.gfx = gfx || null;
+    if (!this.carMeshes || !this.ready) return;
+    for (const m of Object.values(this.carMeshes)) this.dropMesh(m);
+    this.buildCars();
+  }
+  dropMesh(mesh) {
+    if (mesh.meshes) {
+      // (Shared, cached geometry and materials: only taken out.)
+      for (const m of mesh.meshes) this.scene.remove(m);
+      return;
+    }
+    this.scene.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+    mesh.dispose?.();
+  }
   build(city) {
     this.city = city;
     // Props: one instanced mesh per (kind, part).
@@ -158,12 +212,7 @@ export class CityLifeRenderer {
     };
     // Civilian cars (moving, parked, wrecked): one instanced mesh per type
     // (city car, compact, taxi, van, bus, cargo truck), one shared material.
-    const carMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, flatShading: true });
-    this.carMeshes = Object.fromEntries(TYPES.map((t) => {
-      const m = this.instanced(trafficGeometry(t), carMat, 40);
-      m.count = 0;
-      return [t, m];
-    }));
+    this.buildCars();
     // Impact particles: leaves, sparks, dust, rubbish.
     this.particles = [];
     this.particleMesh = this.instanced(
@@ -543,12 +592,7 @@ export class CityLifeRenderer {
       this.flameMesh,
       this.coreMesh,
     ];
-    for (const mesh of all) {
-      this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      mesh.material.dispose();
-      mesh.dispose?.();
-    }
+    for (const mesh of all) this.dropMesh(mesh);
     this.ready = false;
   }
   reset() {

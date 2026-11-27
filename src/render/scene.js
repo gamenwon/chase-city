@@ -14,7 +14,7 @@ import { CityLifeRenderer } from "./city.js";
 import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
-import { MaterialPass } from "./pbr.js";
+import { MaterialPass, paintToon } from "./pbr.js";
 import { CITY_HALF } from "../world/citygen.js";
 import { Weather } from "./weather.js";
 import { OverpassRenderer } from "./overpass.js";
@@ -133,8 +133,10 @@ export class CityRenderer {
     this.roadEvents = new RoadEventsRenderer(this.scene);
     this.officers = new OfficerRenderer(this.scene);
     this.cityLife = new CityLifeRenderer(this.scene);
+    this.cityLife.gfx = this.gfx.on ? this.gfx : null;
     this.pickups = new PickupRenderer(this.scene);
     this.targetView = new TargetRenderer(this.scene);
+    if (this.gfx.on) this.targetView.setGfx(this.gfx);
     this.water = new WaterJets(this.scene);
     // V2.1 elevated road(s) of a generated city.
     this.overpass = new OverpassRenderer(this.scene, theme);
@@ -306,6 +308,9 @@ export class CityRenderer {
     this.gfx.set(on);
     this.gfx.setNight(this.tod === "night");
     this.playerModelId = null; // rebuilt with (or without) materials
+    // Every other car too: traffic, the coin carrier.
+    this.cityLife?.setGfx(on ? this.gfx : null);
+    this.targetView?.setGfx(on ? this.gfx : null);
     // Police cars too: drop them all, the render loop builds new ones.
     if (this.police) {
       for (const m of this.police) this.scene.remove(m);
@@ -450,7 +455,7 @@ export class CityRenderer {
         const slot = (this.policeVariants ||= [])[i] ||= { patrol: this.police[i] };
         this.police[i].visible = false;
         if (!slot[kind]) {
-          slot[kind] = kind === "suv" ? policeSuv() : policeArmored();
+          slot[kind] = kind === "suv" ? paintToon(policeSuv(), this.gfx) : (this.gfx.on && this.gfx.model(policeArmored)) || policeArmored();
           slot[kind].userData.kind = kind;
           this.scene.add(slot[kind]);
         }
