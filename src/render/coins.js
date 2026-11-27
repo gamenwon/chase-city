@@ -87,7 +87,14 @@ export class CoinRenderer {
       if (Math.abs(c.x - p.x) > 85 || Math.abs(c.z - p.z) > 85) continue;
       this.q.setFromAxisAngle(this.v.set(0, 1, 0), now * 3 + c.id * 0.7);
       const bob = Math.sin(now * 2.4 + c.id) * 0.15;
-      this.m.compose(this.v.set(c.x, c.y + bob, c.z), this.q, this.s.setScalar(1.3));
+      // Thrown out of the coin carrier: an arc from the van to where it lies.
+      const fl = c.born != null ? (now - c.born) / 0.45 : 1;
+      if (fl < 1) {
+        const u = Math.max(0, fl);
+        this.v.set(c.fromX + (c.x - c.fromX) * u, 2.2 + (c.y - 2.2) * u + Math.sin(Math.PI * u) * 2.2, c.fromZ + (c.z - c.fromZ) * u);
+        this.q.setFromAxisAngle(this.s.set(1, 0, 0), now * 14 + c.id);
+        this.m.compose(this.v, this.q, this.s.setScalar(1.3));
+      } else this.m.compose(this.v.set(c.x, c.y + bob, c.z), this.q, this.s.setScalar(1.3));
       this.mesh.setMatrixAt(n++, this.m);
       // A glint now and then.
       if (Math.random() < 0.004 && this.sparkList.length < SPARK) this.sparkList.push({ x: c.x + (Math.random() - 0.5) * 0.8, y: c.y + 0.3, z: c.z, vx: 0, vy: 0.6, vz: 0, life: 0.35, max: 0.35, size: 1.4 });

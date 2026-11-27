@@ -16,6 +16,7 @@ import { CONFIG, clamp, angleDelta } from "./config.js";
 import { policeContact } from "./police.js";
 import { addWreck } from "./wrecks.js";
 import { makePath, pointAt, project } from "./citygraph.js";
+import { spillCoins, SPILL } from "./coins.js";
 
 export const TARGET = Object.freeze({
   health: 100,
@@ -348,8 +349,13 @@ export function resolveTargetContact(sim) {
   // Proportional to impact severity: a rear-end bump ~5-12, a hard ram
   // 20-30, a T-bone at full speed up to 34.
   // (A car with more impact power takes it down in fewer hits.)
-  const damage = clamp((closing - 2) * 3.2, 2, 34) * Math.sqrt(sim.vehicle?.stats.impact || 1);
+  // CITY CHAOS: the target is the coin carrier: it cannot be destroyed;
+  // every hit throws coins out round it. (TARGET HUNT: taking it down is
+  // the mission, so there it takes damage as before.)
+  const carrier = !!sim.chaos;
+  const damage = carrier ? 0 : clamp((closing - 2) * 3.2, 2, 34) * Math.sqrt(sim.vehicle?.stats.impact || 1);
   t.health = Math.max(0, t.health - damage);
+  if (carrier) spillCoins(sim, t.x, t.z, SPILL.count);
   t.hits++;
   t.damageTaken += damage;
   t.biggestHit = Math.max(t.biggestHit, closing);

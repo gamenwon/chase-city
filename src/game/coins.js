@@ -207,6 +207,33 @@ export function awardCoins(sim, key, kind, x, z, chainDepth = 0) {
   return amount;
 }
 
+// CITY CHAOS coin carrier: every hit throws coins out round it (they arc
+// out from the van and land on open ground, never in a building). Spilled
+// coins left lying are capped (the oldest go first).
+export const SPILL = Object.freeze({ count: 10, value: 1, r0: 2.6, r1: 4.6, cap: 120, flight: 0.45 });
+export function spillCoins(sim, x, z, n = SPILL.count) {
+  if (!sim.coins) return 0;
+  let made = 0;
+  const base = Math.random() * Math.PI * 2;
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k < 6; k++) {
+      const a = base + (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5 + k * 0.37;
+      const r = SPILL.r0 + Math.random() * (SPILL.r1 - SPILL.r0) - k * 0.3;
+      const cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r;
+      if (sim.nearSolids && sim.nearSolids(cx, cz, 0.6).length) continue;
+      const ground = groundHeight(sim.layout?.mounds || [], cx, cz);
+      sim.coins.push({ id: sim.coins.length, x: cx, z: cz, y: ground + 1.0, kind: "spill", value: SPILL.value, taken: false, born: sim.elapsed, fromX: x, fromZ: z });
+      made++;
+      break;
+    }
+  }
+  // Keep the spilled coins lying about bounded.
+  const lying = sim.coins.filter((c) => c.kind === "spill" && !c.taken);
+  for (const c of lying.slice(0, Math.max(0, lying.length - SPILL.cap))) c.taken = true;
+  sim.coinStats.spilled = (sim.coinStats.spilled || 0) + made;
+  return made;
+}
+
 // Every step: the player drives through coins (never police or traffic).
 export function updateCoins(sim) {
   const p = sim.player;
@@ -215,6 +242,7 @@ export function updateCoins(sim) {
   const R = sim.vehicle?.stats.coinRadius || COINS.radius;
   for (const c of sim.coins) {
     if (c.taken) continue;
+    if (c.born != null && sim.elapsed - c.born < SPILL.flight) continue; // (still flying out)
     if (Math.abs(c.x - p.x) > R || Math.abs(c.z - p.z) > R) continue;
     if (Math.hypot(c.x - p.x, c.z - p.z) > R || Math.abs(c.y - py) > COINS.height) continue;
     c.taken = true;

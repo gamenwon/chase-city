@@ -129,3 +129,34 @@ test("heavy police: heavier, sturdier, slower, not indestructible; shove heavy p
   const normal = run(null), armored = run("armored");
   assert.ok(armored.pv > normal.pv, `the heavy one stops the armored car more (${normal.pv.toFixed(1)} vs ${armored.pv.toFixed(1)})`);
 });
+
+test("coin carrier: never destroyed in CITY CHAOS; every hit throws 10 coins round it (not into buildings), picked up after they land", async () => {
+  const { resolveTargetContact } = await import("../src/game/target.js");
+  const s = make();
+  const t = s.target;
+  t.state = "fleeing";
+  const before = s.coins.length;
+  let hits = 0;
+  for (let k = 0; k < 6; k++) {
+    // A hard ram, past the hit cooldown.
+    Object.assign(s.player, { x: t.x - 2.2, z: t.z, vx: 22, vz: 0, level: 0 });
+    Object.assign(t, { vx: 0, vz: 0, lastHitAt: -99, level: 0 });
+    if (resolveTargetContact(s) > 0) hits++;
+  }
+  assert.ok(hits >= 3, `hits ${hits}`);
+  assert.equal(t.health, 100, "no damage");
+  assert.equal(t.state, "fleeing");
+  const spilled = s.coins.slice(before);
+  assert.equal(spilled.length, hits * 10);
+  for (const c of spilled) assert.equal(s.nearSolids(c.x, c.z, 0.6).length, 0, "on open ground");
+  // Still flying: not picked yet; once landed, the player collects them.
+  const c = spilled.at(-1);
+  Object.assign(s.player, { x: c.x, z: c.z, vx: 0, vz: 0 });
+  s.update(1 / 60, {});
+  assert.equal(c.taken, false, "not while flying");
+  step(s, 30);
+  Object.assign(s.player, { x: c.x, z: c.z, vx: 0, vz: 0 });
+  const coins0 = s.runCoins;
+  step(s, 2);
+  assert.ok(c.taken && s.runCoins > coins0, "picked up after landing");
+});
