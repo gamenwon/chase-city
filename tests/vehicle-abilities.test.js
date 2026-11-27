@@ -201,3 +201,24 @@ test("mini: through a real barricade's cone lane with the whole game step (not p
     assert.ok(b.vertical ? p.z < bz - 1 : p.x < bx - 1, `side ${side}: through`);
   }
 });
+
+test("mini passages: about five 1.9 m gaps between buildings, street to street; only the mini gets through", () => {
+  for (let seed = 1; seed <= 6; seed++) assert.equal(generateCity(seed).miniPassages.length, 5, `seed ${seed}`);
+  const through = (vehicle) => {
+    const s = make(vehicle);
+    return s.layout.miniPassages.map((q) => {
+      const p = s.player;
+      Object.assign(p, { x: q.x, z: q.z0 - 3.5, angle: Math.PI, vx: 0, vz: 10, speed: 10, level: 0, y: 0, recover: null, postEscape: null });
+      s.previousPlayer = { x: p.x, z: p.z };
+      p.lastLegal = { x: p.x, z: p.z };
+      for (let i = 0; i < 260; i++) {
+        s.arrest = 0;
+        Object.assign(p, { angle: Math.PI, vx: 0, vz: 10, speed: 10 });
+        s.update(1 / 60, {});
+      }
+      return p.z > q.z1 + 1.5;
+    });
+  };
+  assert.deepEqual(through("mini"), [true, true, true, true, true]);
+  assert.deepEqual(through("starter"), [false, false, false, false, false]);
+});

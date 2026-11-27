@@ -603,6 +603,7 @@ export function buildCity(seed) {
   // ---- raster and contents per block.
   const buildings = [], alleys = [], arches = [], specialFeatures = [], mounds = [];
   const counts = { landmark: 0, park: 0, built: 0, alley: 0, shortcut: 0, diner: 0 };
+  const narrowSpots = [];
   for (const b of blocks) {
     const S = SIDEWALK;
     if (b.type === "bigsite") {
@@ -663,8 +664,15 @@ export function buildCity(seed) {
       else zones.push({ ...zone, x1: v - A }, { ...zone, x0: v + A });
     } else zones.push(zone);
     const shortcut = !b.alley && R() < 0.85;
-    for (const z of zones) if (packZone(z, R, buildings, { district, shortcut })) counts.shortcut++;
+    for (const z of zones) {
+      const from = buildings.length;
+      if (packZone(z, R, buildings, { district, shortcut })) counts.shortcut++;
+      // (Two rows back to back, street to street: a mini passage could go
+      // between two of its columns.)
+      else if (z.z1 - z.z0 < 23) narrowSpots.push({ z, made: buildings.slice(from) });
+    }
   }
+  const passages = cutMiniPassages(narrowSpots, seed);
   for (const b of buildings) cellsIn(b.x - b.w / 2, b.x + b.w / 2, b.z - b.d / 2, b.z + b.d / 2, (i) => kind[i] !== ROAD && kind[i] !== ALLEY && (kind[i] = BUILT));
   // Street faces of each building (next to pavement, road, alley or lot).
   const open = (x, z) => {
@@ -688,6 +696,9 @@ export function buildCity(seed) {
     b.through = st[0] && st[1] && b.d <= 18 ? "z" : st[2] && st[3] && b.w <= 18 ? "x" : null;
     b.destructible = !!(b.destructible && b.through);
   }
+  // (The mini passages paved as alleys, after the street faces: a 1.9 m
+  // gap is no shopping street.)
+  for (const q of passages) cellsIn(q.x0, q.x1, q.z0, q.z1, (i) => kind[i] !== ROAD && (kind[i] = ALLEY));
   // ---- the outer strip: yard sites between the corners and the exits.
   const segs = [], stripItems = [], stripFlyers = [];
   for (const [axis, s] of [["x", -1], ["x", 1], ["z", -1], ["z", 1]]) {
@@ -783,6 +794,7 @@ export function buildCity(seed) {
     stations: [],
     trees,
     alleys,
+    miniPassages: passages,
     exits,
     overpasses: graph.overpass ? [graph.overpass] : [],
     graph: { nodes: graph.nodes.map(({ id, x, z, ring, foot }) => ({ id, x, z, ring, foot })), edges: allEdges },
@@ -875,6 +887,39 @@ function packZone(z, R, out, { district, shortcut }) {
   }
   out.push(...made);
   return cut;
+}
+
+// Mini passages: about five narrow gaps between two buildings, straight
+// across a two-row block from one street to the other, 1.9 m wide: the
+// mini (1.4 m) gets through, every other car (2.3 m) and the police are
+// too wide. Drawn as alley paving; no street furniture in them. (A random
+// stream of its own, so the rest of the city is as it was.)
+export const MINI_PASSAGE = 1.9;
+function cutMiniPassages(spots, seed) {
+  const R = mulberry32((seed ^ 0x5bd1e995) >>> 0);
+  const order = spots.map((s) => ({ s, k: R() })).sort((a, b) => a.k - b.k).map((o) => o.s);
+  const out = [];
+  for (const { z, made } of order) {
+    if (out.length >= 5) break;
+    const row0 = made.filter((b) => !b.back && !b.destructible && Math.abs(b.z - b.d / 2 - z.z0) < 0.01);
+    const row1 = made.filter((b) => !b.back && !b.destructible && Math.abs(b.z + b.d / 2 - z.z1) < 0.01);
+    // Column edges shared by both rows, not the corners.
+    const edges = row0
+      .map((b) => b.x + b.w / 2)
+      .filter((x) => x > z.x0 + 5 && x < z.x1 - 5 && row1.some((q) => Math.abs(q.x + q.w / 2 - x) < 0.01));
+    if (!edges.length) continue;
+    const X = edges[Math.floor(R() * edges.length)];
+    const cx = (z.z0 + z.z1) / 2;
+    if (out.some((q) => Math.hypot(q.x - X, q.z - cx) < 30)) continue;
+    const left = [...row0, ...row1].filter((b) => Math.abs(b.x + b.w / 2 - X) < 0.01);
+    const right = [...row0, ...row1].filter((b) => Math.abs(b.x - b.w / 2 - X) < 0.01);
+    if (left.length !== 2 || right.length !== 2 || [...left, ...right].some((b) => b.w < MINI_PASSAGE / 2 + 4.6)) continue;
+    const g = MINI_PASSAGE / 2;
+    for (const b of left) (b.w -= g), (b.x -= g / 2);
+    for (const b of right) (b.w -= g), (b.x += g / 2);
+    out.push({ x: X, z: cx, x0: X - g, x1: X + g, z0: z.z0, z1: z.z1 });
+  }
+  return out;
 }
 
 // Cover a block's cells with a few rectangles (for drawing lawns etc.).
@@ -1174,7 +1219,10 @@ export function validateCity(L) {
         const a = B[i], b = B[j];
         const gx = Math.abs(a.x - b.x) - (a.w + b.w) / 2, gz = Math.abs(a.z - b.z) - (a.d + b.d) / 2;
         const slot = (gz < -0.5 && gx > 0.05 && gx < 5.9) || (gx < -0.5 && gz > 0.05 && gz < 5.9);
-        if (slot && !filled((a.x + b.x) / 2, (a.z + b.z) / 2)) problems.push(`slot between buildings at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
+        // (The mini passages are meant: straight through, street to street.)
+        const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
+        const passage = (L.miniPassages || []).some((q) => mx > q.x0 - 0.1 && mx < q.x1 + 0.1 && mz > q.z0 - 0.1 && mz < q.z1 + 0.1);
+        if (slot && !passage && !filled(mx, mz)) problems.push(`slot between buildings at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
         if (gx < -0.05 && gz < -0.05) problems.push(`buildings overlap at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
       }
     for (const e of L.graph.edges) if (e.kind === "road" && e.pts.some((p) => Math.max(Math.abs(p.x), Math.abs(p.z)) > RING + 0.01)) problems.push(`road ${e.id} past the ring`);

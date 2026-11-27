@@ -71,6 +71,8 @@ test("building rows: fronts flush, no gap between neighbours a car could nose in
         // real way through (an alley, 6 m), never a slot in between.
         const filled = (x, z) => B.some((q) => Math.abs(q.x - x) < q.w / 2 && Math.abs(q.z - z) < q.d / 2);
         const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+        // (The mini passages are meant: 1.9 m, straight through.)
+        if (L.miniPassages.some((q) => mid.x > q.x0 - 0.1 && mid.x < q.x1 + 0.1 && mid.z > q.z0 - 0.1 && mid.z < q.z1 + 0.1)) continue;
         if (gz < -0.5 && gx > 0.05 && !filled(mid.x, mid.z)) assert.ok(gx >= 5.9, `seed ${seed}: ${gx.toFixed(2)} m slot at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
         if (gx < -0.5 && gz > 0.05 && !filled(mid.x, mid.z)) assert.ok(gz >= 5.9, `seed ${seed}: ${gz.toFixed(2)} m slot at ${a.x.toFixed(1)},${a.z.toFixed(1)}`);
         assert.ok(!(gx < -0.05 && gz < -0.05), `seed ${seed}: overlapping buildings`);

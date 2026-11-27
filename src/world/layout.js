@@ -62,7 +62,9 @@ export function resolveBuilding(body, box, radius = CONFIG.radius) {
 // are filled with an invisible collider, so a building row reads as one
 // flat wall to physics (a shallow 0.6 m notch at the mouth): no V-shaped pocket at a gap's mouth that a car
 // shoved into it can wedge in. Gaps a car fits through (alleys) are kept.
-export function gapFillers(buildings, maxGap = 2 * CONFIG.radius + 0.9) {
+// (In a mini passage (citygen.js) the filler stops every car but the
+// mini: kind "minigap".)
+export function gapFillers(buildings, maxGap = 2 * CONFIG.radius + 0.9, passages = []) {
   const out = [];
   for (let i = 0; i < buildings.length; i++)
     for (let j = i + 1; j < buildings.length; j++) {
@@ -81,6 +83,7 @@ export function gapFillers(buildings, maxGap = 2 * CONFIG.radius + 0.9) {
         box[w] = gap + 0.02;
         box[o] = (s0 + s1) / 2;
         box[ow] = s1 - s0;
+        if (passages.some((q) => box.x > q.x0 - 0.1 && box.x < q.x1 + 0.1 && box.z > q.z0 - 0.1 && box.z < q.z1 + 0.1)) box.kind = "minigap";
         out.push(box);
       }
     }

@@ -42,7 +42,7 @@ export class Simulation {
       options.cameraRig ||
       new ChaseCamera(options.width || 1100, options.height || 740);
     // Narrow gaps between buildings are closed for physics (gapFillers).
-    this.staticSolids = [...layout.buildings, ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
+    this.staticSolids = [...layout.buildings, ...(layout.obstacles || []), ...gapFillers(layout.buildings, undefined, layout.miniPassages)];
     this.random = options.random || Math.random;
     this.reinforcementsEnabled = options.reinforcements !== false;
     this.helicopterOption = options.helicopter;
@@ -108,7 +108,7 @@ export class Simulation {
     this.layout = layout;
     // Destructible low-rise buildings are solid as wall cells instead
     // (buildings.js), not as one box.
-    this.staticSolids = [...layout.buildings.filter((b) => !b.destructible), ...(layout.obstacles || []), ...gapFillers(layout.buildings)];
+    this.staticSolids = [...layout.buildings.filter((b) => !b.destructible), ...(layout.obstacles || []), ...gapFillers(layout.buildings, undefined, layout.miniPassages)];
   }
   reset(missionId = this.missionId, vehicleId = this.vehicleId) {
     this.runNumber++;
@@ -383,6 +383,8 @@ export class Simulation {
   passesBarricade(body, b, act = true) {
     // (MINI_GAP: how much of the carriageway next to the kerb is open to
     // the mini, render/road-events.js draws cones there.)
+    // (A mini passage between two buildings: only the mini fits.)
+    if (b.kind === "minigap") return body === this.player && !!this.vehicle?.stats.slipsBarricade;
     if (b.kind !== "barricade" || body !== this.player) return false;
     const s = this.vehicle?.stats || {};
     if (s.climbs) {
