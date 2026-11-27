@@ -94,9 +94,12 @@ export class SkidMarks {
   tires(p) {
     const fx = -Math.sin(p.angle), fz = -Math.cos(p.angle);
     const rx = Math.cos(p.angle), rz = -Math.sin(p.angle);
+    // (On the elevated road: at the deck's height, not the street's.)
+    const y = p.level > 0 ? p.y || 0 : 0;
     return [-1, 1].map((side) => ({
       x: p.x - fx * REAR + rx * side * TRACK,
       z: p.z - fz * REAR + rz * side * TRACK,
+      y,
     }));
   }
   update(player, running) {
@@ -116,17 +119,17 @@ export class SkidMarks {
       }
       const dx = pt.x - prev.x, dz = pt.z - prev.z, d = Math.hypot(dx, dz);
       if (d < STEP) return;
-      if (d > 3) {
+      if (d > 3 || Math.abs((pt.y || 0) - (prev.y || 0)) > 0.8) {
         // A jump (respawn, teleport): do not draw across it.
         this.last[i] = pt;
         return;
       }
-      this.add(prev, dx, dz, d, amount);
+      this.add(prev, dx, dz, d, amount, pt);
       this.last[i] = pt;
     });
     this.flush();
   }
-  add(from, dx, dz, d, amount) {
+  add(from, dx, dz, d, amount, to) {
     const i = this.next;
     this.next = (this.next + 1) % this.capacity;
     this.total++;
@@ -137,7 +140,12 @@ export class SkidMarks {
     this.q.setFromAxisAngle(this.up, Math.atan2(-dx, -dz));
     // (On a hill street: on its surface, tilted with it.)
     let y = ROAD_Y;
-    if (this.hills?.length) {
+    if (from.y > 0 || to?.y > 0) {
+      // The deck and its ramps.
+      const y0 = from.y || 0, y1 = to?.y ?? y0;
+      y += y0 + 0.02;
+      this.q.multiply(this.tilt.setFromAxisAngle(this.xAxis, Math.atan2(y1 - y0, d)));
+    } else if (this.hills?.length) {
       const h0 = groundHeight(this.hills, from.x, from.z), h1 = groundHeight(this.hills, from.x + dx, from.z + dz);
       if (h0 > 0 || h1 > 0) {
         y += h0 + 0.02;

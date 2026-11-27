@@ -265,7 +265,7 @@ export class Weather {
     });
   }
   buildSnow() {
-    const n = this.mobile ? 650 : 1000;
+    const n = this.mobile ? 320 : 500;
     const pos = new Float32Array(n * 3), seed = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       pos.set([Math.random() * 70, Math.random() * 34, Math.random() * 70], i * 3);
@@ -398,6 +398,13 @@ export class Weather {
   }
   update(sim, dt, center) {
     if (this.mode === "clear") return;
+    // The street props (trees, benches...) are built with each new city,
+    // after the weather came on: snow on them too.
+    const city = this.r.cityLife?.city;
+    if (city && city !== this.patchedCity) {
+      this.patchedCity = city;
+      this.patchScene();
+    }
     this.time += dt;
     if (this.mode === "snow" && dt > 0) this.paintTracks(sim, center, dt);
     for (const m of [this.snow.material, this.rain.material]) {
