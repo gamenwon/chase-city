@@ -740,6 +740,84 @@ export function armoredTruck() {
   return scaled(g);
 }
 
+// DESTROYER (hostile): a monster truck crossed with an armoured truck,
+// short and wide on huge treaded tyres, black and charcoal armour with
+// vivid red accents, a massive red-edged ram, a slit of a windshield
+// behind an armour visor, flared arches, red lamps. No weapons: it rams.
+export function destroyerTruck() {
+  const BLK = 0x18181c, CH = 0x3a3a42, RED = 0xe3141f, R = 1.0, lift = 0.92;
+  const s = shell({ body: BLK, cabin: CH, roof: BLK, W: 2.36, L: 3.0, clear: lift, belt: lift + 0.78, hood: 0.56, tail: 0.06, cabH: 1.04, lean: 0.22, backLean: 0.04, taper: 0.84, noseDrop: 0.04, r: R, wheelW: 0.8, wheelZ: 1.04, tread: true, rim: CH });
+  const { g, o, faces, inside, top, cf, cb, zf, zb } = s;
+  // Wide stance: wheels out, chunky axles; red hub caps.
+  for (const w of g.userData.wheels) {
+    const sx = Math.sign(w.position.x);
+    w.position.x = sx * (o.W / 2 + 0.26);
+    const hub = add(w, ni(new THREE.CylinderGeometry(0.34, 0.34, 0.08, 8)), RED, sx * (o.wheelW / 2 + 0.03), 0, 0);
+    hub.rotation.z = Math.PI / 2;
+    const nut = add(w, ni(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 6)), BLK, sx * (o.wheelW / 2 + 0.07), 0, 0);
+    nut.rotation.z = Math.PI / 2;
+  }
+  for (const z of [-o.wheelZ, o.wheelZ]) {
+    box(g, o.W + 0.62, 0.2, 0.2, TRIM, 0, R - 0.1, z);
+    for (const sx of [-1, 1]) box(g, 0.16, lift - R + 0.36, 0.16, CH, sx * 0.66, R - 0.02, z);
+  }
+  faceKit(s, { bumper: CH, grille: 0x2a2a30, grilleW: 0.9, lampW: 0.36, lampH: 0.2, bumperH: 0.34 });
+  // Red headlamps over the standard ones (an angry squint).
+  for (const sx of [-1, 1]) box(g, 0.46, 0.17, 0.06, RED, sx * (o.W / 2 - 0.3), o.belt - o.noseDrop - 0.3, zf - 0.05, { emissive: 0xff1020, emissiveIntensity: 1.0 });
+  box(g, o.W - 0.2, 0.08, 0.08, BLK, 0, o.belt - o.noseDrop - 0.17, zf - 0.06); // brow over them
+  // The ram: a wide, deep bumper block with a red face, a wedge plow
+  // below it and two push posts back to the frame.
+  const ry = lift - 0.32, rz = zf - 0.42;
+  box(g, o.W + 0.7, 0.62, 0.36, CH, 0, ry, rz);
+  box(g, o.W + 0.74, 0.18, 0.06, RED, 0, ry + 0.4, rz - 0.2);
+  for (let i = -3; i <= 3; i++) box(g, 0.26, 0.3, 0.06, i % 2 ? BLK : RED, i * 0.38, ry + 0.06, rz - 0.2); // chevron-ish blocks
+  hexa(g, [v3(-o.W / 2 - 0.36, ry - 0.26, rz - 0.52), v3(o.W / 2 + 0.36, ry - 0.26, rz - 0.52), v3(o.W / 2 + 0.36, ry - 0.26, rz + 0.1), v3(-o.W / 2 - 0.36, ry - 0.26, rz + 0.1),
+    v3(-o.W / 2 - 0.36, ry, rz - 0.2), v3(o.W / 2 + 0.36, ry, rz - 0.2), v3(o.W / 2 + 0.36, ry, rz + 0.1), v3(-o.W / 2 - 0.36, ry, rz + 0.1)], BLK); // plow
+  for (const sx of [-1, 1]) box(g, 0.18, 0.18, 0.5, CH, sx * 0.7, ry + 0.2, zf - 0.12);
+  // Armour visor over the windshield: plates top and bottom leave a slit.
+  panel(g, subQuad(faces.front, 0.0, 1.0, 0.0, 0.42), 0.08, CH, inside);
+  panel(g, subQuad(faces.front, 0.0, 1.0, 0.7, 1.0), 0.08, CH, inside);
+  panel(g, subQuad(faces.front, 0.47, 0.53, 0.42, 0.7), 0.08, CH, inside);
+  // Side windows mostly armoured too (small ports), red side stripes.
+  for (const side of ["left", "right"]) {
+    panel(g, subQuad(faces[side], 0.0, 1.0, 0.0, 0.55), 0.07, CH, inside);
+    panel(g, subQuad(faces[side], 0.0, 1.0, 0.0, 0.08), 0.1, RED, inside);
+  }
+  // Flared wheel arches: a thick charcoal brow over each tyre (top and
+  // two sloped ends), a red lip along the top.
+  for (const z of [-o.wheelZ, o.wheelZ]) for (const sx of [-1, 1]) {
+    const x = sx * (o.W / 2 + 0.26), yt = R * 2 + 0.02;
+    box(g, 0.92, 0.16, 1.0, CH, x, yt, z);
+    box(g, 0.94, 0.05, 1.02, RED, x, yt + 0.16, z);
+    for (const e of [-1, 1]) {
+      // (A slab sloping down from the brow's end: listed low z to high z.)
+      let A = [z + e * 0.5, yt], Bq = [z + e * 1.0, yt - 0.48];
+      if (e < 0) [A, Bq] = [Bq, A];
+      const X0 = x - 0.45, X1 = x + 0.45;
+      hexa(g, [v3(X0, A[1], A[0]), v3(X1, A[1], A[0]), v3(X1, Bq[1], Bq[0]), v3(X0, Bq[1], Bq[0]),
+        v3(X0, A[1] + 0.16, A[0]), v3(X1, A[1] + 0.16, A[0]), v3(X1, Bq[1] + 0.16, Bq[0]), v3(X0, Bq[1] + 0.16, Bq[0])], CH);
+    }
+  }
+  // Body armour plates along the flanks with rivets; a red band.
+  for (const sx of [-1, 1]) {
+    const x = sx * (o.W / 2 + 0.03);
+    box(g, 0.06, 0.5, o.L - 0.6, CH, x, lift + 0.12, 0.05);
+    box(g, 0.07, 0.1, o.L - 0.5, RED, x, lift + 0.66, 0.05);
+    for (let i = 0; i < 5; i++) box(g, 0.05, 0.06, 0.06, 0x6a6a72, sx * (o.W / 2 + 0.07), lift + 0.5, zf + 0.5 + i * 0.5);
+  }
+  // Roof: an armour cap and a row of red lamps (no police bar).
+  box(g, o.W * o.taper - 0.1, 0.12, cb - cf - o.lean - 0.2, CH, 0, top + 0.1, (cf + o.lean + cb) / 2);
+  for (const x of [-0.5, -0.17, 0.17, 0.5]) {
+    const m = add(g, ni(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 10)), RED, x, top + 0.32, cf + o.lean + 0.18, { emissive: 0xff1020, emissiveIntensity: 0.9 });
+    m.rotation.x = Math.PI / 2;
+  }
+  // Rear: a heavy step bumper with red tail plates.
+  box(g, o.W + 0.3, 0.36, 0.3, CH, 0, lift - 0.1, zb + 0.12);
+  for (const sx of [-1, 1]) box(g, 0.4, 0.14, 0.05, RED, sx * (o.W / 2 - 0.1), lift + 0.12, zb + 0.28, TAIL);
+  bake(g);
+  return scaled(g);
+}
+
 // ====================================================== CIVILIAN TRAFFIC
 // One coloured geometry per type (instanced in the city; civilian cars
 // keep one material). Built from the same shell, a little simpler.
