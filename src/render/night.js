@@ -120,6 +120,7 @@ export class NightLights {
     for (const b of layout.buildings || []) {
       const cx = Math.round((b.x - 15) / 30) * 30 + 15, cz = Math.round((b.z - 15) / 30) * 30 + 15; // (b.street wins when set)
       const list = buildingWindows(b, [Math.sign(b.x - cx), Math.sign(b.z - cz)]);
+      if (b.baseY) for (const w of list) w.y += b.baseY; // (on a hill street)
       this.ranges.push({ start: wins.length, count: list.length, hidden: false });
       wins.push(...list);
     }

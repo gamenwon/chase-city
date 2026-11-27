@@ -355,7 +355,14 @@ export class GeneratedWorld {
         const group = buildingGroup(b, seed, [0, 0]);
         g = coloredGeometry(group, { dropDown: true, flush: b });
       }
-      g.translate(b.x, 0, b.z);
+      g.translate(b.x, b.baseY || 0, b.z);
+      // On a hill street: standing on a stone base up to the pavement.
+      if (b.baseY) {
+        const parts2 = [g.index ? g.toNonIndexed() : g];
+        cbox(parts2, b.x, (0.4 + b.baseY) / 2, b.z, b.w - 0.02, 0.4 + b.baseY, b.d - 0.02, 0x8f8a80);
+        for (const q of parts2) for (const k of Object.keys(q.attributes)) if (!["position", "normal", "color"].includes(k)) q.deleteAttribute(k);
+        g = mergeGeometries(parts2.map((q) => (q.index ? q.toNonIndexed() : q)));
+      }
       const ng = g.index ? g.toNonIndexed() : g;
       if (ng !== g) g.dispose();
       for (const k of Object.keys(ng.attributes)) if (!["position", "normal", "color"].includes(k)) ng.deleteAttribute(k);

@@ -214,7 +214,7 @@ export class CityLifeRenderer {
     this.q.setFromEuler(this.e);
     this.v.set(
       p.x,
-      p.y + (p.state === "down" && p.kind === "trash" ? 0.45 : p.state === "down" && p.kind === "hydrant" ? 0.2 : 0),
+      p.y + (p.state === "down" && p.kind === "trash" ? 0.45 : p.state === "down" && p.kind === "hydrant" ? 0.2 : 0) + (this.hills?.length ? groundHeight(this.hills, p.x, p.z) : 0),
       p.z,
     );
     this.s.set(1, 1, 1);
@@ -222,6 +222,8 @@ export class CityLifeRenderer {
   }
   update(city, sim, camera, dt, kick) {
     if (!city) return;
+    // Hill streets: props stand on the slope (jumps.js height field).
+    this.hills = (sim?.layout?.mounds || []).filter((m) => m.hill);
     if (!this.ready || this.city !== city) {
       if (this.ready) this.dispose();
       this.build(city);

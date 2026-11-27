@@ -18,8 +18,21 @@ export function mountHeight(m, x, z) {
   if (a >= m.len || b >= m.w + JUMP.side) return 0;
   // (smooth: a rolling road, a cosine hill with flat ends and a round
   // crest; otherwise a ramp with a sharp crest.)
-  const along = m.smooth ? m.h * (0.5 + 0.5 * Math.cos((Math.PI * a) / m.len)) : m.h * (1 - a / m.len);
+  // (crest: a hill street, easing in from the flat and firm over the top,
+  // so a fast car takes off there; smooth: a cosine hill; otherwise a
+  // ramp with a sharp crest.)
+  const along = m.crest ? m.h * Math.pow(1 - a / m.len, 1.7) : m.smooth ? m.h * (0.5 + 0.5 * Math.cos((Math.PI * a) / m.len)) : m.h * (1 - a / m.len);
   return b <= m.w ? along : along * (1 - (b - m.w) / JUMP.side);
+}
+// The mound under a point (the highest), for its take-off speed.
+export function moundAt(mounds, x, z) {
+  let best = null, h = 0;
+  for (const m of mounds) {
+    if (Math.abs(x - m.x) > m.len + m.w + 2 || Math.abs(z - m.z) > m.len + m.w + 2) continue;
+    const y = mountHeight(m, x, z);
+    if (y > h) (h = y), (best = m);
+  }
+  return best;
 }
 export function groundHeight(mounds, x, z) {
   let h = 0;
@@ -42,7 +55,9 @@ export function updateJump(sim, body, dt, mass = 1) {
     // drops away below that (past a crest), it is airborne.
     const vy0 = Math.min(JUMP.maxVy, (body.jumpVy || 0) / (0.85 + 0.15 * mass));
     const carried = y0 + vy0 * dt - 0.5 * JUMP.gravity * dt * dt;
-    if (vy0 > 1.5 && h < carried - 0.005) {
+    // (Hill streets need more speed over the crest than a dirt ramp.)
+    const takeoff = body.lastMound?.takeoff ?? 1.5;
+    if (vy0 > takeoff && h < carried - 0.005) {
       body.air = true;
       body.vy = vy0 - JUMP.gravity * dt;
       body.y = carried;
@@ -53,6 +68,7 @@ export function updateJump(sim, body, dt, mass = 1) {
       return;
     } else {
       body.jumpVy = (h - y0) / dt; // rising (or settling) with the ground
+      if (h > 0) body.lastMound = moundAt(mounds, body.x, body.z) || body.lastMound;
       body.y = h;
       body.onMound = h > 0;
       body.vy = 0;

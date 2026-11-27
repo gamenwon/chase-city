@@ -226,7 +226,7 @@ export class Storefronts {
   faceMatrix(f) {
     this.q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.ry);
     const o = f.half - 3.5;
-    this.m.compose(this.v.set(f.b.x + f.nx * o, 0, f.b.z + f.nz * o), this.q, this.s.set(f.span / 7, 1, 1));
+    this.m.compose(this.v.set(f.b.x + f.nx * o, f.b.baseY || 0, f.b.z + f.nz * o), this.q, this.s.set(f.span / 7, 1, 1));
   }
   place(mesh, f, color) {
     const i = mesh.count++;

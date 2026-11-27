@@ -94,40 +94,51 @@ test("the elevated road keeps every car on the deck (no jumping off)", () => {
   assert.equal(s.stats.deckLeaps || 0, 0);
 });
 
-test("hill road: every city has a street that goes up, down, up and down, joined to the road graph; cars ride over it", () => {
-  for (let seed = 1; seed <= 8; seed++) {
+test("hill streets: one or two of the city's own streets go flat, up, down, up, down, flat; buildings along them stand on the slope", () => {
+  for (let seed = 1; seed <= 10; seed++) {
     const L = generateCity(seed);
-    const f = L.features.find((q) => q.kind === "hillroad");
-    assert.ok(f, `seed ${seed}`);
-    const hills = L.mounds.filter((m) => m.hill);
-    assert.equal(hills.length, 2);
-    const e = L.graph.edges.find((q) => q.hill);
-    assert.ok(e, "a street in the road graph");
-    // Both ends are junctions with the side streets (3 roads meet there).
-    for (const id of [e.a, e.b]) assert.equal(L.graph.edges.filter((q) => q.a === id || q.b === id).length, 3);
-    assert.equal(L.features.some((q) => q.kind === "dunes"), false);
+    const fs = L.features.filter((q) => q.kind === "hillstreet");
+    assert.ok(fs.length >= 1 && fs.length <= 2, `seed ${seed}: ${fs.length}`);
+    // Existing streets (no new ones), no hill block.
+    assert.equal(L.features.some((q) => q.kind === "hillroad" || q.kind === "dunes"), false);
+    for (const f of fs) {
+      // Two hills: one long hill on each of two streets in line through a
+      // junction (or two on one street).
+      assert.equal(f.mounds.length, 2);
+      const ids = new Set(f.mounds.map((m) => m.edge));
+      for (const id of ids) {
+        const e = L.graph.edges.find((q) => q.id === id);
+        assert.ok(e && e.hill && e.kind === "road" && !e.ring && !e.avenue, "an ordinary street");
+      }
+    }
+    assert.ok(L.buildings.some((b) => b.baseY > 0.2), "buildings raised along the slope");
   }
-  // A car driving the street: up over the first hill, down, up over the
-  // second, down again, and out at street level.
-  const s = make("starter");
-  const e = s.layout.graph.edges.find((q) => q.hill), a = e.pts[0], b = e.pts[1];
-  const len = Math.hypot(b.x - a.x, b.z - a.z), ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
-  const p = s.player, speed = 9;
-  Object.assign(p, { x: a.x + ux * 2, z: a.z + uz * 2, angle: Math.atan2(-ux, -uz), vx: ux * speed, vz: uz * speed, speed });
-  s.previousPlayer = { x: p.x, z: p.z };
-  const ys = [];
-  for (let i = 0; i < Math.ceil(((len - 4) / speed) * 60) && !s.result; i++) {
-    s.arrest = 0;
-    p.vx = ux * speed;
-    p.vz = uz * speed;
-    s.move(p, 1 / 60, s.vehicle.stats.radius);
-    updateJump(s, p, 1 / 60, 1);
-    ys.push(p.y || 0);
-  }
-  // Two crests (up-down-up-down), back to street level at the far end.
+});
+
+test("hill street: a car drives over both crests and back to level; fast over a crest it takes off", () => {
+  const run = (speed) => {
+    const s = make("starter");
+    const f = s.layout.features.find((q) => q.kind === "hillstreet");
+    const p = s.player, { a, ux, uz } = f.segs[0];
+    const L = f.segs.reduce((n, q) => n + q.L, 0);
+    Object.assign(p, { x: a.x + ux * 2, z: a.z + uz * 2, angle: Math.atan2(-ux, -uz), vx: ux * speed, vz: uz * speed, speed, y: 0 });
+    const ys = [];
+    let air = 0;
+    for (let i = 0; i < Math.ceil(((L - 4) / speed) * 60); i++) {
+      p.vx = ux * speed;
+      p.vz = uz * speed;
+      s.move(p, 1 / 60, s.vehicle.stats.radius);
+      updateJump(s, p, 1 / 60, 1);
+      ys.push(p.y || 0);
+      if (p.air) air++;
+    }
+    return { ys, air };
+  };
+  const slow = run(8);
   let peaks = 0;
-  for (let i = 1; i < ys.length - 1; i++) if (ys[i] > 0.5 && ys[i] >= ys[i - 1] && ys[i] > ys[i + 1]) peaks++;
+  for (let i = 1; i < slow.ys.length - 1; i++) if (slow.ys[i] > 0.5 && slow.ys[i] >= slow.ys[i - 1] && slow.ys[i] > slow.ys[i + 1]) peaks++;
   assert.equal(peaks, 2, `peaks ${peaks}`);
-  assert.ok(Math.max(...ys) > 1.2);
-  assert.ok(ys.at(-1) < 0.05);
+  assert.equal(slow.air, 0, "slow: no jump");
+  assert.ok(slow.ys.at(-1) < 0.05);
+  assert.ok(run(22).air > 6, "fast: airborne over a crest");
 });

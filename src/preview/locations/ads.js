@@ -33,7 +33,8 @@ import { SCULPTURES } from "./sculptures.js";
 import { Tumblers } from "./tumble.js";
 import { awardCoins } from "../../game/coins.js";
 
-const BASE = 0.4;
+const BASE0 = 0.4;
+let BASE = BASE0; // (per building while its signs are built: raised on a hill street)
 const ATLAS = 1024;
 // Atlas tiles (px): fascia 256x32 (4 a row), blade 40x160 (one row),
 // billboard 256x96 (4 a row), crown 128x32 (8 a row), small 52x26 (two
@@ -230,6 +231,7 @@ export class AdSystem {
       const brand = b.brand && BRANDS[b.brand];
       const faces = faceOf.get(b);
       if (!brand || !faces?.length) continue;
+      BASE = BASE0 + (b.baseY || 0);
       const rec = { b, signs: [], tubes: null, sculpture: null, boards: [], brand };
       this.buildings.set(b, rec);
       const neon = new THREE.Color(brand.neon);
@@ -359,6 +361,7 @@ export class AdSystem {
         rec.sculpture = sc;
       }
     }
+    BASE = BASE0;
     // Draw calls: signs, glows, tubes, screens, frames (+ one a sculpture).
     this.signMat = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true });
     this.signMesh = signQ.mesh(this.signMat);

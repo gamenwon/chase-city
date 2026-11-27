@@ -20,7 +20,7 @@ import { VehicleSystem } from "./vehicles.js";
 import { FlyerSystem } from "./furniture.js";
 import { dinerDecor } from "./diner.js";
 import { bigsiteDecor } from "./bigsite.js";
-import { hillRoadDecor } from "./dunes.js";
+import { hillStreetDecor } from "./dunes.js";
 import { Cranes } from "./cranes.js";
 import { BuildingCollapse } from "./collapse-buildings.js";
 import { yardDecor } from "./yard.js";
@@ -119,7 +119,8 @@ export class LocationsRuntime {
       for (const it of f.items) if (it.kind === "statue") P.plinth(G(decor, it.x, it.y, it.z, it.ry));
       if (f.kind === "diner") dinerDecor(decor, f);
       if (f.kind === "bigsite") bigsiteDecor(decor, f);
-      if (f.kind === "hillroad") hillRoadDecor(decor, f);
+      // (A hill street is its own mesh, straight into the scene.)
+      if (f.kind === "hillstreet") renderer?.gfx?.patch(hillStreetDecor(scene, f).material);
       if (f.kind === "containers") yardDecor(decor, f);
       if (f.kind === "funpark") funparkDecor(decor, f);
       if (decor.children.length) scene.add(bake(decor));
