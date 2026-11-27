@@ -408,6 +408,7 @@ export function civilianCarGeometry() {
 
 // -------------------------------------------------------------- buildings --
 const WALLS = [K.red, K.blue, K.yellow, K.green, K.orange, K.brick, K.cream, K.teal, K.amber];
+export const WALL_COLORS = WALLS;
 const TRIMS = { [K.cream]: 0x9e8f78, [K.yellow]: 0xb5651d };
 // Window: frame bars standing 0.22 m off the wall with the glass behind
 // them, a lintel and a sill (5 boxes).

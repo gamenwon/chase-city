@@ -294,7 +294,7 @@ export class CityRenderer {
   // surface shader; the player's car its material version.
   patchWorld() {
     this.gfx.patch(this.world?.material);
-    this.gfx.patch(this.world?.buildingMaterial);
+    this.gfx.patch(this.world?.buildingMaterial, { building: true });
   }
   // Weather (test build): "clear", "snow" or "rain".
   setWeather(mode) {

@@ -22,8 +22,8 @@
 // ground or buildings, one reflection map for the whole scene.
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { asphaltTextures, pavingTextures, brickTextures } from "./textures.js";
-import { K } from "./kit.js";
+import { asphaltTextures, pavingTextures, brickTextures, plasterTextures } from "./textures.js";
+import { K, WALL_COLORS } from "./kit.js";
 import { buildDetailed, PLAYER_MODELS, TRAFFIC_TYPES, policeCar, INTERIOR, DASH, LENS } from "./cartoon.js";
 import { scaled } from "./kit.js";
 
@@ -36,7 +36,7 @@ export class MaterialPass {
     const pm = new THREE.PMREMGenerator(renderer);
     this.env = pm.fromScene(skyEnvironment(), 0.02).texture;
     pm.dispose();
-    const as = asphaltTextures(), pv = pavingTextures(), br = brickTextures();
+    const as = asphaltTextures(), pv = pavingTextures(), br = brickTextures(), pl = plasterTextures();
     this.uniforms = {
       uPbr: { value: 0 },
       uAsD: { value: as.detail }, uAsN: { value: as.normal },
@@ -45,6 +45,10 @@ export class MaterialPass {
       uRoad: { value: new THREE.Color(theme.road) },
       uWalk: { value: new THREE.Color(K.walk) },
       uBrick: { value: new THREE.Color(K.brick) },
+      uPlD: { value: pl.detail }, uPlN: { value: pl.normal },
+      uWalls: { value: WALL_COLORS.filter((c) => c !== K.brick).map((c) => new THREE.Color(c)) },
+      uGlass: { value: new THREE.Color(K.glass) },
+      uNight: { value: 0 },
       uNormalScale: { value: 0.85 },
     };
     this.patched = new WeakSet();
@@ -52,12 +56,17 @@ export class MaterialPass {
     this.vehicleMats = vehicleMaterials(this.env);
   }
   // Ground (roads, sidewalks) and buildings: patch their materials once.
-  patch(material) {
+  // building: the city blocks' material (plaster walls, roofs, glass).
+  patch(material, { building = false } = {}) {
     if (!material || this.patched.has(material)) return;
     this.patched.add(material);
     const U = this.uniforms;
-    material.onBeforeCompile = (shader) => {
+    const prev = material.onBeforeCompile, prevKey = material.customProgramCacheKey;
+    material.customProgramCacheKey = () => (prevKey ? prevKey.call(material) : "") + (building ? "|pbrB" : "|pbr");
+    material.onBeforeCompile = (shader, r) => {
+      prev?.call(material, shader, r);
       Object.assign(shader.uniforms, U);
+      if (building) shader.fragmentShader = "#define PBR_BUILDING\n" + shader.fragmentShader;
       shader.vertexShader = shader.vertexShader
         .replace("#include <common>", "#include <common>\nvarying vec3 vPbrWorld;")
         .replace(
@@ -78,8 +87,34 @@ export class MaterialPass {
           `#include <common>
 varying vec3 vPbrWorld;
 uniform float uPbr, uNormalScale;
-uniform sampler2D uAsD, uAsN, uPvD, uPvN, uBrD, uBrN;
-uniform vec3 uRoad, uWalk, uBrick;`,
+uniform sampler2D uAsD, uAsN, uPvD, uPvN, uBrD, uBrN, uPlD, uPlN;
+uniform vec3 uRoad, uWalk, uBrick, uGlass;
+uniform vec3 uWalls[${WALL_COLORS.length - 1}];
+uniform float uNight;
+float pbrHash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
+// A room behind a window (interior mapping): the ray from the eye goes
+// through the glass into a box 3 m wide, 3 m high and 2 m deep; the face
+// it meets (back wall, side walls, floor, ceiling) gives the colour.
+vec3 pbrRoom(vec3 p, vec3 v, vec3 N) {
+  vec3 T = abs(N.x) > abs(N.z) ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  float u = dot(p, T), y = p.y - 0.62;
+  vec3 rd = vec3(dot(v, T), v.y, max(0.05, dot(v, -N)));
+  vec2 cell = vec2(floor(u / 3.0), floor(y / 3.0));
+  float x0 = cell.x * 3.0, y0 = cell.y * 3.0;
+  float tx = ((rd.x > 0.0 ? x0 + 3.0 : x0) - u) / (abs(rd.x) < 1e-4 ? 1e-4 : rd.x);
+  float ty = ((rd.y > 0.0 ? y0 + 3.0 : y0) - y) / (abs(rd.y) < 1e-4 ? 1e-4 : rd.y);
+  float tz = 2.0 / rd.z;
+  float t = min(min(tx, ty), tz);
+  float h = pbrHash(cell + floor(dot(p, N) * 0.5) * 17.0);
+  vec3 wallC = mix(vec3(0.78, 0.66, 0.5), vec3(0.5, 0.6, 0.7), step(0.6, h));
+  vec3 c;
+  if (t == tz) c = wallC * 0.8;                                    // back wall
+  else if (t == ty) c = rd.y > 0.0 ? vec3(0.82, 0.8, 0.74) : vec3(0.3, 0.2, 0.13); // ceiling / floor
+  else c = wallC * 0.55;                                           // side wall
+  c *= mix(1.0, 0.35, clamp(t * rd.z / 2.0, 0.0, 1.0));           // deeper, darker
+  c *= step(0.18, h) * 0.85 + 0.15;                                // a few rooms dark (blinds)
+  return c;
+}`,
         )
         .replace(
           "#include <color_fragment>",
@@ -107,26 +142,66 @@ uniform vec3 uRoad, uWalk, uBrick;`,
       pbrNM = texture2D(uBrN, uv).xyz * 2.0 - 1.0;
       pbrKind = 3.0;
     }
+    #ifdef PBR_BUILDING
+    else if (abs(pbrWN.y) < 0.35 && distance(vc, uGlass) < 0.03) {
+      // Window glass: dark, the room shows through it (emissive below).
+      diffuseColor.rgb = vec3(0.03, 0.035, 0.04);
+      pbrKind = 5.0;
+    } else {
+      bool wallC = false;
+      for (int i = 0; i < ${WALL_COLORS.length - 1}; i++) if (distance(vc, uWalls[i]) < 0.03) wallC = true;
+      if (wallC && abs(pbrWN.y) < 0.35) {
+        // Painted plaster.
+        float h = abs(pbrWN.x) > abs(pbrWN.z) ? vPbrWorld.z : vPbrWorld.x;
+        vec2 uv = vec2(h, vPbrWorld.y) / 4.0;
+        diffuseColor.rgb *= texture2D(uPlD, uv).r * 2.0;
+        pbrNM = texture2D(uPlN, uv).xyz * 2.0 - 1.0;
+        pbrKind = 4.0;
+      } else if (wallC && pbrWN.y > 0.6) {
+        // The roof (the body's top): weathered render, larger.
+        vec2 uv = vPbrWorld.xz / 6.0;
+        diffuseColor.rgb *= 0.92 * (texture2D(uPlD, uv).r * 2.0) * (0.9 + 0.2 * texture2D(uAsD, uv * 0.7).r);
+        pbrNM = texture2D(uPlN, uv).xyz * 2.0 - 1.0;
+        pbrKind = 6.0;
+      }
+    }
+    #endif
   }
   #endif`,
         )
         .replace(
           "#include <roughnessmap_fragment>",
           `#include <roughnessmap_fragment>
-  if (pbrKind > 0.5) roughnessFactor = pbrKind < 1.5 ? 0.93 : pbrKind < 2.5 ? 0.82 : 0.9;`,
+  if (pbrKind > 0.5) roughnessFactor = pbrKind < 1.5 ? 0.93 : pbrKind < 2.5 ? 0.82 : pbrKind > 4.5 && pbrKind < 5.5 ? 0.08 : 0.9;`,
         )
         .replace(
           "#include <normal_fragment_maps>",
           `#include <normal_fragment_maps>
   if (pbrKind > 0.5) {
     vec3 T = vec3(1.0, 0.0, 0.0), B = vec3(0.0, 0.0, 1.0), N = vec3(0.0, 1.0, 0.0);
-    if (pbrKind > 2.5) {
+    if (pbrKind > 2.5 && pbrKind < 5.5) {
       N = normalize(vec3(pbrWN.x, 0.0, pbrWN.z));
       T = abs(pbrWN.x) > abs(pbrWN.z) ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
       B = vec3(0.0, 1.0, 0.0);
     }
     vec3 wn = normalize(T * pbrNM.x * uNormalScale + B * pbrNM.y * uNormalScale + N * max(0.2, pbrNM.z));
     normal = normalize((viewMatrix * vec4(wn, 0.0)).xyz);
+  }`,
+        )
+        .replace(
+          "#include <emissivemap_fragment>",
+          `#include <emissivemap_fragment>
+  if (pbrKind > 4.5 && pbrKind < 5.5) {
+    // Glass: the room behind it, and the sky reflected, more of it the
+    // flatter the view (Fresnel); dimmer at night (lit windows are drawn
+    // by night.js).
+    vec3 N = normalize(vec3(pbrWN.x, 0.0, pbrWN.z));
+    vec3 v = normalize(vPbrWorld - cameraPosition);
+    float fres = 0.08 + 0.62 * pow(1.0 - clamp(dot(-v, N), 0.0, 1.0), 4.0);
+    vec3 r = reflect(v, N);
+    vec3 sky = r.y > 0.0 ? mix(vec3(0.95, 0.93, 0.86), vec3(0.5, 0.7, 0.98), pow(r.y, 0.6)) : vec3(0.32, 0.31, 0.33);
+    float day = 1.0 - 0.82 * uNight;
+    totalEmissiveRadiance += (pbrRoom(vPbrWorld, v, N) * (1.0 - fres) * 0.62 + sky * fres * 0.5) * day;
   }`,
         );
     };
@@ -139,6 +214,7 @@ uniform vec3 uRoad, uWalk, uBrick;`,
   }
   setNight(night) {
     this.night = night;
+    this.uniforms.uNight.value = night ? 1 : 0;
     for (const m of Object.values(this.vehicleMats)) if (m.envMapIntensity != null) m.envMapIntensity = (night ? 0.35 : 1) * (m.userData.env ?? 1);
   }
   // A player car with surface materials (null if the id is unknown):

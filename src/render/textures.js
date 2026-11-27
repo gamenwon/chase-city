@@ -135,3 +135,21 @@ export function brickTextures(n = 512) {
   void bh;
   return toTextures(n, height, tone, 2.4);
 }
+// Plaster (painted render) for the coloured walls, and the roofs at a
+// larger scale: fine sand grain, soft blotches, faint vertical rain
+// streaks. Tile: 4 m.
+export function plasterTextures(n = 512) {
+  const R = rng(41);
+  const fine = new Float32Array(n * n).map(() => R());
+  const mid = valueNoise(n, 12, R), big = valueNoise(n, 3, R), streak = valueNoise(n, 24, R);
+  const height = new Float32Array(n * n), tone = new Float32Array(n * n);
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      const i = y * n + x;
+      // (Streaks: noise stretched along the height of the wall.)
+      const s = streak[x % n];
+      height[i] = fine[i] * 0.5 + mid[i] * 0.5;
+      tone[i] = 0.5 + (fine[i] - 0.5) * 0.07 + (mid[i] - 0.5) * 0.08 + (big[i] - 0.5) * 0.1 - Math.max(0, s - 0.62) * 0.35;
+    }
+  return toTextures(n, height, tone, 1.4);
+}
