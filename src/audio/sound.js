@@ -13,7 +13,8 @@ export function soundTargets(sim) {
   // button or a slow turn stays quiet); louder and higher with more speed
   // and a harder turn or slide.
   const turnLoad = (Math.abs(p.turn || 0) * speed) / 24 + lateral * 0.2;
-  const screech =
+  // (Not in the air: no tyre on the road.)
+  const screech = p.air || p.falling ? 0 :
     clamp((turnLoad - 1.05) / 0.75, 0, 1) * clamp((speed - 9) / 7, 0, 1);
   // Each car sounds like itself (vehicles.js engine: pitch, gain).
   const eng = sim.vehicle?.stats.engine || { pitch: 1, gain: 1 };

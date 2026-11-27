@@ -103,7 +103,9 @@ export class SkidMarks {
     }));
   }
   update(player, running) {
-    let amount = running ? skidAmount(player) : 0;
+    // (In the air (a jump, a hop over a barricade, a fall): the tyres
+    // touch nothing, so no marks; the next touch-down starts a new trail.)
+    let amount = running && !player.air && !player.falling ? skidAmount(player) : 0;
     if (this.snow && running && Math.hypot(player.vx, player.vz) > 2.5 && !player.air) amount = Math.max(amount, 0.3);
     if (amount <= 0.05) {
       // The slide ended: the next one starts a new trail.
