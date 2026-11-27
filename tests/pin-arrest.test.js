@@ -136,15 +136,20 @@ test("pinned-1100-roads-5: the lamp beside the car gives way (full game drives o
   const best = Math.max(...escapeAttempts(layout, s, fx.source.width, 740).map((a) => a.best));
   assert.ok(best > 10, `full-game escape ${best} m`);
   for (let f = 0; f < 8 * 60 && !s.result; f++) s.update(1 / 60, {});
-  assert.equal(s.result, null, s.pin.reason);
+  // The pin probe never calls it trapped (there is a way out). (Sitting
+  // still with the police in sight is a standoff now: that one is caught.)
+  assert.equal(s.pin.events.some((e) => e.type === "pinned" && !e.standoff), false, s.pin.reason);
 });
 
 for (const name of OPEN)
   test(`stuck but a real way out exists (${name}): never arrested`, () => {
     const { s } = load(name);
-    for (let f = 0; f < 10 * 60 && !s.result; f++) s.update(1 / 60, {});
+    // Before the standoff time: no arrest, and the pin probe never calls it
+    // trapped (there is a way out)...
+    for (let f = 0; f < 4 * 60 && !s.result; f++) s.update(1 / 60, {});
     assert.equal(s.result, null);
     assert.equal(s.arrest, 0);
+    assert.equal(s.pin.events.some((e) => e.type === "pinned" && !e.standoff), false);
     // ...and the way out is real: the probe drives out.
     assert.equal(probeEscape(s).escaped, true);
   });
@@ -317,3 +322,24 @@ test("police ramming a car that keeps driving (crashes, contact) never starts a 
   assert.equal(maxArrest, 0);
   assert.equal(s.pin.trapped, false);
 });
+
+test("standoff: a car that just sits there with the police in sight is caught; driving off cancels it", () => {
+  const name = "stuck-open-1100-roads-3"; // (police in sight, a way out)
+  const idle = load(name).s;
+  for (let f = 0; f < 12 * 60 && !idle.result; f++) idle.update(1 / 60, {});
+  assert.equal(idle.result, "arrested", idle.pin.reason);
+  assert.ok(idle.pin.events.some((e) => e.type === "pinned" && e.standoff));
+  // The same spot, but the player steers out once the countdown runs.
+  const s = load(name).s;
+  for (let f = 0; f < 10 * 60 && !s.pin.standoff; f++) s.update(1 / 60, {});
+  assert.equal(s.pin.standoff, true);
+  let out = false;
+  for (const input of [{ left: true }, { right: true }]) {
+    const t = load(name).s;
+    for (let f = 0; f < 10 * 60 && !t.pin.standoff; f++) t.update(1 / 60, {});
+    for (let f = 0; f < 4 * 60 && !t.result; f++) t.update(1 / 60, input);
+    if (!t.result && !t.pin.standoff) out = true;
+  }
+  assert.ok(out, "steering away gets out of the standoff");
+});
+

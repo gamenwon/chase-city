@@ -48,6 +48,14 @@ export const PIN = Object.freeze({
   RECONFIRM_EVERY: 1.5, // after a "way out" answer, ask again no sooner
   STALE_AFTER: 3, // ...and ask again after this long even if nothing seems changed
   PROBE_SECONDS: 4,
+  // Standoff: the car has not really moved for this long (the throttle is
+  // always on: it is stuck or held) with a live police car this close:
+  // the arrest countdown starts (a player who just waits, nose against a
+  // barricade with the police queued behind, is caught). Moving away
+  // (ESCAPE_DISTANCE) cancels it as usual.
+  STANDOFF_SECONDS: 5,
+  STANDOFF_RANGE: 10,
+  BARRICADE_GAP: 1.2, // a police barricade this close to the body holds it like a wreck
   PROBE_CLEAR: 10, // a probe that gets this far away found a way out (a car
   // that knocks a lamp over and is stuck again a few metres on has not)
 });
@@ -107,7 +115,8 @@ function probeWorld(sim, { noWrecks = false } = {}) {
         Math.abs(q.z - p.z) < 16,
     )
     .map((q) => ({ x: q.x, z: q.z, r: PROPS[q.kind].r, breakAt: PROPS[q.kind].breakAt }));
-  w.solids = noWrecks ? sim.solids.filter((b) => b.kind !== "wreck") : sim.solids;
+  // (Without the police: their wrecks and their barricades go too.)
+  w.solids = noWrecks ? sim.solids.filter((b) => b.kind !== "wreck" && b.kind !== "barricade") : sim.solids;
   // Civilian cars near the player (parked, stopped, wrecked): the car can
   // shove them, as in the game (same push and masses as city.js).
   w.probeTraffic = (sim.city?.traffic || []).filter(
@@ -367,6 +376,38 @@ const wrecksHolding = (sim) =>
       Math.hypot(w.x - sim.player.x, w.z - sim.player.z) < PIN.NEAR + 2 &&
       bodyGap(sim.player, w) < PIN.WRECK_GAP,
   );
+// Police cars in plain sight of the car (no building or wall between;
+// barricades, wrecks and props do not block the view).
+function inSight(sim, c) {
+  const p = sim.player;
+  for (const b of sim.nearSolids ? sim.nearSolids((p.x + c.x) / 2, (p.z + c.z) / 2, Math.hypot(c.x - p.x, c.z - p.z) / 2 + 2) : sim.solids) {
+    if (b.kind === "barricade" || b.kind === "wreck" || b.kind === "police") continue;
+    // Segment p->c against the box (slab test).
+    let t0 = 0, t1 = 1;
+    for (const [o, d, lo, hi] of [[p.x, c.x - p.x, b.x - b.w / 2, b.x + b.w / 2], [p.z, c.z - p.z, b.z - b.d / 2, b.z + b.d / 2]]) {
+      if (Math.abs(d) < 1e-9) {
+        if (o < lo || o > hi) { t0 = 2; break; }
+        continue;
+      }
+      let a = (lo - o) / d, e = (hi - o) / d;
+      if (a > e) [a, e] = [e, a];
+      t0 = Math.max(t0, a);
+      t1 = Math.min(t1, e);
+      if (t0 > t1) break;
+    }
+    if (t0 <= t1 && t0 < 1 && t1 > 0) return false;
+  }
+  return true;
+}
+// Police barricades against the car body (police equipment: they hold it).
+const barricadesHolding = (sim) => {
+  const p = sim.player, r = CONFIG.radius;
+  return (sim.solids || []).filter((b) => {
+    if (b.kind !== "barricade") return false;
+    const dx = Math.max(0, Math.abs(p.x - b.x) - b.w / 2), dz = Math.max(0, Math.abs(p.z - b.z) - b.d / 2);
+    return Math.hypot(dx, dz) - r < PIN.BARRICADE_GAP;
+  });
+};
 const nearPolice = (sim, range) =>
   sim.police.filter(
     (c) =>
@@ -433,11 +474,13 @@ export function updatePin(sim, dt) {
       release(sim, "escaped");
       return;
     }
-    const near = nearPolice(sim, PIN.NEAR + 3);
+    const near = nearPolice(sim, pin.standoff ? PIN.STANDOFF_RANGE + 4 : PIN.NEAR + 3);
     if (!near.length) {
       release(sim, "no-police");
       return;
     }
+    // A standoff holds until the car gets away or the police leave.
+    if (pin.standoff) return;
     // Re-check for a way out at once when the situation changes (a police
     // car wrecked, exploded, moved or drove off; the car turned), and now
     // and then anyway; not while nothing has changed.
@@ -460,7 +503,17 @@ export function updatePin(sim, dt) {
     Math.hypot(p.x - oldest.x, p.z - oldest.z) < PIN.STILL_DISTANCE;
   pin.stillFor = still ? (pin.stillFor || 0) + dt : 0;
   let near = still ? holdingPolice(sim) : [];
-  const wrecks = still ? wrecksHolding(sim) : [];
+  const wrecks = still ? [...wrecksHolding(sim), ...barricadesHolding(sim)] : [];
+  // Standoff (see PIN.STANDOFF_SECONDS): caught without a probe.
+  if (still && pin.stillFor >= PIN.STANDOFF_SECONDS && nearPolice(sim, PIN.STANDOFF_RANGE).some((c) => inSight(sim, c))) {
+    pin.trapped = true;
+    pin.standoff = true;
+    pin.reason = "standoff";
+    pin.anchor = { x: p.x, z: p.z };
+    pin.probe = null;
+    log(sim, "pinned", { standoff: true });
+    return;
+  }
   let held =
     sim.elapsed - (p.policeContactAt ?? -Infinity) <= PIN.TOUCH_SECONDS ||
     near.some((c) => bodyGap(p, c) < PIN.HOLD_GAP);
@@ -525,6 +578,7 @@ export function updatePin(sim, dt) {
 function release(sim, why) {
   const pin = sim.pin;
   pin.trapped = false;
+  pin.standoff = false;
   pin.anchor = null;
   pin.candidateFor = 0;
   pin.probe = null;
