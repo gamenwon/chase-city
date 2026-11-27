@@ -234,9 +234,9 @@ export class Weather {
           da = Math.atan2(Math.sin(da), Math.cos(da));
           const slide = Math.abs((c.vx || 0) * rx + (c.vz || 0) * rz);
           const turn = Math.min(1, Math.max(0, (Math.abs(da) / d - 0.025) / 0.09, (slide - 1.5) / 4));
-          const a = 0.26 + 0.59 * turn;
+          const a = 0.46 + 0.42 * turn;
           g.strokeStyle = deck ? `rgba(0,255,0,${a})` : `rgba(255,0,0,${a})`;
-          g.lineWidth = w * (0.8 + 0.2 * turn);
+          g.lineWidth = w * (0.9 + 0.15 * turn);
           g.beginPath();
           for (let i = 0; i < 2; i++) {
             g.moveTo((last.pts[i][0] + 120) * k, (last.pts[i][1] + 120) * k);
