@@ -53,6 +53,7 @@ export class BuildingCollapse {
       }
     }
     this.active = [];
+    this.rt.ads?.restoreFootprints?.();
     this.state.clear();
     this.prev.clear();
     this.stats = { cracked: 0, collapsed: 0 };
@@ -144,6 +145,8 @@ export class BuildingCollapse {
       ads.tubeOff?.(rec);
       if (rec.sculpture?.state === "mounted") ads.detach?.(sim, rec.sculpture, fx, fz, 14);
     }
+    // Neon outline, billboards and their frames, screens: gone with it.
+    ads?.clearFootprint?.(b);
     const sf = this.rt.storefronts;
     if (sf) {
       const zero = new THREE.Matrix4().makeScale(0, 0, 0);

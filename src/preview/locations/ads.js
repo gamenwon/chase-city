@@ -406,6 +406,7 @@ export class AdSystem {
       const fm = new THREE.Mesh(coloredGeometry(frames, { dropDown: true }), bakedMaterial);
       fm.castShadow = fm.receiveShadow = true;
       scene.add(fm);
+      this.framesMesh = fm;
     }
     this.signColors = this.signMesh.geometry.attributes.color.array.slice();
     this.signPos = this.signMesh.geometry.attributes.position.array.slice();
@@ -430,6 +431,58 @@ export class AdSystem {
     this.c = new THREE.Color();
     this.night = null;
     this.reset();
+  }
+  // A building came down (collapse-buildings.js): everything mounted on it
+  // in the city-wide meshes (neon tubes along its roof edges, billboards and
+  // their frames, screens, signs and glows) goes with it: each triangle over
+  // its footprint (a little margin for what sticks out) is folded to a
+  // point. The originals are kept for the next run.
+  clearFootprint(b, margin = 1.2) {
+    const x0 = b.x - b.w / 2 - margin, x1 = b.x + b.w / 2 + margin, z0 = b.z - b.d / 2 - margin, z1 = b.z + b.d / 2 + margin;
+    this.footSaved ||= new Map();
+    // (Not what hangs on a neighbour that still stands, wall to wall.)
+    const others = (this.layout?.buildings || []).filter((q) => q !== b && Math.abs(q.x - b.x) < (q.w + b.w) / 2 + margin + 0.5 && Math.abs(q.z - b.z) < (q.d + b.d) / 2 + margin + 0.5);
+    const onOther = (x, z) => others.some((q) => Math.abs(x - q.x) < q.w / 2 && Math.abs(z - q.z) < q.d / 2 && !(Math.abs(x - b.x) < b.w / 2 && Math.abs(z - b.z) < b.d / 2));
+    for (const m of [this.signMesh, this.glowMesh, this.screenMesh, this.tubeMesh, this.framesMesh]) {
+      const pos = m?.geometry?.attributes.position;
+      if (!pos) continue;
+      if (!this.footSaved.has(m)) this.footSaved.set(m, pos.array.slice());
+      // Its own neon outline: exactly its range of the tube mesh.
+      if (m === this.tubeMesh) {
+        const r = this.tubeRanges?.[this.buildings.get(b)?.tubeId];
+        if (r) {
+          for (let q = r.start; q < r.start + r.count; q++) pos.setY(q, -60);
+          pos.needsUpdate = true;
+        }
+        continue;
+      }
+      const idx = m.geometry.index;
+      const tris = idx ? idx.count / 3 : pos.count / 3;
+      const v = (t, k) => (idx ? idx.getX(t * 3 + k) : t * 3 + k);
+      let changed = false;
+      for (let t = 0; t < tris; t++) {
+        const a = v(t, 0), c = v(t, 1), d = v(t, 2);
+        const cx = (pos.getX(a) + pos.getX(c) + pos.getX(d)) / 3, cz = (pos.getZ(a) + pos.getZ(c) + pos.getZ(d)) / 3, cy = (pos.getY(a) + pos.getY(c) + pos.getY(d)) / 3;
+        if (cx < x0 || cx > x1 || cz < z0 || cz > z1 || cy < 0.3 || onOther(cx, cz)) continue;
+        for (const q of [a, c, d]) pos.setXYZ(q, cx, -60, cz);
+        changed = true;
+      }
+      if (changed) {
+        pos.needsUpdate = true;
+        m.geometry.computeBoundingSphere();
+      }
+    }
+    // (The sign animations start from this copy.)
+    if (this.signPos && this.signMesh) this.signPos = this.signMesh.geometry.attributes.position.array.slice();
+  }
+  restoreFootprints() {
+    for (const [m, arr] of this.footSaved || []) {
+      m.geometry.attributes.position.array.set(arr);
+      m.geometry.attributes.position.needsUpdate = true;
+      m.geometry.computeBoundingSphere();
+      if (m === this.signMesh) this.signPos = arr.slice();
+    }
+    this.footSaved = null;
   }
   reset() {
     this.list = [];
