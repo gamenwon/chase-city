@@ -109,7 +109,13 @@ export function constrainLevels(sim, body, radius) {
         return false;
       }
       body.y = overpassHeight(op, s);
-      const lim = op.W / 2 - radius;
+      // The car's own footprint across the deck (a car turned sideways
+      // reaches further than its round body): its corners stay inside
+      // the parapet.
+      const loc0 = local(op, body.x, body.z), ux = loc0.ux ?? op.u.x, uz = loc0.uz ?? op.u.z;
+      const fx = -Math.sin(body.angle || 0), fz = -Math.cos(body.angle || 0);
+      const k = radius / 1.15, across = 2.15 * k * Math.abs(fx * uz - fz * ux) + 1.0 * k * Math.abs(fx * ux + fz * uz);
+      const lim = op.W / 2 - Math.max(radius, across) - 0.1;
       if (Math.abs(lat) > lim) {
         // The parapet: back inside, the speed into it taken away.
         const loc = local(op, body.x, body.z);
