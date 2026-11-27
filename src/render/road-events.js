@@ -93,6 +93,7 @@ export class RoadEventsRenderer {
     const g = new THREE.Group();
     this.box(g, 0, 0.03, 0, 0.5, 0.06, 0.5, 0x23373e);
     const c = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.62, 8), new THREE.MeshStandardMaterial({ color: 0xff6a1a, roughness: 0.6 }));
+    c.material.userData.noWeather = true; // (no snow on the cones)
     c.position.y = 0.37;
     g.add(c);
     this.box(g, 0, 0.42, 0, 0.3, 0.08, 0.3, 0xf4f4f0);

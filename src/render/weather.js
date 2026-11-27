@@ -40,9 +40,12 @@ export class Weather {
       uSnow: { value: 0 },
       uRain: { value: 0 },
       uWxRoad: { value: new THREE.Color(roadColor) },
+      uWxTracks: { value: null },
     };
     this.patched = new WeakSet();
+    this.extra = new Set(); // other street surfaces (hill streets): wet like the ground
     this.dot = softDot();
+    this.buildTracks();
     this.buildSnow();
     this.buildRain();
     this.buildPuffs();
@@ -55,6 +58,8 @@ export class Weather {
     const keep = new Set();
     const grab = (root) => root?.traverse?.((o) => o.material && (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => keep.add(m)));
     grab(this.r.player);
+    // Police barricades and cones stay clean (no snow on top).
+    for (const m of this.r.roadEvents?.materials?.values?.() || []) keep.add(m);
     for (const m of this.r.police || []) grab(m);
     for (const m of Object.values(this.r.cityLife?.carMeshes || {})) grab(m);
     this.r.scene.traverse((o) => {
@@ -63,7 +68,7 @@ export class Weather {
     });
   }
   patch(m) {
-    if (!m || this.patched.has(m) || m.transparent || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
+    if (!m || this.patched.has(m) || m.transparent || m.userData.noWeather || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
     this.patched.add(m);
     const U = this.uniforms, prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey;
     m.onBeforeCompile = (shader, r) => {
@@ -93,6 +98,7 @@ export class Weather {
           uniform float uSnow;
           uniform float uRain;
           uniform vec3 uWxRoad;
+          uniform sampler2D uWxTracks;
           float wxHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
           float wxNoise(vec2 p) {
             vec2 i = floor(p), f = fract(p);
@@ -114,6 +120,8 @@ export class Weather {
             // Snow: thick on roofs, pavements and grass, thin slush on the
             // roads (worn into darker ruts), a light frost on the walls.
             float cover = uSnow * up * mix(0.72, 1.0, n) * (1.0 - road * mix(0.72, 0.5, n));
+            // Tyre tracks: where cars have driven, the surface shows through.
+            cover *= 1.0 - 0.92 * texture2D(uWxTracks, (vWxWorld.xz + 120.0) / 240.0).r;
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 0.98), clamp(cover, 0.0, 1.0));
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.9, 0.95), uSnow * 0.1 * (1.0 - up));
             // Rain: wet, darker upward surfaces, darker still in puddles.
@@ -134,7 +142,7 @@ export class Weather {
   // reflection): only the ground and the buildings, only in the rain.
   setWet(on) {
     const env = this.r.gfx?.env;
-    for (const m of [this.r.world?.material, this.r.world?.buildingMaterial]) {
+    for (const m of [this.r.world?.material, this.r.world?.buildingMaterial, ...this.extra]) {
       if (!m || !env) continue;
       const want = on ? env : null;
       if (m.envMap !== want) {
@@ -142,6 +150,83 @@ export class Weather {
         m.envMapIntensity = on ? 0.55 : 1;
         m.needsUpdate = true;
       }
+    }
+  }
+  // A street surface drawn on its own (hill streets): the same weather.
+  addSurface(m) {
+    this.extra.add(m);
+    this.patch(m);
+    if (this.mode === "rain") this.setWet(true);
+  }
+  // ---------------------------------------------------- snow tracks --
+  // A map of where cars have driven (the whole city, 240 m square): each
+  // car's rear tyres draw lines in it; the snow thins out along them, so
+  // the asphalt, the court, the plaza... shows in the tracks. Uploaded a
+  // few times a second, only in the snow.
+  buildTracks() {
+    const n = this.mobile ? 768 : 1024;
+    const c = document.createElement("canvas");
+    c.width = c.height = n;
+    this.trackCtx = c.getContext("2d");
+    this.trackCtx.fillStyle = "#000";
+    this.trackCtx.fillRect(0, 0, n, n);
+    this.trackN = n;
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.NoColorSpace;
+    t.generateMipmaps = false;
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    this.trackTex = t;
+    this.uniforms.uWxTracks.value = t;
+    this.trackLast = new Map();
+    this.trackClock = 0;
+  }
+  clearTracks() {
+    this.trackCtx.fillStyle = "#000";
+    this.trackCtx.fillRect(0, 0, this.trackN, this.trackN);
+    this.trackTex.needsUpdate = true;
+    this.trackLast = new Map();
+  }
+  paintTracks(sim, center, dt) {
+    if (sim.runNumber !== this.trackRun || sim.layout !== this.trackLayout) {
+      this.trackRun = sim.runNumber;
+      this.trackLayout = sim.layout;
+      this.clearTracks();
+    }
+    const k = this.trackN / 240, g = this.trackCtx;
+    g.strokeStyle = "rgba(255,255,255,0.85)";
+    g.lineWidth = Math.max(1.2, 0.34 * k);
+    g.lineCap = "round";
+    const cars = [sim.player, ...sim.police.filter((c) => c.state === "active"), ...(sim.target?.state === "fleeing" ? [sim.target] : [])];
+    for (const t of sim.city?.traffic || []) if (!t.parked && t.state !== "wreck" && Math.abs(t.x - center.x) < 70 && Math.abs(t.z - center.z) < 70) cars.push(t);
+    let drew = false;
+    for (const c of cars) {
+      if (c.air || c.level > 0) {
+        this.trackLast.delete(c);
+        continue;
+      }
+      const fx = -Math.sin(c.angle), fz = -Math.cos(c.angle), rx = Math.cos(c.angle), rz = -Math.sin(c.angle);
+      const pts = [-1, 1].map((s) => [c.x - fx * 1.1 + rx * s * 0.7, c.z - fz * 1.1 + rz * s * 0.7]);
+      const last = this.trackLast.get(c);
+      if (last) {
+        const d = Math.hypot(pts[0][0] - last[0][0], pts[0][1] - last[0][1]);
+        if (d < 0.25) continue;
+        if (d < 4) {
+          g.beginPath();
+          for (let i = 0; i < 2; i++) {
+            g.moveTo((last[i][0] + 120) * k, (last[i][1] + 120) * k);
+            g.lineTo((pts[i][0] + 120) * k, (pts[i][1] + 120) * k);
+          }
+          g.stroke();
+          drew = true;
+        }
+      }
+      this.trackLast.set(c, pts);
+    }
+    this.trackClock += dt;
+    if (drew && this.trackClock > (this.mobile ? 0.25 : 0.15)) {
+      this.trackClock = 0;
+      this.trackTex.needsUpdate = true;
     }
   }
   // ----------------------------------------------------- particles --
@@ -288,6 +373,7 @@ export class Weather {
   update(sim, dt, center) {
     if (this.mode === "clear") return;
     this.time += dt;
+    if (this.mode === "snow" && dt > 0) this.paintTracks(sim, center, dt);
     for (const m of [this.snow.material, this.rain.material]) {
       m.uniforms.uTime.value = this.time;
       m.uniforms.uCenter.value.set(center.x, (center.y || 0) - 2, center.z);

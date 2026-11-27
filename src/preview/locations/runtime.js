@@ -124,7 +124,7 @@ export class LocationsRuntime {
         // Same surfaces as the flat streets: asphalt / paving, snow, rain.
         const m = hillStreetDecor(scene, f).material;
         renderer?.gfx?.patch(m);
-        renderer?.weather?.patch(m);
+        renderer?.weather?.addSurface(m);
       }
       if (f.kind === "containers") yardDecor(decor, f);
       if (f.kind === "funpark") funparkDecor(decor, f);

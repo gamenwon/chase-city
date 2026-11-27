@@ -297,7 +297,9 @@ export class CityRenderer {
   // Weather (test build): "clear", "snow" or "rain".
   setWeather(mode) {
     this.weather.set(mode);
-    this.trails.skids.snow = this.weather.mode === "snow";
+    // (Snow: the weather's track map shows where cars drove; the grey
+    // strips are not needed.)
+    this.trails.skids.snow = false;
     this.applyTimeOfDay(this.tod);
   }
   setGfx(on) {
