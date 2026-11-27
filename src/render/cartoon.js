@@ -663,9 +663,10 @@ export function miniCar() {
   // Checker decal on the sides.
   for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2 === 0) box(g, 0.02, 0.1, 0.1, 0xffffff, sx * (o.W / 2 + 0.01), o.clear + 0.3 + j * 0.1, cb - 0.55 + i * 0.1);
   bake(g);
-  // (Smaller than the other cars, like its collision radius.)
+  // (Smaller than the other cars, like its collision radius: 80% of
+  // its first size.)
   const out = scaled(g);
-  out.scale.setScalar(0.84);
+  out.scale.setScalar(0.672);
   return out;
 }
 // Monster truck: purple body high on huge treaded tyres with yellow coil

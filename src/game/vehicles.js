@@ -124,7 +124,7 @@ export const VEHICLES = Object.freeze({
     resist: { civilian: 1.2 },
     // (Smaller than the rest, and narrow enough to slip past a barricade
     // over the pavement: slipsBarricade.)
-    stats: { radius: 0.86, slipsBarricade: true, grip: 13, roll: 0.03, engine: { pitch: 1.45, gain: 0.8 } },
+    stats: { radius: 0.69, slipsBarricade: true, grip: 13, roll: 0.03, engine: { pitch: 1.45, gain: 0.8 } },
   }),
   super: build("super", "슈퍼카", "최고 속도와 가속. 추격과 탈출에 강하고, 큰 충돌에서는 속도를 많이 잃는다.", { speed: 5, accel: 5, steer: 4, mass: 1, destroy: 2 , durability: 2}, {
     maxHp: 100,

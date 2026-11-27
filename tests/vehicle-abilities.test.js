@@ -174,3 +174,30 @@ test("tall hill street: slowly up two storeys and down to level; fast over the c
   assert.ok(slow.end < 0.05);
   assert.ok(run(22).air > 6, "fast: airborne over the crest");
 });
+
+test("mini: through a real barricade's cone lane with the whole game step (not put back by the overlap check)", () => {
+  const s = new Simulation(createLayout(), { cityGenerator: generateCity, seed: 3, vehicle: "mini" });
+  s.start();
+  for (let t = 0; t < 60 && !s.solids.some((b) => b.kind === "barricade"); t += 1 / 30) {
+    s.arrest = 0;
+    s.update(1 / 30, {});
+    if (s.result) break;
+  }
+  const b = s.solids.find((q) => q.kind === "barricade");
+  assert.ok(b, "a barricade came");
+  for (const side of [-1, 1]) {
+    const lat = side * (b.roadHalf - 1);
+    const bx = b.vertical ? b.road.x + lat : b.x, bz = b.vertical ? b.z : b.road.z + lat;
+    const ax = b.vertical ? 0 : 1, az = b.vertical ? 1 : 0;
+    const p = s.player;
+    s.police.forEach((c) => Object.assign(c, { x: 400, z: 400 }));
+    Object.assign(p, { x: bx + ax * 6, z: bz + az * 6, angle: Math.atan2(ax, az), vx: -ax * 12, vz: -az * 12, speed: 12, level: 0, y: 0 });
+    s.previousPlayer = { x: p.x, z: p.z };
+    p.lastLegal = { x: p.x, z: p.z };
+    for (let i = 0; i < 40; i++) {
+      s.arrest = 0;
+      s.update(1 / 60, {});
+    }
+    assert.ok(b.vertical ? p.z < bz - 1 : p.x < bx - 1, `side ${side}: through`);
+  }
+});

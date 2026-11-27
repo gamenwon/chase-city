@@ -1194,7 +1194,7 @@ export class Simulation {
       const before = { x: c.x, z: c.z };
       const hit = this.constrain(
         c,
-        c === p ? CONFIG.radius : CONFIG.policeRadius,
+        c === p ? this.vehicle?.stats.radius || CONFIG.radius : CONFIG.policeRadius,
         previous.get(c),
       );
       if (hit && c !== p && c.state === "active") {
@@ -1213,7 +1213,9 @@ export class Simulation {
     // still leaves the car overlapping one, it goes back to its last legal
     // spot (normally the previous frame).
     if (!p.recover && !p.level) {
-      const inside = this.nearSolids(p.x, p.z, CONFIG.radius + 4).some((b) => resolveBuilding({ x: p.x, z: p.z }, b, CONFIG.radius - 0.08));
+      // (A barricade the car may pass (the mini by the cones, the monster
+      // truck over it) does not count.)
+      const inside = this.nearSolids(p.x, p.z, CONFIG.radius + 4).some((b) => !this.passesBarricade(p, b, false) && resolveBuilding({ x: p.x, z: p.z }, b, (this.vehicle?.stats.radius || CONFIG.radius) - 0.08));
       if (inside && p.lastLegal) {
         p.x = p.lastLegal.x;
         p.z = p.lastLegal.z;
