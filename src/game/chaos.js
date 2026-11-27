@@ -140,6 +140,19 @@ function callout(c, sim, text, kind) {
   if (c.feed.length > 6) c.feed.shift();
 }
 
+// DESTROYER (destroyer.js): a feed line, and on its wreck coins, score and
+// heat (works outside CITY CHAOS too: then only the coins).
+export function chaosReward(sim, { text, kind = "destroyer", coins = 0, score = 0, heat = 0, x = sim.player.x, z = sim.player.z }) {
+  const c = sim.chaos;
+  if (c) {
+    if (text) callout(c, sim, text, kind);
+    c.score += Math.round(score);
+    c.heat += heat;
+    if (coins) (c.counts.destroyers = (c.counts.destroyers || 0) + 1);
+  }
+  if (coins) payCoins(sim, coins, x, z, kind);
+}
+
 // Coins for an activity (not destruction: not under the destruction cap).
 function payCoins(sim, amount, x, z, reason) {
   if (!amount || sim.result) return;

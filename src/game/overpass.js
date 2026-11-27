@@ -229,7 +229,7 @@ export function updateOverpasses(sim, dt) {
 // Bodies dropping (off a broken or jumped-off deck, over a barricade):
 // gravity until they reach the street.
 export function updateFalling(sim, dt) {
-  for (const b of [sim.player, ...sim.police, ...(sim.city?.traffic || []), ...(sim.target ? [sim.target] : [])]) {
+  for (const b of [sim.player, ...sim.police, ...(sim.city?.traffic || []), ...(sim.target ? [sim.target] : []), ...(sim.destroyer && sim.destroyer.state !== "wrecked" ? [sim.destroyer] : [])]) {
     if (!b.falling) continue;
     b.vy = (b.vy || 0) - 18 * dt;
     b.y = Math.max(0, (b.y || 0) + b.vy * dt);

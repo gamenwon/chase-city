@@ -56,6 +56,8 @@ const ui = new Interface(),
     cityGenerator: generateCity,
     seed: seedParam() ?? (evalMode ? 3 : undefined),
     chaosPace: evalMode ? 2 : 1,
+    // (Testing: ?destroyerAt=N brings the DESTROYER in after N s.)
+    destroyerFirstAt: params.get("destroyerAt") != null && params.get("destroyerAt") !== "" ? Number(params.get("destroyerAt")) : undefined,
   });
 function seedParam() {
   const v = new URLSearchParams(location.search).get("seed");

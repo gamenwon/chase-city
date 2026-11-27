@@ -53,7 +53,9 @@ export function resetDurability(sim) {
 
 // Hurt the player: kind (see above), base HP for a 100 HP car, key: the
 // source (for the per-source cooldown), or null.
-export function hurt(sim, kind, base, key = null) {
+// cap: a window cap of its own (a DESTROYER's charged ram hits through
+// whole).
+export function hurt(sim, kind, base, key = null, cap = DAMAGE.windowCap) {
   if (!sim.hp || sim.result || !(base > 0)) return 0;
   const now = sim.elapsed;
   if (key != null) {
@@ -67,14 +69,15 @@ export function hurt(sim, kind, base, key = null) {
   }
   sim.damageLog = sim.damageLog.filter((d) => now - d.t < DAMAGE.window);
   const used = sim.damageLog.reduce((a, d) => a + d.base, 0);
-  const allowed = Math.max(0, DAMAGE.windowCap - used);
+  const allowed = Math.max(0, cap - used);
   if (allowed <= 0) {
     sim.damageStats.blocked++;
     return 0;
   }
   base = Math.min(base, allowed);
   sim.damageLog.push({ t: now, base });
-  const resist = sim.vehicle?.stats.resist?.[kind] ?? 1;
+  // (A DESTROYER ram counts as a heavy hit for the car's resistance.)
+  const resist = sim.vehicle?.stats.resist?.[kind === "destroyer" ? "heavy" : kind] ?? 1;
   const hp = base * resist;
   sim.hp = Math.max(0, sim.hp - hp);
   sim.health = sim.healthWritten = (sim.hp / sim.maxHp) * 100;

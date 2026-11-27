@@ -15,6 +15,7 @@ import { NightLights, NIGHT } from "./night.js";
 import { WaterJets } from "./water.js";
 import { GeneratedWorld } from "./world.js";
 import { MaterialPass, paintToon } from "./pbr.js";
+import { DestroyerRenderer } from "./destroyer.js";
 import { CITY_HALF } from "../world/citygen.js";
 import { Weather } from "./weather.js";
 import { OverpassRenderer } from "./overpass.js";
@@ -137,6 +138,8 @@ export class CityRenderer {
     this.pickups = new PickupRenderer(this.scene);
     this.targetView = new TargetRenderer(this.scene);
     if (this.gfx.on) this.targetView.setGfx(this.gfx);
+    this.destroyerView = new DestroyerRenderer(this.scene);
+    if (this.gfx.on) this.destroyerView.setGfx(this.gfx);
     this.water = new WaterJets(this.scene);
     // V2.1 elevated road(s) of a generated city.
     this.overpass = new OverpassRenderer(this.scene, theme);
@@ -311,6 +314,7 @@ export class CityRenderer {
     // Every other car too: traffic, the coin carrier.
     this.cityLife?.setGfx(on ? this.gfx : null);
     this.targetView?.setGfx(on ? this.gfx : null);
+    this.destroyerView?.setGfx(on ? this.gfx : null);
     // Police cars too: drop them all, the render loop builds new ones.
     if (this.police) {
       for (const m of this.police) this.scene.remove(m);
@@ -515,6 +519,7 @@ export class CityRenderer {
     this.pickups.update(sim, this.camera);
     this.chaos.update(sim, this.camera);
     this.targetView.update(sim, this.camera, (k) => this.cameraRig.kick(k));
+    this.destroyerView.update(sim, this.camera);
     this.water.update(sim.city, sim.elapsed, this.camera);
     this.overpass.update(sim, dt);
     // Police helicopter (after the camera has moved this frame).
@@ -693,6 +698,7 @@ export class CityRenderer {
     this.pickups.reset();
     this.chaos.reset();
     this.targetView.reset();
+    this.destroyerView.reset();
     this.water.reset();
     this.cameraRig.reset();
     this.trails.reset();

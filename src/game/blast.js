@@ -12,6 +12,7 @@
 //
 // Systems outside the simulation (the preview locations) join in through
 // sim.blastListeners: (sim, event, radius, strength, later) => void.
+import { blastDestroyer } from "./destroyer.js";
 import { hurt } from "./durability.js";
 import { blastCity } from "./city.js";
 import { awardCoins } from "./coins.js";
@@ -96,6 +97,8 @@ export function applyBlast(sim, e, later) {
       });
     }
   }
+  // The DESTROYER: like a police car, sturdier (destroyer.js).
+  blastDestroyer(sim, e, R, s, BLAST.police);
   // The player: a shove and some damage when close.
   const p = sim.player;
   const pd = Math.hypot(p.x - e.x, p.z - e.z);

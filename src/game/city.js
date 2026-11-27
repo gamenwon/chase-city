@@ -402,7 +402,7 @@ export function standingPostsNear(city, x, z, reach = 4) {
   );
 }
 
-function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
+export function hitProps(sim, city, car, radius, isPlayer, ram = 1) {
   for (const prop of nearbyProps(city, car.x, car.z)) {
     const spec = PROPS[prop.kind];
     if (prop.state !== "stand" && prop.state !== "down") continue;

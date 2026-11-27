@@ -22,6 +22,7 @@ import { CHAOS, chaosDestroyed, chaosFleet, chaosNextPoliceKind } from "./chaos.
 import { makeHeavyPolice } from "./police.js";
 import { resetCoins, updateCoins, awardCoins } from "./coins.js";
 import { resetRepairs, updateRepairs } from "./repairs.js";
+import { updateDestroyer, resetDestroyer } from "./destroyer.js";
 import { createOverpasses, pillarSolids, constrainLevels, hitPillar, updateOverpasses, updateFalling, sameLevel } from "./overpass.js";
 import { createBuildingCells, cellSolids, hitWall } from "./buildings.js";
 import { updateRoadblock } from "./roadblock.js";
@@ -46,6 +47,8 @@ export class Simulation {
     this.random = options.random || Math.random;
     this.reinforcementsEnabled = options.reinforcements !== false;
     this.helicopterOption = options.helicopter;
+    this.destroyerOption = options.destroyer; // (on in CITY CHAOS anyway)
+    if (options.destroyerFirstAt != null) this.destroyerFirstAt = options.destroyerFirstAt;
     this.barricadesEnabled = options.barricades !== false;
     // V1.9 city life (props, pedestrians, traffic). On in the real game
     // (main.js); off by default so older fixed scenarios keep their meaning.
@@ -131,6 +134,7 @@ export class Simulation {
     this.pin = createPin();
     this.pickups = [];
     this.target = null; // TARGET HUNT: the fleeing car (target.js)
+    resetDestroyer(this); // the hostile ram truck (destroyer.js)
     this.chaos = null; // CITY CHAOS state (chaos.js), set by its setup
     this.chaosMode = !!missionRules.chaos;
     this.blastQueue = []; // chain links waiting to go off (blast.js)
@@ -1191,6 +1195,8 @@ export class Simulation {
       if (this.target?.state === "fleeing") updateJump(this, this.target, dt, 1.1);
       resolveTargetContact(this);
     }
+    // DESTROYER: hunts, charges, rams; fights the player's car (destroyer.js).
+    updateDestroyer(this, dt);
     for (const c of [p, ...this.police.filter((c) => c.state === "active")]) {
       if (c === p && p.recover) continue; // gliding out along a clear line
       const before = { x: c.x, z: c.z };
