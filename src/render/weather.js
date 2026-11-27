@@ -14,6 +14,7 @@
 // the vertex shader (one draw call each, fewer on phones); a small pool of
 // puffs. Works in both orientations (everything follows the camera).
 import * as THREE from "three";
+import { bakedMaterial } from "./kit.js";
 
 const SNOW_SKY = 0xdbe4ec, RAIN_SKY = 0x7d8993;
 
@@ -62,6 +63,9 @@ export class Weather {
     for (const m of this.r.roadEvents?.materials?.values?.() || []) keep.add(m);
     for (const m of this.r.police || []) grab(m);
     for (const m of Object.values(this.r.cityLife?.carMeshes || {})) grab(m);
+    // (The shared baked material is also every facility block's ground and
+    // decor: those must get snow, so it is not kept out.)
+    keep.delete(bakedMaterial);
     this.r.scene.traverse((o) => {
       if (!o.material || o.userData.xray || o.isPoints || o.isLine || o.isSprite) return;
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (!keep.has(m)) this.patch(m);
@@ -240,7 +244,7 @@ export class Weather {
     });
   }
   buildSnow() {
-    const n = this.mobile ? 1500 : 2400;
+    const n = this.mobile ? 650 : 1000;
     const pos = new Float32Array(n * 3), seed = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       pos.set([Math.random() * 70, Math.random() * 34, Math.random() * 70], i * 3);
@@ -254,19 +258,19 @@ export class Weather {
       uniform float uTime; uniform vec3 uCenter; uniform vec3 uBox; uniform float uScale;
       void main() {
         vec3 p = position;
-        p.y = mod(p.y - uTime * (2.6 + seed * 1.6), uBox.y);
-        p.x += sin(uTime * 0.9 + seed * 40.0) * 0.9;
-        p.z += cos(uTime * 0.7 + seed * 31.0) * 0.7;
+        p.y = mod(p.y - uTime * (1.4 + seed * 0.9), uBox.y);
+        p.x += sin(uTime * 0.7 + seed * 40.0) * 0.9;
+        p.z += cos(uTime * 0.5 + seed * 31.0) * 0.7;
         vec3 w = vec3(uCenter.x + mod(p.x - uCenter.x + uBox.x * 0.5, uBox.x) - uBox.x * 0.5, p.y + uCenter.y, uCenter.z + mod(p.z - uCenter.z + uBox.z * 0.5, uBox.z) - uBox.z * 0.5);
         vec4 mv = modelViewMatrix * vec4(w, 1.0);
         gl_Position = projectionMatrix * mv;
         // (Big enough to read from the chase camera, like the rain.)
-        gl_PointSize = clamp((0.45 + seed * 0.45) * uScale / -mv.z, 2.5, 18.0);
+        gl_PointSize = clamp((0.3 + seed * 0.3) * uScale / -mv.z, 1.8, 9.0);
       }`,
       `uniform sampler2D uMap;
       void main() {
         vec4 t = texture2D(uMap, gl_PointCoord);
-        gl_FragColor = vec4(1.0, 1.0, 1.0, t.a);
+        gl_FragColor = vec4(1.0, 1.0, 1.0, t.a * 0.8);
       }`,
     );
     this.snow = new THREE.Points(g, m);
