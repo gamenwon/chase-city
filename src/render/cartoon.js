@@ -841,18 +841,79 @@ export function trafficGeometry(type) {
 
 // TARGET: the fleeing getaway car, orange-red with black stripes and bags
 // on a roof rack (never confused with the yellow taxi).
+// A gold coin face (canvas): rim, a darker inner disc and a star, for the
+// coin carrier's sides and its roof coin.
+function coinFace(size = 0.6) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d");
+  g.fillStyle = "#b8860b";
+  g.beginPath();
+  g.arc(64, 64, 62, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#ffd23a";
+  g.beginPath();
+  g.arc(64, 64, 54, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#f2b712";
+  g.beginPath();
+  g.arc(64, 64, 42, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#fff3b0";
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 13 : 30;
+    g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r);
+  }
+  g.closePath();
+  g.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
+}
+
+// TARGET: the coin carrier (CITY CHAOS / TARGET HUNT: take it down and
+// it bursts into coins). Exaggerated cartoon van in vivid blue: a very
+// tall cabin with big windows over a short bonnet, angular body, a gold
+// band and coin symbols on the sides, and a giant gold coin on the roof
+// on a stand (it spins: render/target.js), so it reads at a glance from
+// the phone camera and is never taken for traffic.
 export function targetCar() {
-  const OR = 0xff5a1f, BLK = 0x1f1e24;
-  const s = shell({ body: OR, cabin: OR, roof: BLK });
-  faceKit(s, { bumper: BLK });
-  stripes(s, BLK, [-0.2, 0.2], 0.16);
+  const BLUE = 0x1f6bff, NAVY = 0x123a8c, GOLD = 0xffc61a, GOLD2 = 0xe0a000;
+  const s = shell({ body: BLUE, cabin: BLUE, roof: NAVY, W: 2.0, L: 3.3, belt: 1.0, hood: 0.34, tail: 0.04, cabH: 1.82, lean: 0.36, backLean: 0.02, taper: 0.88 });
+  faceKit(s, { bumper: NAVY, grille: GOLD2, lampW: 0.36, lampH: 0.24 });
   const { g, o, top, cf, cb } = s;
+  // Gold band along the sides, gold kerb plates at the sills.
+  for (const sx of [-1, 1]) {
+    box(g, 0.03, 0.16, o.L - 0.5, GOLD, sx * (o.W / 2 + 0.012), o.belt - 0.3, 0.1);
+    box(g, 0.03, 0.08, o.L - 0.6, GOLD2, sx * (o.W / 2 + 0.012), o.clear + 0.08, 0.1);
+  }
+  // Coin symbols on both sides of the body.
+  sideDecal(g, coinFace(0.5), o.W / 2 + 0.03, o.clear + 0.36, (cf + cb) / 2 + 0.1);
+  // Roof: a stand and the giant coin (kept apart from the bake: it spins).
   const zc = (cf + o.lean + cb) / 2;
-  for (const z of [zc - 0.35, zc + 0.35]) box(g, o.W * 0.8, 0.06, 0.08, BLK, 0, top + 0.16, z);
-  box(g, 0.55, 0.3, 0.5, 0x3a6b3a, -0.25, top + 0.2, zc);
-  box(g, 0.4, 0.24, 0.42, 0x6b4a2a, 0.3, top + 0.2, zc - 0.05);
-  bake(g);
-  return scaled(g);
+  box(g, 0.9, 0.12, 0.7, NAVY, 0, top + 0.1, zc);
+  box(g, 0.16, 0.42, 0.16, 0x55535c, 0, top + 0.2, zc);
+  const coin = new THREE.Group();
+  coin.position.set(0, top + 1.42, zc);
+  g.add(coin);
+  const lit = { emissive: 0x6b4a00, emissiveIntensity: 0.35 };
+  const disc = add(coin, ni(new THREE.CylinderGeometry(0.8, 0.8, 0.24, 20)), GOLD, 0, 0, 0, lit);
+  disc.rotation.z = Math.PI / 2;
+  const rim = add(coin, ni(new THREE.TorusGeometry(0.8, 0.06, 6, 20)), GOLD2, 0, 0, 0, lit);
+  rim.rotation.y = Math.PI / 2;
+  for (const sx of [-1, 1]) {
+    const f = coinFace(1.42);
+    f.position.set(sx * 0.125, 0, 0);
+    f.rotation.y = (sx * Math.PI) / 2;
+    coin.add(f);
+  }
+  const keep = [];
+  coin.traverse((q) => q.isMesh && keep.push(q));
+  bake(g, keep);
+  const out = scaled(g);
+  out.userData.coin = coin;
+  return out;
 }
 
 // Lamp positions per car (local metres, x = half the lamp spacing, y up,

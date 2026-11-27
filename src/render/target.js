@@ -1,4 +1,5 @@
-// TARGET HUNT: the target car on screen. A bright yellow getaway sedan,
+// TARGET HUNT: the target car on screen. The blue coin carrier (a giant
+// gold coin on the roof; cartoon.js targetCar),
 // a pulsing red marker above it and a ring on the road so it stays easy
 // to spot in a busy street, smoke that thickens as its durability drops,
 // a flash on every hit, and the takedown: it flips and lands on its roof
@@ -101,8 +102,10 @@ export class TargetRenderer {
       this.car.rotation.set(0, t.angle + sway, sway * 0.6);
       this.car.visible = true;
       this.marker.visible = this.ring.visible = true;
-      this.marker.position.y = 3.2 + 0.25 * Math.sin(now * 4);
+      this.marker.position.y = 4.9 + 0.25 * Math.sin(now * 4); // (above the roof coin)
       this.marker.rotation.y = now * 2.2;
+      // The roof coin turns slowly (it catches the light from every side).
+      if (this.car.userData.coin) this.car.userData.coin.rotation.y = now * 1.6;
       const pulse = 1 + 0.1 * Math.sin(now * 6);
       this.ring.scale.setScalar(pulse);
     }
