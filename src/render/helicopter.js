@@ -226,14 +226,21 @@ export class HelicopterRenderer {
     this.shadow.scale.set(4.3, 1, 6.0);
     this.shadow.rotation.y = h.heading;
     this.shadow.material.opacity = 0.2 * Math.min(1, 0.4 + this.opacity);
-    this.pool.visible = this.beam.visible = night && h.mode !== "entry";
-    if (night) {
-      const R = 5.6;
-      this.pool.position.set(h.spot.x, groundY + 0.04, h.spot.z);
+    // The searchlight, all the time it is here (day and night): on the
+    // car exactly (where it is drawn this frame, at its height: hills, the
+    // elevated deck), softer by day.
+    this.pool.visible = this.beam.visible = true;
+    {
+      const R = 5.6, p = sim.player;
+      const tx = h.leaving ? h.spot.x : p.x, tz = h.leaving ? h.spot.z : p.z;
+      const ty = (h.leaving ? 0 : p.y || 0) + groundY + 0.04;
+      this.pool.position.set(tx, ty, tz);
       this.pool.scale.set(R, 1, R);
+      this.pool.material.opacity = night ? 0.6 : 0.32;
+      this.beam.material.opacity = night ? 0.12 : 0.05;
       // Beam from under the nose down to the pool.
       const fx = h.x - Math.sin(h.heading) * -1.5, fz = h.z - Math.cos(h.heading) * -1.5, fy = h.y - 0.9;
-      const dx = h.spot.x - fx, dy = groundY - fy, dz = h.spot.z - fz, len = Math.hypot(dx, dy, dz);
+      const dx = tx - fx, dy = ty - fy, dz = tz - fz, len = Math.hypot(dx, dy, dz);
       this.beam.position.set(fx, fy, fz);
       this.q.setFromUnitVectors(this.v.set(0, -1, 0), this.v.set(dx / len, dy / len, dz / len).clone());
       this.beam.quaternion.copy(this.q);

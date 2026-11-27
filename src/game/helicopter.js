@@ -157,10 +157,16 @@ export function updateHelicopter(sim, dt) {
   h.bank += (Math.max(-0.35, Math.min(0.35, -turn * 0.28)) - h.bank) * Math.min(1, dt * 3);
   h.pitch = Math.min(0.22, sp / 160);
   h.rotor += dt * 26;
-  // Searchlight: lags behind the player a little.
-  const f = 1 - Math.exp(-dt * HELI.spotLag);
-  h.spot.x += (p.x - h.spot.x) * f;
-  h.spot.z += (p.z - h.spot.z) * f;
+  // Searchlight: right on the player the whole time it is here; it only
+  // drifts off (lagging) as it leaves.
+  if (!h.leaving) {
+    h.spot.x = p.x;
+    h.spot.z = p.z;
+  } else {
+    const f = 1 - Math.exp(-dt * HELI.spotLag);
+    h.spot.x += (p.x - h.spot.x) * f;
+    h.spot.z += (p.z - h.spot.z) * f;
+  }
   h.tracking = !h.leaving && h.mode !== "entry" && Math.hypot(h.x - p.x, h.z - p.z) < HELI.trackRange;
   p.heliTracked = h.tracking;
   if (h.leaving && Math.hypot(h.x - p.x, h.z - p.z) > 220) {
