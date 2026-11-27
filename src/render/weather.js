@@ -240,7 +240,7 @@ export class Weather {
     });
   }
   buildSnow() {
-    const n = this.mobile ? 900 : 1600;
+    const n = this.mobile ? 1500 : 2400;
     const pos = new Float32Array(n * 3), seed = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       pos.set([Math.random() * 70, Math.random() * 34, Math.random() * 70], i * 3);
@@ -254,18 +254,19 @@ export class Weather {
       uniform float uTime; uniform vec3 uCenter; uniform vec3 uBox; uniform float uScale;
       void main() {
         vec3 p = position;
-        p.y = mod(p.y - uTime * (1.3 + seed * 0.9), uBox.y);
-        p.x += sin(uTime * 0.8 + seed * 40.0) * 0.7;
-        p.z += cos(uTime * 0.6 + seed * 31.0) * 0.5;
+        p.y = mod(p.y - uTime * (2.6 + seed * 1.6), uBox.y);
+        p.x += sin(uTime * 0.9 + seed * 40.0) * 0.9;
+        p.z += cos(uTime * 0.7 + seed * 31.0) * 0.7;
         vec3 w = vec3(uCenter.x + mod(p.x - uCenter.x + uBox.x * 0.5, uBox.x) - uBox.x * 0.5, p.y + uCenter.y, uCenter.z + mod(p.z - uCenter.z + uBox.z * 0.5, uBox.z) - uBox.z * 0.5);
         vec4 mv = modelViewMatrix * vec4(w, 1.0);
         gl_Position = projectionMatrix * mv;
-        gl_PointSize = (0.18 + seed * 0.16) * uScale / -mv.z;
+        // (Big enough to read from the chase camera, like the rain.)
+        gl_PointSize = clamp((0.45 + seed * 0.45) * uScale / -mv.z, 2.5, 18.0);
       }`,
       `uniform sampler2D uMap;
       void main() {
         vec4 t = texture2D(uMap, gl_PointCoord);
-        gl_FragColor = vec4(1.0, 1.0, 1.0, t.a * 0.9);
+        gl_FragColor = vec4(1.0, 1.0, 1.0, t.a);
       }`,
     );
     this.snow = new THREE.Points(g, m);
@@ -377,7 +378,7 @@ export class Weather {
     for (const m of [this.snow.material, this.rain.material]) {
       m.uniforms.uTime.value = this.time;
       m.uniforms.uCenter.value.set(center.x, (center.y || 0) - 2, center.z);
-      m.uniforms.uScale.value = 300 * Math.min(2, (this.r.renderer.getPixelRatio() * innerHeight) / 800);
+      m.uniforms.uScale.value = 900 * Math.min(2, (this.r.renderer.getPixelRatio() * innerHeight) / 800);
     }
     // Powder / spray behind moving cars near the camera.
     this.puffClock += dt;
